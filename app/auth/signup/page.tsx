@@ -11,7 +11,7 @@ import { Smartphone, MessageSquare, CheckCircle2 } from "lucide-react";
 
 /**
  * Signup page — same flow as login but purpose "signup"
- * After successful verification, server can create user and respond with requiresProfileComplete true
+ * After successful verification, server returns requiresProfileComplete; redirect accordingly.
  */
 
 export default function Page() {
@@ -22,6 +22,8 @@ export default function Page() {
   const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const normalizePhone = (v: string) => v.replace(/\D/g, "").slice(0, 10);
 
@@ -40,8 +42,14 @@ export default function Page() {
 
   const sendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    setError(null);
+    setMessage(null);
+
     const p = normalizePhone(phone);
-    if (p.length !== 10) return alert("Enter a 10-digit phone number.");
+    if (p.length !== 10) {
+      setError("Enter a 10-digit phone number.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -52,21 +60,31 @@ export default function Page() {
       });
       const json = await res.json();
       setLoading(false);
-      if (!res.ok) return alert(json?.error || "Failed to send code.");
+      if (!res.ok) {
+        setError(json?.error || "Failed to send code.");
+        return;
+      }
       setShowOtp(true);
       startResendCountdown();
-      alert(json?.message || "Verification code sent");
-    } catch (err) {
+      setMessage(json?.message || "Verification code sent");
+    } catch (err: any) {
       setLoading(false);
       console.error(err);
-      alert("Error sending code. Try again.");
+      setError("Error sending code. Try again.");
     }
   };
 
   const verifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setMessage(null);
+
     const p = normalizePhone(phone);
-    if (code.trim().length === 0) return;
+    if (code.trim().length === 0) {
+      setError("Enter the verification code.");
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await fetch("/api/auth/verify-otp", {
@@ -76,14 +94,22 @@ export default function Page() {
       });
       const json = await res.json();
       setLoading(false);
-      if (!res.ok) return alert(json?.error || "Verification failed");
+      if (!res.ok) {
+        setError(json?.error || "Verification failed");
+        return;
+      }
 
-      // On signup success, redirect to complete-profile
-      router.push("/auth/complete-profile");
-    } catch (err) {
+      const requiresProfile = json?.requiresProfileComplete === true;
+
+      if (requiresProfile) {
+        router.push("/auth/complete-profile");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: any) {
       setLoading(false);
       console.error(err);
-      alert("Verification error. Try again.");
+      setError("Verification error. Try again.");
     }
   };
 
@@ -106,6 +132,9 @@ export default function Page() {
         </CardHeader>
 
         <CardContent className="p-6">
+          {message && <div className="mb-4 text-sm text-green-700 bg-green-50 p-2 rounded">{message}</div>}
+          {error && <div className="mb-4 text-sm text-red-700 bg-red-50 p-2 rounded">{error}</div>}
+
           {!showOtp ? (
             <form onSubmit={sendCode} className="space-y-4">
               <div>

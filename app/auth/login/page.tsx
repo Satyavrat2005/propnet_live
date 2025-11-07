@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Smartphone, MessageSquare, CheckCircle2, Play } from "lucide-react";
+import { Smartphone, MessageSquare, CheckCircle2 } from "lucide-react";
 
 /**
- * Login page (improved)
- * - shows inline errors
- * - shows OTP input only when server returns ok
- * - displays clear Twilio/trial hints when Twilio returns permission errors
+ * Login page
+ * - sends OTP using /api/auth/send-otp
+ * - verifies via /api/auth/verify-otp
+ * - redirects to /auth/complete-profile if profile incomplete, else /dashboard
+ * - fallback: if verify-otp response doesn't include requiresProfileComplete, it calls /api/auth/me
+ *   to determine redirect.
  */
 
 export default function Page() {
@@ -65,13 +67,12 @@ export default function Page() {
       setLoading(false);
 
       if (!res.ok) {
-        // show clear error and helpful guidance for Twilio trial issues
         const msg = json?.error || "Failed to send verification code.";
-        setError(msg);
-
-        // Twilio specific hints often show phrases like "Permission to send an SMS"
+        // Twilio-specific hint detection
         if (/permission|verify|trial|not authorized|not enabled/i.test(msg)) {
           setError(msg + " — On Twilio trial you must verify recipient numbers or upgrade your account. See Twilio console.");
+        } else {
+          setError(msg);
         }
         return;
       }
@@ -84,6 +85,25 @@ export default function Page() {
       setLoading(false);
       console.error("sendCode error:", err);
       setError("Network error sending code. Check server logs and .env variables.");
+    }
+  };
+
+  // Helper: fetch /api/auth/me to determine profile status if verify endpoint doesn't return it
+  const checkProfileAndRedirect = async () => {
+    try {
+      const meRes = await fetch("/api/auth/me");
+      if (!meRes.ok) return router.push("/auth/complete-profile");
+      const meJson = await meRes.json();
+      const profile = meJson?.user ?? null;
+      if (profile && profile.profile_complete === true) {
+        router.push("/dashboard");
+      } else {
+        router.push("/auth/complete-profile");
+      }
+    } catch (err) {
+      console.error("checkProfileAndRedirect error:", err);
+      // fallback
+      router.push("/auth/complete-profile");
     }
   };
 
@@ -114,16 +134,21 @@ export default function Page() {
         return;
       }
 
-      // success: server returns requiresProfileComplete flag
-      const requiresProfile = json?.requiresProfileComplete === true;
-      setMessage("Verification successful. Redirecting...");
-
-      // decide destination
-      if (requiresProfile) {
-        router.push("/auth/complete-profile");
-      } else {
-        router.push("/dashboard"); // explicit dashboard route
+      // Prefer server-provided flag
+      if (typeof json?.requiresProfileComplete === "boolean") {
+        const requiresProfile = json.requiresProfileComplete;
+        setMessage("Verification successful. Redirecting...");
+        if (requiresProfile) {
+          router.push("/auth/complete-profile");
+        } else {
+          router.push("/dashboard");
+        }
+        return;
       }
+
+      // Fallback: call /api/auth/me to determine profile completeness
+      setMessage("Verification successful. Checking profile...");
+      await checkProfileAndRedirect();
     } catch (err: any) {
       setLoading(false);
       console.error("verifyCode error:", err);
