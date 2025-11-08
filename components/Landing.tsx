@@ -36,9 +36,19 @@ import {
  * Uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from .env.local
  * Make sure those env vars are present in your app before running.
  */
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in environment"
+  );
+}
+
+// Create a client even if env vars are missing (will fail gracefully on API calls)
+const supabase = (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http'))
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createClient("https://placeholder.supabase.co", "placeholder-key");
 
 export default function Page() {
   const router = useRouter();

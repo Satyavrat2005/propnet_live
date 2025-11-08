@@ -10,7 +10,10 @@ if (!accountSid || !authToken || !verifyServiceSid) {
   console.warn("Missing Twilio env vars in send-otp route");
 }
 
-const client = accountSid && authToken ? Twilio(accountSid, authToken) : null;
+// Only initialize Twilio client if credentials are present
+const client = (accountSid && authToken && accountSid.startsWith('AC')) 
+  ? Twilio(accountSid, authToken) 
+  : null;
 
 export async function POST(req: Request) {
   try {

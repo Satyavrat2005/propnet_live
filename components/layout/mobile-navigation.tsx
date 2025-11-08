@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocation } from "wouter";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Home,
@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/sheet";
 
 export default function MobileNavigation() {
-  const [location] = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
@@ -53,11 +54,11 @@ export default function MobileNavigation() {
         <div className="flex items-center justify-around px-4 py-3">
           {navItems.slice(0, 3).map((item) => {
             const Icon = item.icon;
-            const isActive = location === item.href;
+            const isActive = pathname === item.href;
             return (
-              <a
+              <button
                 key={item.href}
-                href={item.href}
+                onClick={() => router.push(item.href)}
                 className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-all ${
                   isActive
                     ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30"
@@ -66,7 +67,7 @@ export default function MobileNavigation() {
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs font-medium">{item.label}</span>
-              </a>
+              </button>
             );
           })}
 
@@ -89,13 +90,15 @@ export default function MobileNavigation() {
               <div className="space-y-2">
                 {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location === item.href;
+                  const isActive = pathname === item.href;
                   return (
-                    <a
+                    <button
                       key={item.href}
-                      href={item.href}
-                      onClick={() => setIsOpen(false)}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
+                      onClick={() => {
+                        router.push(item.href);
+                        setIsOpen(false);
+                      }}
+                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all w-full ${
                         isActive
                           ? "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -103,18 +106,20 @@ export default function MobileNavigation() {
                     >
                       <Icon className="h-5 w-5" />
                       <span className="font-medium">{item.label}</span>
-                    </a>
+                    </button>
                   );
                 })}
                 <hr className="my-4" />
-                <a
-                  href="/logout"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/30 transition-all"
+                <button
+                  onClick={() => {
+                    router.push("/logout");
+                    setIsOpen(false);
+                  }}
+                  className="flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/30 transition-all w-full"
                 >
                   <LogOut className="h-5 w-5" />
                   <span className="font-medium">Logout</span>
-                </a>
+                </button>
               </div>
             </SheetContent>
           </Sheet>
@@ -136,12 +141,12 @@ export default function MobileNavigation() {
           <nav className="space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location === item.href;
+              const isActive = pathname === item.href;
               return (
-                <a
+                <button
                   key={item.href}
-                  href={item.href}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
+                  onClick={() => router.push(item.href)}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all w-full ${
                     isActive
                       ? "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
                       : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -149,7 +154,7 @@ export default function MobileNavigation() {
                 >
                   <Icon className="h-5 w-5" />
                   <span className="font-medium">{item.label}</span>
-                </a>
+                </button>
               );
             })}
           </nav>
@@ -157,13 +162,13 @@ export default function MobileNavigation() {
 
         {/* Logout Button */}
         <div className="absolute bottom-6 left-6 right-6">
-          <a
-            href="/logout"
+          <button
+            onClick={() => router.push("/logout")}
             className="flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/30 transition-all w-full"
           >
             <LogOut className="h-5 w-5" />
             <span className="font-medium">Logout</span>
-          </a>
+          </button>
         </div>
       </div>
     </>

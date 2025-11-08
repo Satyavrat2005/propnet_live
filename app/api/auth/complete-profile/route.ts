@@ -13,7 +13,9 @@ if (!imgbbApiKey) {
   console.warn("Missing IMGBB_API_KEY in env");
 }
 
-const supabase = createClient(supabaseUrl ?? "", supabaseServiceRoleKey ?? "");
+const supabase = (supabaseUrl && supabaseServiceRoleKey)
+  ? createClient(supabaseUrl, supabaseServiceRoleKey)
+  : null;
 
 /**
  * Helper: convert File (formData entry) to base64 string
@@ -25,6 +27,14 @@ async function fileToBase64(file: File): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  // Return early if Supabase is not configured
+  if (!supabase) {
+    return NextResponse.json(
+      { error: "Database not configured" },
+      { status: 503 }
+    );
+  }
+
   try {
     const formData = await req.formData();
 
