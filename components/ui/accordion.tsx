@@ -1,8 +1,13 @@
+"use client"
+
 import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+
+// Next.js-compatible client component version of the Accordion
+// Place this file at: /components/ui/accordion.tsx
 
 const Accordion = AccordionPrimitive.Root
 
@@ -36,6 +41,7 @@ const AccordionTrigger = React.forwardRef<
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))
+// keep the original displayName from radix for better DevTools/readability
 AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
 
 const AccordionContent = React.forwardRef<
