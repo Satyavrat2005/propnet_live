@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -35,13 +35,6 @@ export default function MyListings() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/");
-    }
-  }, [authLoading, user, router]);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -53,6 +46,7 @@ export default function MyListings() {
   const { data: myProperties = [], isLoading } = useQuery({
     queryKey: ["/api/my-properties"],
     queryFn: () => safeFetch("/api/my-properties", []),
+    enabled: !!user,
   });
 
   const form = useForm<z.infer<typeof propertyFormSchema>>({
@@ -185,7 +179,6 @@ export default function MyListings() {
   });
 
   const handleSubmit = (values: z.infer<typeof propertyFormSchema>) => {
-    // Check for form validation errors
     const errors = form.formState.errors;
     if (Object.keys(errors).length > 0) {
       const errorFields = Object.keys(errors).join(', ');
@@ -225,7 +218,6 @@ export default function MyListings() {
   const handleEdit = (property: any) => {
     setEditingProperty(property);
     
-    // Populate form with existing data
     form.reset({
       title: property.title || "",
       propertyType: property.propertyType || "",
@@ -316,19 +308,570 @@ export default function MyListings() {
     "Market Analysis",
   ];
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/");
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const PropertyForm = () => (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        {/* Property Details */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="bg-white border-b border-gray-100">
+            <CardTitle className="text-base font-semibold text-gray-900">Property Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6 bg-white">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Property Title</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Beautiful 2 BHK Apartment..." 
+                      {...field}
+                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="propertyType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Property Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-white border-gray-300">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="Apartment">Apartment</SelectItem>
+                        <SelectItem value="Villa">Villa</SelectItem>
+                        <SelectItem value="Commercial">Commercial</SelectItem>
+                        <SelectItem value="Plot">Plot</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="transactionType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Transaction Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-white border-gray-300">
+                          <SelectValue placeholder="Select transaction" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="sale">Sale</SelectItem>
+                        <SelectItem value="rent">Rent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="bhk"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">BHK (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="2" 
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="size"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Area</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="1200" 
+                        {...field}
+                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="sizeUnit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Area Unit</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-white border-gray-300">
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="sq.ft">Square Feet (sq.ft)</SelectItem>
+                        <SelectItem value="sq.m">Square Meters (sq.m)</SelectItem>
+                        <SelectItem value="sq.yd">Square Yards (sq.yd)</SelectItem>
+                        <SelectItem value="acre">Acres</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">
+                      {form.watch("transactionType") === "rent" ? "Monthly Rent" : "Sale Price"}
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder={form.watch("transactionType") === "rent" ? "₹25,000/month" : "₹50 Lakhs"} 
+                        {...field}
+                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {form.watch("transactionType") === "rent" && (
+                <FormField
+                  control={form.control}
+                  name="rentFrequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">Rent Frequency</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white border-gray-300">
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Location (Area, City)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Bandra West, Mumbai" 
+                      {...field}
+                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fullAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Full Address</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Complete address with landmarks..."
+                      className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="flatNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Flat/Unit No.</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="A-101" 
+                        {...field}
+                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-gray-500 mt-1">Encrypted & used only for verification</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="floorNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Floor No.</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="3rd Floor" 
+                        {...field}
+                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="buildingSociety"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Building/Society</FormLabel>
+                    <FormControl>
+                      <GooglePlacesAutocomplete
+                        value={field.value || ""}
+                        onChange={(value) => field.onChange(value)}
+                        placeholder="Search building..."
+                        types={["establishment"]}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Description</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Property details, amenities, nearby facilities..."
+                      className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      rows={4}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">Property Photos (Up to 10)</label>
+              <FileUpload 
+                onFilesChange={setSelectedFiles}
+                maxFiles={10}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Listing Type */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="bg-white border-b border-gray-100">
+            <CardTitle className="text-base font-semibold text-gray-900">Listing Type</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 bg-white">
+            <FormField
+              control={form.control}
+              name="listingType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+                        <input
+                          type="radio"
+                          id={editingProperty ? "exclusive-edit" : "exclusive"}
+                          value="exclusive"
+                          checked={field.value === "exclusive"}
+                          onChange={() => field.onChange("exclusive")}
+                          className="mt-1"
+                        />
+                        <label htmlFor={editingProperty ? "exclusive-edit" : "exclusive"} className="flex-1 cursor-pointer">
+                          <div className="font-medium text-gray-900">Exclusive</div>
+                          <div className="text-sm text-gray-600">Only I can list and share it</div>
+                        </label>
+                      </div>
+                      <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+                        <input
+                          type="radio"
+                          id={editingProperty ? "colisting-edit" : "colisting"}
+                          value="colisting"
+                          checked={field.value === "colisting"}
+                          onChange={() => field.onChange("colisting")}
+                          className="mt-1"
+                        />
+                        <label htmlFor={editingProperty ? "colisting-edit" : "colisting"} className="flex-1 cursor-pointer">
+                          <div className="font-medium text-gray-900">Allow Co-Listing</div>
+                          <div className="text-sm text-gray-600">Multiple agents can list with permission</div>
+                        </label>
+                      </div>
+                      <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+                        <input
+                          type="radio"
+                          id={editingProperty ? "shared-edit" : "shared"}
+                          value="shared"
+                          checked={field.value === "shared"}
+                          onChange={() => field.onChange("shared")}
+                          className="mt-1"
+                        />
+                        <label htmlFor={editingProperty ? "shared-edit" : "shared"} className="flex-1 cursor-pointer">
+                          <div className="font-medium text-gray-900">Shared Within Network</div>
+                          <div className="text-sm text-gray-600">Platform-controlled visibility</div>
+                        </label>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isPubliclyVisible"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-gray-200 p-4 mt-4 bg-white">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-gray-900 font-medium">
+                      Allow this property to appear in public agent feed and search?
+                    </FormLabel>
+                    <p className="text-xs text-gray-600">
+                      Enable to make this listing visible in general search and feed. Disable for private listing sharing only.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Owner Details */}
+        <Card className="bg-white border-gray-200">
+          <CardHeader className="bg-white border-b border-gray-100">
+            <CardTitle className="text-base font-semibold text-gray-900 flex items-center">
+              <Shield size={16} className="mr-2 text-green-600" />
+              Owner Details (Encrypted & Secure)
+            </CardTitle>
+            <p className="text-xs text-gray-600 mt-1">
+              Owner will receive a consent request with clear terms
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6 bg-white">
+            <FormField
+              control={form.control}
+              name="ownerName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Owner Name</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Property owner's full name" 
+                      {...field}
+                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                    />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">This information is encrypted and never shared publicly</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="ownerPhone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Owner Phone Number</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="+91 9876543210" 
+                      {...field}
+                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                    />
+                  </FormControl>
+                  <p className="text-xs text-gray-500">Required for verification and trust</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="commissionTerms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Commission Terms</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="2% of sale value" 
+                      {...field}
+                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">Scope of Work</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {scopeOfWorkOptions.map((option) => (
+                  <div key={option} className="flex items-center space-x-2 p-2 border border-gray-200 rounded-md bg-white">
+                    <Checkbox
+                      id={editingProperty ? `${option}-edit` : option}
+                      checked={form.watch('scopeOfWork')?.includes(option)}
+                      onCheckedChange={(checked) => {
+                        const current = form.getValues('scopeOfWork') || [];
+                        if (checked) {
+                          form.setValue('scopeOfWork', [...current, option]);
+                        } else {
+                          form.setValue('scopeOfWork', current.filter((item: string) => item !== option));
+                        }
+                      }}
+                    />
+                    <label htmlFor={editingProperty ? `${option}-edit` : option} className="text-sm text-gray-700 cursor-pointer">{option}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">Agreement Document (Optional)</label>
+              <FileUpload 
+                onFilesChange={setAgreementFiles}
+                maxFiles={1}
+              />
+              <p className="text-xs text-gray-500 mt-1">Upload agent agreement or authorization letter</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-3 pt-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => {
+              if (editingProperty) {
+                setIsEditDialogOpen(false);
+                setEditingProperty(null);
+              } else {
+                setIsAddDialogOpen(false);
+              }
+              form.reset();
+            }}
+            className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending}
+            className="flex-1"
+          >
+            {(createPropertyMutation.isPending || updatePropertyMutation.isPending) 
+              ? (editingProperty ? "Updating..." : "Creating...") 
+              : (editingProperty ? "Update Listing" : "Create Listing")
+            }
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+
   return (
-    <div className="flex flex-col min-h-screen pb-20">
+    <div className="flex flex-col min-h-screen pb-20 bg-gray-50">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
+      <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center">
             <button 
-              className="text-primary mr-4"
+              className="text-primary mr-4 hover:opacity-80"
               onClick={() => router.push("/feed")}
             >
               <ArrowLeft size={24} />
             </button>
-            <h2 className="text-lg font-semibold text-neutral-900">My Listings</h2>
+            <h2 className="text-lg font-semibold text-gray-900">My Listings</h2>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -337,976 +880,29 @@ export default function MyListings() {
                 <span>Add Listing</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Property Listing</DialogTitle>
-                <p className="text-sm text-neutral-600">
-                  <Shield size={14} className="inline mr-1" />
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+              <DialogHeader className="bg-white pb-4 border-b border-gray-100">
+                <DialogTitle className="text-xl font-semibold text-gray-900">Create New Property Listing</DialogTitle>
+                <DialogDescription className="flex items-center text-gray-600">
+                  <Shield size={14} className="inline mr-1 text-green-600" />
                   Your data is secure. All sensitive information is stored safely and never displayed without explicit permission.
-                </p>
+                </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                  {/* Property Details */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Property Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Property Title</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Beautiful 2 BHK Apartment..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="propertyType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Property Type</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Apartment">Apartment</SelectItem>
-                                  <SelectItem value="Villa">Villa</SelectItem>
-                                  <SelectItem value="Commercial">Commercial</SelectItem>
-                                  <SelectItem value="Plot">Plot</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="transactionType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Transaction Type</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select transaction" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="sale">Sale</SelectItem>
-                                  <SelectItem value="rent">Rent</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="bhk"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>BHK (Optional)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  placeholder="2" 
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="price"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>
-                                {form.watch("transactionType") === "rent" ? "Monthly Rent" : "Sale Price"}
-                              </FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder={form.watch("transactionType") === "rent" ? "₹25,000/month" : "₹50 Lakhs"} 
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {form.watch("transactionType") === "rent" && (
-                          <FormField
-                            control={form.control}
-                            name="rentFrequency"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Rent Frequency</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select frequency" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                    <SelectItem value="yearly">Yearly</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="size"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Area</FormLabel>
-                              <FormControl>
-                                <Input placeholder="1200" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="sizeUnit"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Area Unit</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select unit" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="sq.ft">Square Feet (sq.ft)</SelectItem>
-                                  <SelectItem value="sq.m">Square Meters (sq.m)</SelectItem>
-                                  <SelectItem value="sq.yd">Square Yards (sq.yd)</SelectItem>
-                                  <SelectItem value="acre">Acres</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="fullAddress"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Address</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Complete address with landmarks..."
-                                className="resize-none"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="flatNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Flat/Unit No.</FormLabel>
-                              <FormControl>
-                                <Input placeholder="A-101" {...field} />
-                              </FormControl>
-                              <p className="text-xs text-neutral-500">Encrypted & used only for verification</p>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="floorNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Floor No.</FormLabel>
-                              <FormControl>
-                                <Input placeholder="3rd Floor" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="buildingSociety"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Building/Society</FormLabel>
-                              <FormControl>
-                                <GooglePlacesAutocomplete
-                                  value={field.value || ""}
-                                  onChange={(value) => field.onChange(value)}
-                                  placeholder="Search for building or society..."
-                                  types={["establishment"]}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Location (Area, City)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Bandra West, Mumbai" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Property details, amenities, nearby facilities..."
-                                className="resize-none"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div>
-                        <label className="text-sm font-medium">Property Photos (Up to 10)</label>
-                        <FileUpload 
-                          onFilesChange={setSelectedFiles}
-                          maxFiles={10}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Listing Type */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Listing Type</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <FormField
-                        control={form.control}
-                        name="listingType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="space-y-3">
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="exclusive"
-                                    value="exclusive"
-                                    checked={field.value === "exclusive"}
-                                    onChange={() => field.onChange("exclusive")}
-                                  />
-                                  <label htmlFor="exclusive" className="text-sm font-medium">
-                                    Exclusive - Only I can list and share it
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="colisting"
-                                    value="colisting"
-                                    checked={field.value === "colisting"}
-                                    onChange={() => field.onChange("colisting")}
-                                  />
-                                  <label htmlFor="colisting" className="text-sm font-medium">
-                                    Allow Co-Listing - Multiple agents can list with permission
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="shared"
-                                    value="shared"
-                                    checked={field.value === "shared"}
-                                    onChange={() => field.onChange("shared")}
-                                  />
-                                  <label htmlFor="shared" className="text-sm font-medium">
-                                    Shared Within Network - Platform-controlled visibility
-                                  </label>
-                                </div>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="isPubliclyVisible"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 mt-4">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>
-                                Allow this property to appear in public agent feed and search?
-                              </FormLabel>
-                              <p className="text-xs text-muted-foreground">
-                                Enable to make this listing visible in general search and feed. Disable for private listing sharing only.
-                              </p>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  {/* Owner Details */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center">
-                        <Shield size={16} className="mr-2" />
-                        Owner Details (Encrypted & Secure)
-                      </CardTitle>
-                      <p className="text-xs text-neutral-600">
-                        Owner will receive a consent request with clear terms
-                      </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="ownerName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Owner Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Property owner's full name" {...field} />
-                            </FormControl>
-                            <p className="text-xs text-neutral-500">This information is encrypted and never shared publicly</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="ownerPhone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Owner Phone Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="+91 9876543210" {...field} />
-                            </FormControl>
-                            <p className="text-xs text-neutral-500">Required for verification and trust</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="commissionTerms"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Commission Terms</FormLabel>
-                            <FormControl>
-                              <Input placeholder="2% of sale value" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div>
-                        <label className="text-sm font-medium">Scope of Work</label>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          {scopeOfWorkOptions.map((option) => (
-                            <div key={option} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={option}
-                                checked={form.watch('scopeOfWork')?.includes(option)}
-                                onCheckedChange={(checked) => {
-                                  const current = form.getValues('scopeOfWork') || [];
-                                  if (checked) {
-                                    form.setValue('scopeOfWork', [...current, option]);
-                                  } else {
-                                    form.setValue('scopeOfWork', current.filter((item: string) => item !== option));
-                                  }
-                                }}
-                              />
-                              <label htmlFor={option} className="text-xs">{option}</label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium">Agreement Document (Optional)</label>
-                        <FileUpload 
-                          onFilesChange={setAgreementFiles}
-                          maxFiles={1}
-                        />
-                        <p className="text-xs text-neutral-500 mt-1">Upload agent agreement or authorization letter</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <div className="flex space-x-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setIsAddDialogOpen(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={createPropertyMutation.isPending}
-                      className="flex-1"
-                    >
-                      {createPropertyMutation.isPending ? "Creating..." : "Create Listing"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+              <PropertyForm />
             </DialogContent>
           </Dialog>
           
           {/* Edit Dialog */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Edit Property Listing</DialogTitle>
-                <p className="text-sm text-neutral-600">
-                  <Shield size={14} className="inline mr-1" />
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+              <DialogHeader className="bg-white pb-4 border-b border-gray-100">
+                <DialogTitle className="text-xl font-semibold text-gray-900">Edit Property Listing</DialogTitle>
+                <DialogDescription className="flex items-center text-gray-600">
+                  <Shield size={14} className="inline mr-1 text-green-600" />
                   Update your property information. Changes will be saved immediately.
-                </p>
+                </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                  {/* Property Details - Same as create form */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Property Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Property Title</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Beautiful 2 BHK Apartment..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="propertyType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Property Type</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select type" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Apartment">Apartment</SelectItem>
-                                  <SelectItem value="Villa">Villa</SelectItem>
-                                  <SelectItem value="Commercial">Commercial</SelectItem>
-                                  <SelectItem value="Plot">Plot</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="transactionType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Transaction Type</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select transaction" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="sale">Sale</SelectItem>
-                                  <SelectItem value="rent">Rent</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="price"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>
-                                {form.watch("transactionType") === "rent" ? "Monthly Rent" : "Sale Price"}
-                              </FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder={form.watch("transactionType") === "rent" ? "₹25,000/month" : "₹50 Lakhs"} 
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        {form.watch("transactionType") === "rent" && (
-                          <FormField
-                            control={form.control}
-                            name="rentFrequency"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Rent Frequency</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select frequency" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="monthly">Monthly</SelectItem>
-                                    <SelectItem value="yearly">Yearly</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="size"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Size</FormLabel>
-                              <FormControl>
-                                <Input placeholder="1200" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="sizeUnit"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Unit</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Unit" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="sq.ft">sq.ft</SelectItem>
-                                  <SelectItem value="sq.m">sq.m</SelectItem>
-                                  <SelectItem value="sq.yard">sq.yard</SelectItem>
-                                  <SelectItem value="acre">acre</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="bhk"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>BHK</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  placeholder="2" 
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="location"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Location</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Bandra West, Mumbai" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="fullAddress"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Address</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Complete address" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="flatNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Flat/Unit Number</FormLabel>
-                              <FormControl>
-                                <Input placeholder="A-101" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="floorNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Floor Number</FormLabel>
-                              <FormControl>
-                                <Input placeholder="5th Floor" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="buildingSociety"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Building/Society</FormLabel>
-                              <FormControl>
-                                <GooglePlacesAutocomplete
-                                  value={field.value || ""}
-                                  onChange={(value) => field.onChange(value)}
-                                  placeholder="Search for building or society..."
-                                  types={["establishment"]}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description (Optional)</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Property details, amenities, nearby facilities..."
-                                className="resize-none"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div>
-                        <label className="text-sm font-medium">Property Photos (Up to 10)</label>
-                        <FileUpload 
-                          onFilesChange={setSelectedFiles}
-                          maxFiles={10}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Listing Type */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Listing Type</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <FormField
-                        control={form.control}
-                        name="listingType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="space-y-3">
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="exclusive-edit"
-                                    value="exclusive"
-                                    checked={field.value === "exclusive"}
-                                    onChange={() => field.onChange("exclusive")}
-                                  />
-                                  <label htmlFor="exclusive-edit" className="text-sm font-medium">
-                                    Exclusive - Only I can list and share it
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="colisting-edit"
-                                    value="colisting"
-                                    checked={field.value === "colisting"}
-                                    onChange={() => field.onChange("colisting")}
-                                  />
-                                  <label htmlFor="colisting-edit" className="text-sm font-medium">
-                                    Allow Co-Listing - Multiple agents can list with permission
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="radio"
-                                    id="shared-edit"
-                                    value="shared"
-                                    checked={field.value === "shared"}
-                                    onChange={() => field.onChange("shared")}
-                                  />
-                                  <label htmlFor="shared-edit" className="text-sm font-medium">
-                                    Shared Within Network - Platform-controlled visibility
-                                  </label>
-                                </div>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="isPubliclyVisible"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 mt-4">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel>
-                                Allow this property to appear in public agent feed and search?
-                              </FormLabel>
-                              <p className="text-xs text-muted-foreground">
-                                Enable to make this listing visible in general search and feed. Disable for private listing sharing only.
-                              </p>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  {/* Owner Details */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center">
-                        <Shield size={16} className="mr-2" />
-                        Owner Details (Encrypted & Secure)
-                      </CardTitle>
-                      <p className="text-xs text-neutral-600">
-                        Owner will receive a consent request with clear terms
-                      </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="ownerName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Owner Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Property owner's full name" {...field} />
-                            </FormControl>
-                            <p className="text-xs text-neutral-500">This information is encrypted and never shared publicly</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="ownerPhone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Owner Phone Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="+91 9876543210" {...field} />
-                            </FormControl>
-                            <p className="text-xs text-neutral-500">Required for verification and trust</p>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="commissionTerms"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Commission Terms</FormLabel>
-                            <FormControl>
-                              <Input placeholder="2% of sale value" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div>
-                        <label className="text-sm font-medium">Scope of Work</label>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          {scopeOfWorkOptions.map((option) => (
-                            <div key={option} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`${option}-edit`}
-                                checked={form.watch('scopeOfWork')?.includes(option)}
-                                onCheckedChange={(checked) => {
-                                  const current = form.getValues('scopeOfWork') || [];
-                                  if (checked) {
-                                    form.setValue('scopeOfWork', [...current, option]);
-                                  } else {
-                                    form.setValue('scopeOfWork', current.filter((item: string) => item !== option));
-                                  }
-                                }}
-                              />
-                              <label htmlFor={`${option}-edit`} className="text-xs">{option}</label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium">Agreement Document (Optional)</label>
-                        <FileUpload 
-                          onFilesChange={setAgreementFiles}
-                          maxFiles={1}
-                        />
-                        <p className="text-xs text-neutral-500 mt-1">Upload agent agreement or authorization letter</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <div className="flex space-x-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => {
-                        setIsEditDialogOpen(false);
-                        setEditingProperty(null);
-                        form.reset();
-                      }}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={updatePropertyMutation.isPending}
-                      className="flex-1"
-                    >
-                      {updatePropertyMutation.isPending ? "Updating..." : "Update Listing"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+              <PropertyForm />
             </DialogContent>
           </Dialog>
         </div>
@@ -1319,10 +915,10 @@ export default function MyListings() {
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
         ) : (myProperties as any[])?.length === 0 ? (
-          <div className="text-center py-12">
-            <Building2 size={48} className="mx-auto text-neutral-400 mb-4" />
-            <h3 className="text-lg font-medium text-neutral-700 mb-2">No listings yet</h3>
-            <p className="text-neutral-500 mb-4">Create your first property listing to get started</p>
+          <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+            <Building2 size={48} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-700 mb-2">No listings yet</h3>
+            <p className="text-gray-500 mb-4">Create your first property listing to get started</p>
             <Button onClick={() => setIsAddDialogOpen(true)}>
               <Plus size={16} className="mr-2" />
               Add Your First Listing
@@ -1331,11 +927,11 @@ export default function MyListings() {
         ) : (
           <div className="space-y-4">
             {(myProperties as any[]).map((property: any) => (
-              <Card key={property.id} className="p-4">
+              <Card key={property.id} className="p-4 bg-white border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-neutral-900 mb-1">{property.title}</h3>
-                    <div className="flex items-center text-sm text-neutral-500 space-x-4 mb-2">
+                    <h3 className="font-semibold text-gray-900 mb-1">{property.title}</h3>
+                    <div className="flex items-center text-sm text-gray-500 space-x-4 mb-2">
                       <span className="flex items-center">
                         <MapPin size={12} className="mr-1" />
                         {property.location}
@@ -1348,7 +944,7 @@ export default function MyListings() {
                     </div>
                     <div className="flex items-center space-x-2">
                       {getStatusBadge(property.ownerApprovalStatus)}
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs border-gray-300 text-gray-700">
                         {property.listingType}
                       </Badge>
                     </div>
@@ -1357,44 +953,44 @@ export default function MyListings() {
                   <div className="flex items-center space-x-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 border-gray-300">
                           <MoreVertical size={16} />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => router.push(`/property/${property.id}`)}>
+                      <DropdownMenuContent align="end" className="bg-white">
+                        <DropdownMenuItem onClick={() => router.push(`/property/${property.id}`)} className="cursor-pointer">
                           <Eye size={14} className="mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(property)}>
+                        <DropdownMenuItem onClick={() => handleEdit(property)} className="cursor-pointer">
                           <Edit size={14} className="mr-2" />
                           Edit Property
                         </DropdownMenuItem>
                         {property.ownerApprovalStatus === 'approved' && (
-                          <DropdownMenuItem onClick={() => handlePdfDownload(property.id, property.title)}>
+                          <DropdownMenuItem onClick={() => handlePdfDownload(property.id, property.title)} className="cursor-pointer">
                             <Download size={14} className="mr-2" />
                             Download PDF
                           </DropdownMenuItem>
                         )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-red-600">
                               <Trash2 size={14} className="mr-2" />
                               Delete Property
                             </DropdownMenuItem>
                           </AlertDialogTrigger>
-                          <AlertDialogContent>
+                          <AlertDialogContent className="bg-white">
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Property Listing</AlertDialogTitle>
-                              <AlertDialogDescription>
+                              <AlertDialogTitle className="text-gray-900">Delete Property Listing</AlertDialogTitle>
+                              <AlertDialogDescription className="text-gray-600">
                                 Are you sure you want to delete this property listing? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogCancel className="bg-white border-gray-300 text-gray-700">Cancel</AlertDialogCancel>
                               <AlertDialogAction 
                                 onClick={() => handleDelete(property.id)}
-                                className="bg-red-600 hover:bg-red-700"
+                                className="bg-red-600 hover:bg-red-700 text-white"
                               >
                                 {deletePropertyMutation.isPending ? "Deleting..." : "Delete"}
                               </AlertDialogAction>
@@ -1407,22 +1003,22 @@ export default function MyListings() {
                 </div>
 
                 {property.description && (
-                  <p className="text-sm text-neutral-600 mb-3">{property.description}</p>
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{property.description}</p>
                 )}
 
                 {/* Owner Details (Masked) */}
-                <div className="bg-neutral-50 rounded-lg p-3 mb-3">
+                <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-200">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-neutral-700">Owner Details</h4>
+                    <h4 className="text-sm font-medium text-gray-700">Owner Details</h4>
                     <Shield size={14} className="text-green-600" />
                   </div>
                   <div className="text-sm space-y-1">
-                    <div className="flex items-center">
-                      <User size={12} className="mr-2 text-neutral-400" />
+                    <div className="flex items-center text-gray-600">
+                      <User size={12} className="mr-2 text-gray-400" />
                       <span>{property.ownerName}</span>
                     </div>
-                    <div className="flex items-center">
-                      <Phone size={12} className="mr-2 text-neutral-400" />
+                    <div className="flex items-center text-gray-600">
+                      <Phone size={12} className="mr-2 text-gray-400" />
                       <span>
                         {showOwnerPhone[property.id] 
                           ? property.ownerPhone 
@@ -1439,7 +1035,7 @@ export default function MyListings() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-neutral-400">
+                <div className="flex items-center justify-between text-xs text-gray-400">
                   <div className="flex items-center space-x-4">
                     <span className="flex items-center">
                       <Clock size={12} className="mr-1" />
@@ -1455,7 +1051,7 @@ export default function MyListings() {
                 </div>
 
                 {property.ownerApprovalStatus === 'pending' && (
-                  <div className="mt-3 p-2 bg-yellow-50 rounded-lg">
+                  <div className="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
                     <p className="text-xs text-yellow-800 flex items-center">
                       <AlertCircle size={12} className="mr-1" />
                       Waiting for owner approval. You'll be notified once the owner responds.
@@ -1464,7 +1060,7 @@ export default function MyListings() {
                 )}
 
                 {property.ownerApprovalStatus === 'rejected' && (
-                  <div className="mt-3 p-2 bg-red-50 rounded-lg">
+                  <div className="mt-3 p-2 bg-red-50 rounded-lg border border-red-200">
                     <p className="text-xs text-red-800 flex items-center">
                       <XCircle size={12} className="mr-1" />
                       Owner declined this listing. Please contact the owner directly.

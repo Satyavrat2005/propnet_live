@@ -21,9 +21,20 @@ const supabase = (supabaseUrl && supabaseServiceRoleKey)
  * Response: { user: { ...profile } } or { user: null }
  */
 export async function GET(req: Request) {
-  // Return early if Supabase is not configured
+  // Return early if Supabase is not configured - use mock user for development
   if (!supabase) {
-    return NextResponse.json({ user: null });
+    // Mock user for development/testing when Supabase is not configured
+    const mockUser = {
+      id: 1,
+      name: "Demo Agent",
+      email: "demo@propnet.com",
+      phone: "+919876543210",
+      agencyName: "PropNet Realty",
+      city: "Mumbai",
+      role: "agent",
+      isVerified: true,
+    };
+    return NextResponse.json({ user: mockUser });
   }
 
   try {
