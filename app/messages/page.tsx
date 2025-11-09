@@ -218,7 +218,7 @@ export default function MessagesPage() {
               <Plus size={16} className="mr-1" /> New Chat
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
             <DialogHeader><DialogTitle>Start New Conversation</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="relative">

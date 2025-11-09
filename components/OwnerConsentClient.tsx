@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { use } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,6 +57,7 @@ export default function OwnerConsentClient({ consentId }: { consentId: string })
 
   // Fetch consent details
   const { data: consentData, isLoading } = useQuery<ConsentData>({
+    queryKey: [`/api/consent/${consentId}`],
     queryKey: [`/api/consent/${consentId}`],
   });
 
