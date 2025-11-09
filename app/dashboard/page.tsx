@@ -18,6 +18,8 @@ import {
   ArrowRight,
   Activity,
   Star,
+  Search,
+  Map,
   Users,
   Target,
   CheckCircle,
@@ -105,14 +107,14 @@ function MobileNavigation() {
 
   const items = [
     { key: "home", label: "Home", path: "/dashboard", icon: Home },
-    { key: "quick", label: "QuickPost", path: "/quickpost", icon: Zap },
-    { key: "add", label: "Add", path: "/add-property", icon: Plus },
-    { key: "listings", label: "Listings", path: "/my-listings", icon: Building2 },
-    { key: "profile", label: "Profile", path: "/profile", icon: Users },
+    { key: "quick", label: "Feed", path: "/feed", icon: Search },
+    { key: "add", label: "Map", path: "/map", icon: Map },
+    { key: "listings", label: "Messages", path: "/messages" , icon: MessageCircle },
+    { key: "profile", label: "Clients", path: "/clients", icon: Users },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-2 md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-2 ">
       <div className="max-w-4xl mx-auto flex justify-between">
         {items.map((it) => {
           const Icon = it.icon;
