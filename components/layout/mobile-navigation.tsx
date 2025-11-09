@@ -16,6 +16,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
   SheetTrigger,
 } from "@/components/ui/sheet";
 
@@ -83,9 +84,12 @@ export default function MobileNavigation() {
                 <span className="text-xs font-medium">More</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl">
+            <SheetContent side="bottom" className="rounded-t-2xl bg-white">
               <SheetHeader className="mb-6">
                 <SheetTitle>Menu</SheetTitle>
+                <SheetDescription>
+                  Navigate to different sections of the application
+                </SheetDescription>
               </SheetHeader>
               <div className="space-y-2">
                 {navItems.map((item) => {
@@ -100,8 +104,8 @@ export default function MobileNavigation() {
                       }}
                       className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all w-full ${
                         isActive
-                          ? "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-900 hover:bg-gray-100"
                       }`}
                     >
                       <Icon className="h-5 w-5" />
@@ -115,7 +119,7 @@ export default function MobileNavigation() {
                     router.push("/logout");
                     setIsOpen(false);
                   }}
-                  className="flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/30 transition-all w-full"
+                  className="flex items-center space-x-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-100 transition-all w-full"
                 >
                   <LogOut className="h-5 w-5" />
                   <span className="font-medium">Logout</span>

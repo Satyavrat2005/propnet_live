@@ -98,7 +98,7 @@ export default function PropertyFeedPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="loading-spinner" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
       </div>
     );
   }
@@ -180,8 +180,8 @@ export default function PropertyFeedPage() {
 
         {/* Expandable Filters */}
         {showFilters && (
-          <Card className="mx-4 mb-3 border-t-0 rounded-t-none shadow-sm">
-            <CardContent className="p-4 space-y-4">
+          <Card className="mx-4 mb-3 border-t-0 rounded-t-none shadow-sm bg-white">
+            <CardContent className="p-4 space-y-4 bg-white">
               {/* Quick Filters Row */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <Select
@@ -267,7 +267,7 @@ export default function PropertyFeedPage() {
         {filteredProperties.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center bg-white rounded-2xl shadow-sm">
             <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-              <Plus className="text-neutral-400" size={24} />
+              <Plus className="text-neutral-900" size={24} />
             </div>
             <h3 className="text-lg font-medium text-neutral-900 mb-2">No Properties Found</h3>
             <p className="text-neutral-500 mb-4">

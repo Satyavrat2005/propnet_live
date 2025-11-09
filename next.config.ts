@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["@radix-ui/*", "lucide-react"],
+    optimizeCss: true,
   },
   images: {
     remotePatterns: [
