@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -13,12 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Shield, Lock } from "lucide-react";
-import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function AdminLogin() {
-  const [, setLocation] = useLocation();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -35,7 +35,7 @@ export default function AdminLogin() {
       if (data.success) {
         // The session token is automatically set as an HTTP-only cookie by the server
         // No need to store it in localStorage
-        setLocation("/admin/dashboard");
+        router.push("/admin/dashboard");
       } else {
         setError(data.message || "Login failed");
       }

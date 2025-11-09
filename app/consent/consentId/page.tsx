@@ -1,7 +1,7 @@
 // app/owner-consent/[consentId]/page.tsx
 "use client";
 
-import React from "react";
+import React, { use } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,20 +44,21 @@ interface ConsentData {
 }
 
 interface OwnerConsentProps {
-  params: { consentId: string };
+  params: Promise<{ consentId: string }>;
 }
 
 export default function OwnerConsent({ params }: OwnerConsentProps) {
+  const { consentId } = use(params);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: consentData, isLoading } = useQuery<ConsentData>({
-    queryKey: [`/api/consent/${params.consentId}`],
+    queryKey: [`/api/consent/${consentId}`],
   });
 
   const approveConsentMutation = useMutation({
     mutationFn: async (action: "approve" | "reject") => {
-      const resp = await apiRequest("POST", `/api/consent/${params.consentId}/${action}`);
+      const resp = await apiRequest("POST", `/api/consent/${consentId}/${action}`);
       // apiRequest might return Response or parsed; handle both
       if (resp && typeof (resp as Response).json === "function") {
         return (resp as Response).json();
@@ -66,7 +67,7 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
     },
     onSuccess: (data: any, variables: "approve" | "reject") => {
       // Invalidate consent (and properties if you want)
-      queryClient.invalidateQueries({ queryKey: [`/api/consent/${params.consentId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/consent/${consentId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
 
       const action = data?.action ?? variables;

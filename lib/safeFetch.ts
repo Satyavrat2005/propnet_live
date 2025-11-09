@@ -6,7 +6,10 @@ export async function safeFetch<T = any>(url: string, defaultValue: T): Promise<
     const response = await fetch(url);
     
     if (!response.ok) {
-      console.warn(`Failed to fetch ${url}:`, response.status);
+      // Only log non-404 errors (404s are expected during development)
+      if (response.status !== 404) {
+        console.warn(`Failed to fetch ${url}:`, response.status);
+      }
       return defaultValue;
     }
     
