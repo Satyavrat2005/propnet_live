@@ -1,4 +1,3 @@
-// app/owner-consent/[consentId]/page.tsx
 "use client";
 
 import React from "react";
@@ -6,7 +5,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Shield, MapPin, Building2, User, Phone, FileText, Star } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  Shield,
+  MapPin,
+  Building2,
+  User,
+  Phone,
+  FileText,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -43,30 +51,26 @@ interface ConsentData {
   action?: "approve" | "reject";
 }
 
-interface OwnerConsentProps {
-  params: { consentId: string };
-}
-
-export default function OwnerConsent({ params }: OwnerConsentProps) {
+export default function OwnerConsentClient({ consentId }: { consentId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch consent details
   const { data: consentData, isLoading } = useQuery<ConsentData>({
-    queryKey: [`/api/consent/${params.consentId}`],
+    queryKey: [`/api/consent/${consentId}`],
   });
 
+  // Approve / Reject actions
   const approveConsentMutation = useMutation({
     mutationFn: async (action: "approve" | "reject") => {
-      const resp = await apiRequest("POST", `/api/consent/${params.consentId}/${action}`);
-      // apiRequest might return Response or parsed; handle both
+      const resp = await apiRequest("POST", `/api/consent/${consentId}/${action}`);
       if (resp && typeof (resp as Response).json === "function") {
         return (resp as Response).json();
       }
       return resp;
     },
     onSuccess: (data: any, variables: "approve" | "reject") => {
-      // Invalidate consent (and properties if you want)
-      queryClient.invalidateQueries({ queryKey: [`/api/consent/${params.consentId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/consent/${consentId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
 
       const action = data?.action ?? variables;
@@ -91,6 +95,7 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
     approveConsentMutation.mutate(action);
   };
 
+  // Loading spinner
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -99,6 +104,7 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
     );
   }
 
+  // No consent data
   if (!consentData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -106,32 +112,38 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
           <CardContent className="text-center py-8">
             <XCircle size={48} className="mx-auto text-red-500 mb-4" />
             <h2 className="text-lg font-semibold mb-2">Invalid or Expired Link</h2>
-            <p className="text-neutral-600">This consent link is no longer valid or has already been processed.</p>
+            <p className="text-neutral-600">
+              This consent link is no longer valid or has already been processed.
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const property = consentData.property;
-  const agent = consentData.agent;
+  const { property, agent, status } = consentData;
 
-  if (consentData.status !== "pending") {
+  // Already processed consent
+  if (status !== "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="text-center py-8">
-            {consentData.status === "approved" ? (
+            {status === "approved" ? (
               <>
                 <CheckCircle size={48} className="mx-auto text-green-500 mb-4" />
                 <h2 className="text-lg font-semibold mb-2">Already Approved</h2>
-                <p className="text-neutral-600">You have already approved this property listing.</p>
+                <p className="text-neutral-600">
+                  You have already approved this property listing.
+                </p>
               </>
             ) : (
               <>
                 <XCircle size={48} className="mx-auto text-red-500 mb-4" />
                 <h2 className="text-lg font-semibold mb-2">Already Rejected</h2>
-                <p className="text-neutral-600">You have already rejected this property listing.</p>
+                <p className="text-neutral-600">
+                  You have already rejected this property listing.
+                </p>
               </>
             )}
           </CardContent>
@@ -140,6 +152,7 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
     );
   }
 
+  // Main UI
   return (
     <div className="min-h-screen bg-neutral-50 py-8">
       <div className="max-w-2xl mx-auto px-4">
@@ -147,9 +160,14 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Shield size={32} className="text-primary mr-2" />
-            <h1 className="text-2xl font-bold text-neutral-900">Property Listing Consent</h1>
+            <h1 className="text-2xl font-bold text-neutral-900">
+              Property Listing Consent
+            </h1>
           </div>
-          <p className="text-neutral-600">An agent has requested to list your property. Please review the details below.</p>
+          <p className="text-neutral-600">
+            An agent has requested to list your property. Please review the details
+            below.
+          </p>
         </div>
 
         {/* Property Details */}
@@ -163,7 +181,9 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold text-neutral-900">{property.title}</h3>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  {property.title}
+                </h3>
                 <div className="flex items-center text-neutral-600 mt-1">
                   <MapPin size={14} className="mr-1" />
                   <span>{property.location}</span>
@@ -213,16 +233,19 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
                   </Badge>
                 </div>
                 <p className="text-xs text-neutral-500 mt-1">
-                  {property.listingType === "exclusive" && "Only this agent can list and share this property"}
-                  {property.listingType === "colisting" && "Multiple agents can list this property with permission"}
-                  {property.listingType === "shared" && "Property can be viewed and promoted within the platform network"}
+                  {property.listingType === "exclusive" &&
+                    "Only this agent can list and share this property"}
+                  {property.listingType === "colisting" &&
+                    "Multiple agents can list this property with permission"}
+                  {property.listingType === "shared" &&
+                    "Property can be viewed and promoted within the platform network"}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Agent Information */}
+        {/* Agent Info */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -236,14 +259,22 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
                 <div className="w-12 h-12 bg-neutral-200 rounded-full flex items-center justify-center">
                   {agent.profilePhoto ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={`/uploads/${agent.profilePhoto}`} alt="Agent" className="w-full h-full rounded-full object-cover" />
+                    <img
+                      src={`/uploads/${agent.profilePhoto}`}
+                      alt="Agent"
+                      className="w-full h-full rounded-full object-cover"
+                    />
                   ) : (
-                    <span className="text-lg font-bold text-neutral-500">{agent.name?.charAt(0) || "A"}</span>
+                    <span className="text-lg font-bold text-neutral-500">
+                      {agent.name?.charAt(0) || "A"}
+                    </span>
                   )}
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-neutral-900">{agent.name}</h4>
-                  {agent.agencyName && <p className="text-neutral-600">{agent.agencyName}</p>}
+                  {agent.agencyName && (
+                    <p className="text-neutral-600">{agent.agencyName}</p>
+                  )}
                   <div className="flex items-center space-x-4 mt-2 text-sm text-neutral-500">
                     <span className="flex items-center">
                       <Phone size={12} className="mr-1" />
@@ -274,14 +305,18 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
             <div className="space-y-4">
               {property.commissionTerms && (
                 <div>
-                  <span className="text-sm font-medium text-neutral-700">Commission Terms</span>
+                  <span className="text-sm font-medium text-neutral-700">
+                    Commission Terms
+                  </span>
                   <p className="text-neutral-600">{property.commissionTerms}</p>
                 </div>
               )}
 
               {property.scopeOfWork && property.scopeOfWork.length > 0 && (
                 <div>
-                  <span className="text-sm font-medium text-neutral-700">Scope of Work</span>
+                  <span className="text-sm font-medium text-neutral-700">
+                    Scope of Work
+                  </span>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {property.scopeOfWork.map((scope: string, index: number) => (
                       <Badge key={index} variant="secondary" className="text-xs">
@@ -293,7 +328,9 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
               )}
 
               <div className="bg-blue-50 p-4 rounded-lg">
-                <h5 className="font-medium text-blue-900 mb-2">Agent's Responsibilities</h5>
+                <h5 className="font-medium text-blue-900 mb-2">
+                  Agent's Responsibilities
+                </h5>
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Market and promote your property to potential buyers</li>
                   <li>• Coordinate property viewings and handle inquiries</li>
@@ -327,7 +364,9 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
               className="w-full"
             >
               <XCircle size={20} className="mr-2" />
-              {approveConsentMutation.isPending ? "Processing..." : "Decline Listing"}
+              {approveConsentMutation.isPending
+                ? "Processing..."
+                : "Decline Listing"}
             </Button>
             <Button
               size="lg"
@@ -336,14 +375,17 @@ export default function OwnerConsent({ params }: OwnerConsentProps) {
               className="w-full"
             >
               <CheckCircle size={20} className="mr-2" />
-              {approveConsentMutation.isPending ? "Processing..." : "Approve Listing"}
+              {approveConsentMutation.isPending
+                ? "Processing..."
+                : "Approve Listing"}
             </Button>
           </div>
 
           <div className="text-center">
             <p className="text-xs text-neutral-500">
               <Shield size={12} className="inline mr-1" />
-              This consent is secured and your decision will be recorded with timestamp for legal compliance.
+              This consent is secured and your decision will be recorded with
+              timestamp for legal compliance.
             </p>
           </div>
         </div>

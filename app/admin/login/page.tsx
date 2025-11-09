@@ -1,6 +1,8 @@
+// app/admin/login/page.tsx
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -13,12 +15,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Shield, Lock } from "lucide-react";
-import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+
+/**
+ * Admin login — Next.js App Router compatible
+ * - Replaced wouter with next/navigation
+ * - Uses fetch inside mutation instead of apiRequest to avoid SSR/import-time issues
+ * - UI, styling, text and behavior kept identical
+ */
 
 export default function AdminLogin() {
-  const [, setLocation] = useLocation();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -28,20 +35,26 @@ export default function AdminLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { username: string; password: string }) => {
-      const res = await apiRequest("POST", "/api/secure-portal/login", credentials);
-      return res.json();
+      // plain fetch to your server endpoint; server should set HTTP-only cookie on success
+      const res = await fetch("/api/secure-portal/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      const json = await res.json().catch(() => ({ success: false, message: "Invalid response" }));
+      return { ok: res.ok, status: res.status, body: json };
     },
-    onSuccess: (data) => {
-      if (data.success) {
-        // The session token is automatically set as an HTTP-only cookie by the server
-        // No need to store it in localStorage
-        setLocation("/admin/dashboard");
+    onSuccess: (result) => {
+      const data = result?.body;
+      if (result.ok && data?.success) {
+        // session cookie should already be set by server
+        router.push("/admin/dashboard");
       } else {
-        setError(data.message || "Login failed");
+        setError(data?.message || "Login failed");
       }
     },
-    onError: (error: any) => {
-      setError(error.message || "Login failed");
+    onError: (err: any) => {
+      setError(err?.message || "Login failed");
     },
   });
 
