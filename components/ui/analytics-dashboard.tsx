@@ -1,19 +1,49 @@
-import { useQuery } from "@tanstack/react-query";
+"use client";
+
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Eye, Heart, Share2, Calendar, Users } from "lucide-react";
+import { TrendingUp, Eye, Heart, Share2 } from "lucide-react";
 
 interface AnalyticsDashboardProps {
   userId: number;
 }
 
 export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) {
-  const { data: myProperties = [] } = useQuery({
-    queryKey: ["/api/my-properties"],
-  });
+  const [myProperties, setMyProperties] = useState<any[]>([]);
+  const [colistingRequests, setColistingRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: colistingRequests = [] } = useQuery({
-    queryKey: ["/api/colisting-requests"],
-  });
+  async function fetchJson(path: string) {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) return [];
+      const json = await res.json();
+      // If the API returns an object with `data` or similar, adapt as needed
+      return Array.isArray(json) ? json : json?.data ?? [];
+    } catch (err) {
+      console.error("fetchJson error", path, err);
+      return [];
+    }
+  }
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
+      const [propsData, colistData] = await Promise.all([
+        fetchJson("/api/my-properties"),
+        fetchJson("/api/colisting-requests"),
+      ]);
+      if (!mounted) return;
+      setMyProperties(Array.isArray(propsData) ? propsData : []);
+      setColistingRequests(Array.isArray(colistData) ? colistData : []);
+      setLoading(false);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
 
   // Calculate analytics
   const totalListings = myProperties.length;
@@ -22,7 +52,8 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
   const pendingRequests = colistingRequests.filter((r: any) => r.status === "pending").length;
 
   // Mock analytics data for premium features
-  const totalViews = myProperties.reduce((acc: number, p: any) => acc + Math.floor(Math.random() * 100) + 50, 0);
+  // Keep original behavior (random-ish totals per property) to preserve UI experience
+  const totalViews = myProperties.reduce((acc: number) => acc + (Math.floor(Math.random() * 100) + 50), 0);
   const totalLikes = Math.floor(totalViews * 0.2);
   const totalShares = Math.floor(totalViews * 0.1);
 
@@ -32,6 +63,8 @@ export default function AnalyticsDashboard({ userId }: AnalyticsDashboardProps) 
     { action: "Property shared", property: "Commercial Space", time: "1 day ago" },
   ];
 
+  // While loading, you may want to return a loader or skeleton.
+  // To keep UI identical, we'll render the same layout — counts will default to 0 while loading.
   return (
     <div className="space-y-6">
       {/* Quick Stats */}

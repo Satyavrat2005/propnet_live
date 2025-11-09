@@ -18,8 +18,12 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.warn("Missing Supabase env vars in verify-otp route");
 }
 
-const twilioClient = accountSid && authToken ? Twilio(accountSid, authToken) : null;
-const supabase = supabaseUrl && supabaseServiceRoleKey ? createClient(supabaseUrl, supabaseServiceRoleKey) : null;
+const twilioClient = (accountSid && authToken && accountSid.startsWith('AC')) 
+  ? Twilio(accountSid, authToken) 
+  : null;
+const supabase = (supabaseUrl && supabaseServiceRoleKey) 
+  ? createClient(supabaseUrl, supabaseServiceRoleKey) 
+  : null;
 
 function cookieString(name: string, value: string, days = 30) {
   const maxAge = days * 24 * 60 * 60;

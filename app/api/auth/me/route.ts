@@ -9,7 +9,9 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
   console.warn("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in env");
 }
 
-const supabase = createClient(supabaseUrl ?? "", supabaseServiceRoleKey ?? "");
+const supabase = (supabaseUrl && supabaseServiceRoleKey) 
+  ? createClient(supabaseUrl, supabaseServiceRoleKey)
+  : null;
 
 /**
  * GET /api/auth/me
@@ -19,6 +21,11 @@ const supabase = createClient(supabaseUrl ?? "", supabaseServiceRoleKey ?? "");
  * Response: { user: { ...profile } } or { user: null }
  */
 export async function GET(req: Request) {
+  // Return early if Supabase is not configured
+  if (!supabase) {
+    return NextResponse.json({ user: null });
+  }
+
   try {
     // read cookie
     const cookieHeader = req.headers.get("cookie") || "";

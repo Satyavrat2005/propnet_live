@@ -1,10 +1,17 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { User, Send, Edit3, Phone, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,7 +37,7 @@ export function AgentNotificationModal({
   onClose,
   clientData,
   agentData,
-  onSendNotification
+  onSendNotification,
 }: AgentNotificationModalProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -39,9 +46,12 @@ export function AgentNotificationModal({
 
   const generateTemplate = () => {
     const requirement = clientData.requirementType || "property";
-    const needType = requirement.includes("buy") ? "buying" : 
-                    requirement.includes("sell") ? "selling" : "renting";
-    
+    const needType = requirement.includes("buy")
+      ? "buying"
+      : requirement.includes("sell")
+      ? "selling"
+      : "renting";
+
     return `Hi ${clientData.name},
 
 I've added your details to my system to assist you with your ${needType} needs.
@@ -58,13 +68,14 @@ Feel free to reach out to me at ${agentData.phone}.
       setCustomMessage(generateTemplate());
       setIsEditing(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, clientData, agentData]);
 
   const handleSendMessage = async () => {
     setIsSending(true);
     try {
       const success = await onSendNotification(customMessage);
-      
+
       if (success) {
         toast({
           title: "Notification sent successfully",
@@ -103,7 +114,8 @@ Feel free to reach out to me at ${agentData.phone}.
             <span>Send Client Engagement Message</span>
           </DialogTitle>
           <DialogDescription>
-            Send a professional, agent-branded message to build trust and establish direct communication with your new client.
+            Send a professional, agent-branded message to build trust and establish direct communication
+            with your new client.
           </DialogDescription>
         </DialogHeader>
 
@@ -125,9 +137,7 @@ Feel free to reach out to me at ${agentData.phone}.
               {clientData.requirementType && (
                 <div className="flex items-center space-x-2">
                   <Badge variant="outline">{clientData.requirementType}</Badge>
-                  {clientData.propertyType && (
-                    <Badge variant="secondary">{clientData.propertyType}</Badge>
-                  )}
+                  {clientData.propertyType && <Badge variant="secondary">{clientData.propertyType}</Badge>}
                 </div>
               )}
             </CardContent>
@@ -184,15 +194,11 @@ Feel free to reach out to me at ${agentData.phone}.
                     placeholder="Customize your message..."
                     className="min-h-[200px] font-mono text-sm"
                   />
-                  <div className="text-xs text-gray-500">
-                    Message length: {customMessage.length} characters
-                  </div>
+                  <div className="text-xs text-gray-500">Message length: {customMessage.length} characters</div>
                 </div>
               ) : (
                 <div className="bg-gray-50 p-4 rounded-lg border">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">
-                    {customMessage}
-                  </pre>
+                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{customMessage}</pre>
                 </div>
               )}
             </CardContent>
@@ -215,11 +221,7 @@ Feel free to reach out to me at ${agentData.phone}.
             <Button variant="outline" onClick={onClose} className="flex-1">
               Skip for Now
             </Button>
-            <Button 
-              onClick={handleSendMessage} 
-              disabled={isSending || !customMessage.trim()}
-              className="flex-1"
-            >
+            <Button onClick={handleSendMessage} disabled={isSending || !customMessage.trim()} className="flex-1">
               {isSending ? (
                 "Sending..."
               ) : (

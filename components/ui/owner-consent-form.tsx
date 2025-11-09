@@ -20,7 +20,7 @@ const ownerDetailsSchema = z.object({
   ownerType: z.enum(["existing", "new"]),
   existingClientId: z.number().optional(),
   commissionTerms: z.string().min(10, "Commission terms are required"),
-  scopeOfWork: z.array(z.string()).default([]),
+  scopeOfWork: z.array(z.string()).min(1, "At least one scope is required"),
   notes: z.string().optional(),
 });
 

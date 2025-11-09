@@ -87,7 +87,7 @@ export default function OnboardingTracker() {
     if (step.completed) return;
 
     // Track the step attempt
-    trackOnboarding(step.id, step.title);
+    trackOnboarding(step.title, step.completed);
 
     if (step.route) {
       setLocation(step.route);
