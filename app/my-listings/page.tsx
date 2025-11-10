@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -8,19 +8,45 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Building2, MapPin, Clock, Shield, Eye, EyeOff, Phone, User, FileText, CheckCircle, XCircle, AlertCircle, Download, Edit, Trash2, MoreVertical } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Building2,
+  MapPin,
+  Clock,
+  Shield,
+  Eye,
+  EyeOff,
+  Phone,
+  User,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Download,
+  Edit,
+  Trash2,
+  MoreVertical
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { safeFetch } from "@/lib/safeFetch";
 import { insertPropertySchema } from "@/lib/schema";
 import FileUpload from "@/components/ui/file-upload";
@@ -29,310 +55,42 @@ import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete
 import { z } from "zod";
 
 const propertyFormSchema = insertPropertySchema;
+type PropertyFormValues = z.infer<typeof propertyFormSchema>;
 
-export default function MyListings() {
-  const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingProperty, setEditingProperty] = useState<any>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [agreementFiles, setAgreementFiles] = useState<File[]>([]);
-  const [showOwnerPhone, setShowOwnerPhone] = useState<{[key: number]: boolean}>({});
+type PropertyFormProps = {
+  form: UseFormReturn<PropertyFormValues>;
+  onSubmit: (values: PropertyFormValues) => void;
+  selectedFiles: File[];
+  setSelectedFiles: (files: File[]) => void;
+  agreementFiles: File[];
+  setAgreementFiles: (files: File[]) => void;
+  editingProperty: any;
+};
 
-  const { data: myProperties = [], isLoading } = useQuery({
-    queryKey: ["/api/my-properties"],
-    queryFn: () => safeFetch("/api/my-properties", []),
-    enabled: !!user,
-  });
+function PropertyForm({
+  form,
+  onSubmit,
+  selectedFiles,
+  setSelectedFiles,
+  agreementFiles,
+  setAgreementFiles,
+  editingProperty,
+}: PropertyFormProps) {
+  const scopeOfWorkOptions = useMemo(
+    () => [
+      "Property Viewing Coordination",
+      "Marketing & Promotion",
+      "Documentation Support",
+      "Negotiation Assistance",
+      "Legal Compliance Check",
+      "Market Analysis",
+    ],
+    []
+  );
 
-  const form = useForm<z.infer<typeof propertyFormSchema>>({
-    resolver: zodResolver(propertyFormSchema),
-    defaultValues: {
-      title: "",
-      propertyType: "",
-      transactionType: "sale",
-      price: "",
-      rentFrequency: "monthly",
-      size: "",
-      sizeUnit: "sq.ft",
-      location: "",
-      fullAddress: "",
-      flatNumber: "",
-      floorNumber: "",
-      buildingSociety: "",
-      description: "",
-      bhk: 0,
-      listingType: "exclusive",
-      isPubliclyVisible: false,
-      ownerName: "",
-      ownerPhone: "",
-      commissionTerms: "",
-      scopeOfWork: [],
-    },
-  });
-
-  const createPropertyMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", "/api/properties", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
-      setIsAddDialogOpen(false);
-      form.reset();
-      setSelectedFiles([]);
-      setAgreementFiles([]);
-      toast({
-        title: "Property Listed Successfully",
-        description: "Owner approval request has been sent. Property will go live after approval.",
-      });
-    },
-    onError: (error: any) => {
-      let errorMessage = "Failed to create property listing. Please try again.";
-      
-      if (error?.response?.status === 401) {
-        errorMessage = "You need to be logged in to create a property listing.";
-      } else if (error?.response?.data?.details) {
-        errorMessage = error.response.data.details;
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updatePropertyMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: FormData }) => {
-      const response = await apiRequest("PUT", `/api/properties/${id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
-      setIsEditDialogOpen(false);
-      setEditingProperty(null);
-      form.reset();
-      setSelectedFiles([]);
-      setAgreementFiles([]);
-      toast({
-        title: "Property Updated Successfully",
-        description: "Your property listing has been updated.",
-      });
-    },
-    onError: (error: any) => {
-      let errorMessage = "Failed to update property listing. Please try again.";
-      
-      if (error?.response?.status === 401) {
-        errorMessage = "You need to be logged in to update a property listing.";
-      } else if (error?.response?.data?.details) {
-        errorMessage = error.response.data.details;
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deletePropertyMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/properties/${id}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
-      toast({
-        title: "Property Deleted",
-        description: "Your property listing has been deleted successfully.",
-      });
-    },
-    onError: (error: any) => {
-      let errorMessage = "Failed to delete property listing. Please try again.";
-      
-      if (error?.response?.status === 401) {
-        errorMessage = "You need to be logged in to delete a property listing.";
-      } else if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (values: z.infer<typeof propertyFormSchema>) => {
-    const errors = form.formState.errors;
-    if (Object.keys(errors).length > 0) {
-      const errorFields = Object.keys(errors).join(', ');
-      toast({
-        title: "Form Validation Error",
-        description: `Please fix the following fields: ${errorFields}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const formData = new FormData();
-    
-    Object.entries(values).forEach(([key, value]) => {
-      if (key === 'scopeOfWork' && Array.isArray(value)) {
-        formData.append(key, JSON.stringify(value));
-      } else if (value !== undefined && value !== null && value !== '') {
-        formData.append(key, value.toString());
-      }
-    });
-
-    selectedFiles.forEach(file => {
-      formData.append('photos', file);
-    });
-
-    if (agreementFiles.length > 0) {
-      formData.append('agreementDocument', agreementFiles[0]);
-    }
-
-    if (editingProperty) {
-      updatePropertyMutation.mutate({ id: editingProperty.id, data: formData });
-    } else {
-      createPropertyMutation.mutate(formData);
-    }
-  };
-
-  const handleEdit = (property: any) => {
-    setEditingProperty(property);
-    
-    form.reset({
-      title: property.title || "",
-      propertyType: property.propertyType || "",
-      transactionType: property.transactionType || "sale",
-      price: property.price || "",
-      rentFrequency: property.rentFrequency || "monthly",
-      size: property.size || "",
-      sizeUnit: property.sizeUnit || "sq.ft",
-      location: property.location || "",
-      fullAddress: property.fullAddress || "",
-      flatNumber: property.flatNumber || "",
-      floorNumber: property.floorNumber || "",
-      buildingSociety: property.buildingSociety || "",
-      description: property.description || "",
-      bhk: property.bhk || 0,
-      listingType: property.listingType || "exclusive",
-      isPubliclyVisible: property.isPubliclyVisible || false,
-      ownerName: property.ownerName || "",
-      ownerPhone: property.ownerPhone || "",
-      commissionTerms: property.commissionTerms || "",
-      scopeOfWork: property.scopeOfWork || [],
-    });
-    
-    setSelectedFiles([]);
-    setAgreementFiles([]);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleDelete = (id: number) => {
-    deletePropertyMutation.mutate(id);
-  };
-
-  const handlePdfDownload = async (propertyId: number, propertyTitle: string) => {
-    try {
-      const response = await fetch(`/api/properties/${propertyId}/pdf`);
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF');
-      }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `${propertyTitle.replace(/[^a-zA-Z0-9]/g, '_')}_listing.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast({
-        title: "PDF Downloaded",
-        description: "Property listing PDF has been downloaded successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Download Failed",
-        description: "Failed to download PDF. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const toggleOwnerPhone = (propertyId: number) => {
-    setShowOwnerPhone(prev => ({
-      ...prev,
-      [propertyId]: !prev[propertyId]
-    }));
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle size={12} className="mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-100 text-red-800"><XCircle size={12} className="mr-1" />Rejected</Badge>;
-      default:
-        return <Badge className="bg-yellow-100 text-yellow-800"><AlertCircle size={12} className="mr-1" />Pending Approval</Badge>;
-    }
-  };
-
-  const scopeOfWorkOptions = [
-    "Property Viewing Coordination",
-    "Marketing & Promotion",
-    "Documentation Support",
-    "Negotiation Assistance",
-    "Legal Compliance Check",
-    "Market Analysis",
-  ];
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/");
-    }
-  }, [authLoading, user, router]);
-
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  const PropertyForm = () => (
+  return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {/* Property Details */}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
         <Card className="bg-white border-gray-200">
           <CardHeader className="bg-white border-b border-gray-100">
             <CardTitle className="text-base font-semibold text-gray-900">Property Details</CardTitle>
@@ -345,9 +103,10 @@ export default function MyListings() {
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Property Title</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Beautiful 2 BHK Apartment..." 
+                    <Input
+                      placeholder="Beautiful 2 BHK Apartment..."
                       {...field}
+                      autoComplete="off"
                       className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                     />
                   </FormControl>
@@ -412,11 +171,12 @@ export default function MyListings() {
                   <FormItem>
                     <FormLabel className="text-gray-700 font-medium">BHK (Optional)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="2" 
+                      <Input
+                        type="number"
+                        placeholder="2"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        autoComplete="off"
                         className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                       />
                     </FormControl>
@@ -432,9 +192,10 @@ export default function MyListings() {
                   <FormItem>
                     <FormLabel className="text-gray-700 font-medium">Area</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="1200" 
+                      <Input
+                        placeholder="1200"
                         {...field}
+                        autoComplete="off"
                         className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                       />
                     </FormControl>
@@ -478,9 +239,10 @@ export default function MyListings() {
                       {form.watch("transactionType") === "rent" ? "Monthly Rent" : "Sale Price"}
                     </FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder={form.watch("transactionType") === "rent" ? "₹25,000/month" : "₹50 Lakhs"} 
+                      <Input
+                        placeholder={form.watch("transactionType") === "rent" ? "₹25,000/month" : "₹50 Lakhs"}
                         {...field}
+                        autoComplete="off"
                         className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                       />
                     </FormControl>
@@ -521,9 +283,10 @@ export default function MyListings() {
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Location (Area, City)</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Bandra West, Mumbai" 
+                    <Input
+                      placeholder="Bandra West, Mumbai"
                       {...field}
+                      autoComplete="off"
                       className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                     />
                   </FormControl>
@@ -539,7 +302,7 @@ export default function MyListings() {
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Full Address</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Complete address with landmarks..."
                       className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
                       rows={3}
@@ -559,9 +322,10 @@ export default function MyListings() {
                   <FormItem>
                     <FormLabel className="text-gray-700 font-medium">Flat/Unit No.</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="A-101" 
+                      <Input
+                        placeholder="A-101"
                         {...field}
+                        autoComplete="off"
                         className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                       />
                     </FormControl>
@@ -578,9 +342,10 @@ export default function MyListings() {
                   <FormItem>
                     <FormLabel className="text-gray-700 font-medium">Floor No.</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="3rd Floor" 
+                      <Input
+                        placeholder="3rd Floor"
                         {...field}
+                        autoComplete="off"
                         className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                       />
                     </FormControl>
@@ -616,7 +381,7 @@ export default function MyListings() {
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Description</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Property details, amenities, nearby facilities..."
                       className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
                       rows={4}
@@ -630,15 +395,11 @@ export default function MyListings() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">Property Photos (Up to 10)</label>
-              <FileUpload 
-                onFilesChange={setSelectedFiles}
-                maxFiles={10}
-              />
+              <FileUpload onFilesChange={setSelectedFiles} maxFiles={10} />
             </div>
           </CardContent>
         </Card>
 
-        {/* Listing Type */}
         <Card className="bg-white border-gray-200">
           <CardHeader className="bg-white border-b border-gray-100">
             <CardTitle className="text-base font-semibold text-gray-900">Listing Type</CardTitle>
@@ -706,10 +467,7 @@ export default function MyListings() {
               render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-gray-200 p-4 mt-4 bg-white">
                   <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel className="text-gray-900 font-medium">
@@ -725,7 +483,6 @@ export default function MyListings() {
           </CardContent>
         </Card>
 
-        {/* Owner Details */}
         <Card className="bg-white border-gray-200">
           <CardHeader className="bg-white border-b border-gray-100">
             <CardTitle className="text-base font-semibold text-gray-900 flex items-center">
@@ -744,9 +501,10 @@ export default function MyListings() {
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Owner Name</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Property owner's full name" 
+                    <Input
+                      placeholder="Property owner's full name"
                       {...field}
+                      autoComplete="off"
                       className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                     />
                   </FormControl>
@@ -763,9 +521,10 @@ export default function MyListings() {
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Owner Phone Number</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="+91 9876543210" 
+                    <Input
+                      placeholder="+91 9876543210"
                       {...field}
+                      autoComplete="off"
                       className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                     />
                   </FormControl>
@@ -782,9 +541,10 @@ export default function MyListings() {
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Commission Terms</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="2% of sale value" 
+                    <Input
+                      placeholder="2% of sale value"
                       {...field}
+                      autoComplete="off"
                       className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
                     />
                   </FormControl>
@@ -796,21 +556,20 @@ export default function MyListings() {
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">Scope of Work</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {scopeOfWorkOptions.map((option) => (
+                {["Property Viewing Coordination", "Marketing & Promotion", "Documentation Support", "Negotiation Assistance", "Legal Compliance Check", "Market Analysis"].map((option) => (
                   <div key={option} className="flex items-center space-x-2 p-2 border border-gray-200 rounded-md bg-white">
                     <Checkbox
                       id={editingProperty ? `${option}-edit` : option}
-                      checked={form.watch('scopeOfWork')?.includes(option)}
+                      checked={form.watch("scopeOfWork")?.includes(option)}
                       onCheckedChange={(checked) => {
-                        const current = form.getValues('scopeOfWork') || [];
-                        if (checked) {
-                          form.setValue('scopeOfWork', [...current, option]);
-                        } else {
-                          form.setValue('scopeOfWork', current.filter((item: string) => item !== option));
-                        }
+                        const current = form.getValues("scopeOfWork") || [];
+                        if (checked) form.setValue("scopeOfWork", [...current, option]);
+                        else form.setValue("scopeOfWork", current.filter((item: string) => item !== option));
                       }}
                     />
-                    <label htmlFor={editingProperty ? `${option}-edit` : option} className="text-sm text-gray-700 cursor-pointer">{option}</label>
+                    <label htmlFor={editingProperty ? `${option}-edit` : option} className="text-sm text-gray-700 cursor-pointer">
+                      {option}
+                    </label>
                   </div>
                 ))}
               </div>
@@ -818,69 +577,295 @@ export default function MyListings() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">Agreement Document (Optional)</label>
-              <FileUpload 
-                onFilesChange={setAgreementFiles}
-                maxFiles={1}
-              />
+              <FileUpload onFilesChange={setAgreementFiles} maxFiles={1} />
               <p className="text-xs text-gray-500 mt-1">Upload agent agreement or authorization letter</p>
             </div>
           </CardContent>
         </Card>
 
         <div className="flex gap-3 pt-4">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => {
-              if (editingProperty) {
-                setIsEditDialogOpen(false);
-                setEditingProperty(null);
-              } else {
-                setIsAddDialogOpen(false);
-              }
               form.reset();
             }}
             className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending}
-            className="flex-1"
-          >
-            {(createPropertyMutation.isPending || updatePropertyMutation.isPending) 
-              ? (editingProperty ? "Updating..." : "Creating...") 
-              : (editingProperty ? "Update Listing" : "Create Listing")
-            }
+          <Button type="submit" className="flex-1">
+            Create Listing
           </Button>
         </div>
       </form>
     </Form>
   );
+}
+
+export default function MyListings() {
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<any>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [agreementFiles, setAgreementFiles] = useState<File[]>([]);
+  const [showOwnerPhone, setShowOwnerPhone] = useState<{ [key: string]: boolean }>({});
+
+  const { data: myProperties = [], isLoading } = useQuery({
+    queryKey: ["/api/my-properties"],
+    queryFn: () => safeFetch("/api/my-properties", []),
+    enabled: !!user,
+  });
+
+  const form = useForm<PropertyFormValues>({
+    resolver: zodResolver(propertyFormSchema),
+    defaultValues: {
+      title: "",
+      propertyType: "",
+      transactionType: "sale",
+      price: "",
+      rentFrequency: "monthly",
+      size: "",
+      sizeUnit: "sq.ft",
+      location: "",
+      fullAddress: "",
+      flatNumber: "",
+      floorNumber: "",
+      buildingSociety: "",
+      description: "",
+      bhk: 0,
+      listingType: "exclusive",
+      isPubliclyVisible: false,
+      ownerName: "",
+      ownerPhone: "",
+      commissionTerms: "",
+      scopeOfWork: [],
+    },
+  });
+
+  // IMPORTANT: send FormData via native fetch (no JSON headers)
+  const createPropertyMutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      const res = await fetch("/api/my-properties", { method: "POST", body: data, credentials: "same-origin" });
+      const json = await res.json();
+      if (!res.ok) throw { response: { data: json } };
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
+      setIsAddDialogOpen(false);
+      form.reset();
+      setSelectedFiles([]);
+      setAgreementFiles([]);
+      toast({
+        title: "Property Listed Successfully",
+        description: "Owner approval request has been sent. Property will go live after approval.",
+      });
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Failed to create property listing. Please try again.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  const updatePropertyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
+      // keep your existing JSON helper for PUT if it expects JSON; adjust if it is also FormData
+      const res = await fetch(`/api/properties/${id}`, { method: "PUT", body: data, credentials: "same-origin" });
+      const json = await res.json();
+      if (!res.ok) throw { response: { data: json } };
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
+      setIsEditDialogOpen(false);
+      setEditingProperty(null);
+      form.reset();
+      setSelectedFiles([]);
+      setAgreementFiles([]);
+      toast({ title: "Property Updated Successfully", description: "Your property listing has been updated." });
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Failed to update property listing. Please try again.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/properties/${id}`, { method: "DELETE", credentials: "same-origin" });
+      const json = await res.json();
+      if (!res.ok) throw { response: { data: json } };
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
+      toast({ title: "Property Deleted", description: "Your property listing has been deleted successfully." });
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Failed to delete property listing. Please try again.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  const onSubmit = (values: PropertyFormValues) => {
+    const errors = form.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      const errorFields = Object.keys(errors).join(", ");
+      toast({
+        title: "Form Validation Error",
+        description: `Please fix the following fields: ${errorFields}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const formData = new FormData();
+
+    Object.entries(values).forEach(([key, value]) => {
+      if (key === "scopeOfWork" && Array.isArray(value)) {
+        formData.append(key, JSON.stringify(value));
+      } else if (value !== undefined && value !== null && value !== "") {
+        formData.append(key, value.toString());
+      }
+    });
+
+    selectedFiles.forEach((file) => formData.append("photos", file));
+    if (agreementFiles.length > 0) formData.append("agreementDocument", agreementFiles[0]);
+
+    if (editingProperty) {
+      updatePropertyMutation.mutate({ id: editingProperty.id, data: formData });
+    } else {
+      createPropertyMutation.mutate(formData);
+    }
+  };
+
+  const handleEdit = (property: any) => {
+    setEditingProperty(property);
+    form.reset({
+      title: property.title || "",
+      propertyType: property.propertyType || "",
+      transactionType: property.transactionType || "sale",
+      price: property.price || "",
+      rentFrequency: property.rentFrequency || "monthly",
+      size: property.size || "",
+      sizeUnit: property.sizeUnit || "sq.ft",
+      location: property.location || "",
+      fullAddress: property.fullAddress || "",
+      flatNumber: property.flatNumber || "",
+      floorNumber: property.floorNumber || "",
+      buildingSociety: property.buildingSociety || "",
+      description: property.description || "",
+      bhk: property.bhk || 0,
+      listingType: property.listingType || "exclusive",
+      isPubliclyVisible: property.isPubliclyVisible || false,
+      ownerName: property.ownerName || "",
+      ownerPhone: property.ownerPhone || "",
+      commissionTerms: property.commissionTerms || "",
+      scopeOfWork: property.scopeOfWork || [],
+    });
+    setSelectedFiles([]);
+    setAgreementFiles([]);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDelete = (id: string) => deletePropertyMutation.mutate(id);
+
+  const handlePdfDownload = async (propertyId: string, propertyTitle: string) => {
+    try {
+      const response = await fetch(`/api/properties/${propertyId}/pdf`);
+      if (!response.ok) throw new Error("Failed to generate PDF");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `${propertyTitle.replace(/[^a-zA-Z0-9]/g, "_")}_listing.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({ title: "PDF Downloaded", description: "Property listing PDF has been downloaded successfully." });
+    } catch {
+      toast({ title: "Download Failed", description: "Failed to download PDF. Please try again.", variant: "destructive" });
+    }
+  };
+
+  const toggleOwnerPhone = (propertyId: string) =>
+    setShowOwnerPhone((p) => ({ ...p, [propertyId]: !p[propertyId] }));
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/feed");
+    }
+  };
+
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "approved":
+        return (
+          <Badge className="bg-green-100 text-green-800">
+            <CheckCircle size={12} className="mr-1" />
+            Approved
+          </Badge>
+        );
+      case "rejected":
+        return (
+          <Badge className="bg-red-100 text-red-800">
+            <XCircle size={12} className="mr-1" />
+            Rejected
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800">
+            <AlertCircle size={12} className="mr-1" />
+            Pending Approval
+          </Badge>
+        );
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen pb-20 bg-gray-50">
-      {/* Header */}
       <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center">
-            <button 
-              className="text-primary mr-4 hover:opacity-80"
-              onClick={() => router.push("/feed")}
-            >
+          <button className="text-primary mr-4 hover:opacity-80" onClick={handleBack} type="button" aria-label="Go back">
               <ArrowLeft size={24} />
             </button>
             <h2 className="text-lg font-semibold text-gray-900">My Listings</h2>
           </div>
+
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="flex items-center space-x-2">
+              <Button size="sm" className="flex items-center space-x-2" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus size={16} />
                 <span>Add Listing</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+            <DialogContent className="w/[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
               <DialogHeader className="bg-white pb-4 border-b border-gray-100">
                 <DialogTitle className="text-xl font-semibold text-gray-900">Create New Property Listing</DialogTitle>
                 <DialogDescription className="flex items-center text-gray-600">
@@ -888,27 +873,43 @@ export default function MyListings() {
                   Your data is secure. All sensitive information is stored safely and never displayed without explicit permission.
                 </DialogDescription>
               </DialogHeader>
-              <PropertyForm />
+
+              <PropertyForm
+                form={form}
+                onSubmit={onSubmit}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
+                agreementFiles={agreementFiles}
+                setAgreementFiles={setAgreementFiles}
+                editingProperty={editingProperty}
+              />
             </DialogContent>
           </Dialog>
-          
-          {/* Edit Dialog */}
+
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
-              <DialogHeader className="bg-white pb-4 border-b border-gray-100">
+            <DialogContent className="w/[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
+              <DialogHeader className="bg-white pb-4 border-gray-100">
                 <DialogTitle className="text-xl font-semibold text-gray-900">Edit Property Listing</DialogTitle>
                 <DialogDescription className="flex items-center text-gray-600">
                   <Shield size={14} className="inline mr-1 text-green-600" />
                   Update your property information. Changes will be saved immediately.
                 </DialogDescription>
               </DialogHeader>
-              <PropertyForm />
+
+              <PropertyForm
+                form={form}
+                onSubmit={onSubmit}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
+                agreementFiles={agreementFiles}
+                setAgreementFiles={setAgreementFiles}
+                editingProperty={editingProperty}
+              />
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 px-6 py-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -949,7 +950,7 @@ export default function MyListings() {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -962,11 +963,11 @@ export default function MyListings() {
                           <Eye size={14} className="mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(property)} className="cursor-pointer">
+                        <DropdownMenuItem onClick={() => setEditingProperty(property)} className="cursor-pointer">
                           <Edit size={14} className="mr-2" />
                           Edit Property
                         </DropdownMenuItem>
-                        {property.ownerApprovalStatus === 'approved' && (
+                        {property.ownerApprovalStatus === "approved" && (
                           <DropdownMenuItem onClick={() => handlePdfDownload(property.id, property.title)} className="cursor-pointer">
                             <Download size={14} className="mr-2" />
                             Download PDF
@@ -988,7 +989,7 @@ export default function MyListings() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel className="bg-white border-gray-300 text-gray-700">Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
+                              <AlertDialogAction
                                 onClick={() => handleDelete(property.id)}
                                 className="bg-red-600 hover:bg-red-700 text-white"
                               >
@@ -1002,11 +1003,8 @@ export default function MyListings() {
                   </div>
                 </div>
 
-                {property.description && (
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{property.description}</p>
-                )}
+                {property.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{property.description}</p>}
 
-                {/* Owner Details (Masked) */}
                 <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-200">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-sm font-medium text-gray-700">Owner Details</h4>
@@ -1020,15 +1018,11 @@ export default function MyListings() {
                     <div className="flex items-center text-gray-600">
                       <Phone size={12} className="mr-2 text-gray-400" />
                       <span>
-                        {showOwnerPhone[property.id] 
-                          ? property.ownerPhone 
-                          : `${property.ownerPhone?.slice(0, 3)}****${property.ownerPhone?.slice(-2)}`
-                        }
+                        {showOwnerPhone[property.id]
+                          ? property.ownerPhone
+                          : `${property.ownerPhone?.slice(0, 3)}****${property.ownerPhone?.slice(-2)}`}
                       </span>
-                      <button
-                        onClick={() => toggleOwnerPhone(property.id)}
-                        className="ml-2 text-primary hover:text-primary/80"
-                      >
+                      <button onClick={() => setShowOwnerPhone(property.id)} className="ml-2 text-primary hover:text-primary/80">
                         {showOwnerPhone[property.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
                     </div>
@@ -1050,7 +1044,7 @@ export default function MyListings() {
                   </div>
                 </div>
 
-                {property.ownerApprovalStatus === 'pending' && (
+                {property.ownerApprovalStatus === "pending" && (
                   <div className="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
                     <p className="text-xs text-yellow-800 flex items-center">
                       <AlertCircle size={12} className="mr-1" />
@@ -1059,7 +1053,7 @@ export default function MyListings() {
                   </div>
                 )}
 
-                {property.ownerApprovalStatus === 'rejected' && (
+                {property.ownerApprovalStatus === "rejected" && (
                   <div className="mt-3 p-2 bg-red-50 rounded-lg border border-red-200">
                     <p className="text-xs text-red-800 flex items-center">
                       <XCircle size={12} className="mr-1" />

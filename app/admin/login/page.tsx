@@ -44,17 +44,10 @@ export default function AdminLogin() {
       const json = await res.json().catch(() => ({ success: false, message: "Invalid response" }));
       return { ok: res.ok, status: res.status, body: json };
     },
-<<<<<<< HEAD
     onSuccess: (result) => {
       const data = result?.body;
       if (result.ok && data?.success) {
         // session cookie should already be set by server
-=======
-    onSuccess: (data) => {
-      if (data.success) {
-        // The session token is automatically set as an HTTP-only cookie by the server
-        // No need to store it in localStorage
->>>>>>> branch2
         router.push("/admin/dashboard");
       } else {
         setError(data?.message || "Login failed");

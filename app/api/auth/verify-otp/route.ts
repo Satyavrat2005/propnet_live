@@ -1,133 +1,154 @@
-// app/api/auth/verify-otp/route.ts
-import { NextResponse } from "next/server";
-import Twilio from "twilio";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { signSession, getSessionCookieHeader } from "@/lib/auth/session";
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+// ---------- Supabase (server) ----------
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!accountSid || !authToken || !verifyServiceSid) {
-  console.warn("Missing Twilio env vars in verify-otp route");
+// ---------- Helpers ----------
+function normalizePhoneToE164(raw: string) {
+  const s = (raw || "").trim();
+  if (!s) return s;
+  if (s.startsWith("+")) return s; // already E.164
+  const digits = s.replace(/[^\d]/g, "");
+  // Default to +91 if no country code provided
+  return `+91${digits}`;
 }
 
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  console.warn("Missing Supabase env vars in verify-otp route");
-}
+async function verifyWithTwilio(phone: string, code: string) {
+  const sid = process.env.TWILIO_ACCOUNT_SID!;
+  const token = process.env.TWILIO_AUTH_TOKEN!;
+  const service = process.env.TWILIO_VERIFY_SERVICE_SID!;
+  const basic = Buffer.from(`${sid}:${token}`).toString("base64");
 
-const twilioClient = (accountSid && authToken && accountSid.startsWith('AC')) 
-  ? Twilio(accountSid, authToken) 
-  : null;
-const supabase = (supabaseUrl && supabaseServiceRoleKey) 
-  ? createClient(supabaseUrl, supabaseServiceRoleKey) 
-  : null;
-
-function cookieString(name: string, value: string, days = 30) {
-  const maxAge = days * 24 * 60 * 60;
-  // Note: Secure is omitted so it works in local http. In production you may want Secure; add it conditionally.
-  return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
-}
-
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const phoneRaw = String(body.phone || "");
-    const phone = phoneRaw.replace(/\D/g, "");
-    const code = String(body.code || "");
-    const purpose = body.purpose || "login";
-
-    if (!phone || phone.length < 7 || !code) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  const resp = await fetch(
+    `https://verify.twilio.com/v2/Services/${service}/VerificationCheck`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${basic}`,
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      },
+      body: new URLSearchParams({ To: phone, Code: code }),
+      cache: "no-store",
     }
+  );
 
-    if (!twilioClient || !verifyServiceSid) {
-      return NextResponse.json({ error: "Server misconfiguration: missing Twilio credentials or Verify SID" }, { status: 500 });
-    }
+  if (!resp.ok) {
+    throw new Error(`Twilio Verify failed with status ${resp.status}`);
+  }
 
-    const to = `+91${phone}`;
+  const json = await resp.json();
+  return json.status === "approved";
+}
 
+/**
+ * Read POST body as JSON, urlencoded, or multipart/form-data.
+ * Accepts common field aliases:
+ *  - otp OR code
+ *  - phone
+ */
+async function readPayload(req: NextRequest) {
+  const ct = req.headers.get("content-type") || "";
+
+  const getFromFormData = async () => {
+    const fd = await req.formData();
+    const rawPhone = fd.get("phone")?.toString() ?? "";
+    const rawOtp = (fd.get("otp") ?? fd.get("code"))?.toString() ?? "";
+    return { phone: rawPhone, otp: rawOtp };
+  };
+
+  if (ct.includes("application/json")) {
     try {
-      const check = await twilioClient.verify.v2.services(verifyServiceSid).verificationChecks.create({
-        to,
-        code,
-      });
+      const j = await req.json();
+      return {
+        phone: (j?.phone ?? "").toString(),
+        otp: (j?.otp ?? j?.code ?? "").toString(),
+      };
+    } catch {
+      // fall through to try form parsing
+    }
+  }
 
-      if (check.status !== "approved") {
-        return NextResponse.json({ error: "Invalid verification code" }, { status: 400 });
-      }
-    } catch (twErr: any) {
-      console.error("Twilio Verify error (check):", twErr);
-      const msg = twErr?.message || String(twErr);
-      return NextResponse.json({ error: "Twilio verification failed: " + msg }, { status: 400 });
+  if (ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data")) {
+    return await getFromFormData();
+  }
+
+  // Fallback: try JSON, then form
+  try {
+    const j = await req.json();
+    return {
+      phone: (j?.phone ?? "").toString(),
+      otp: (j?.otp ?? j?.code ?? "").toString(),
+    };
+  } catch {
+    return await getFromFormData();
+  }
+}
+
+// ---------- Route: POST /api/verify-route ----------
+export async function POST(req: NextRequest) {
+  try {
+    const { phone, otp } = await readPayload(req);
+
+    if (!phone || !otp) {
+      return NextResponse.json(
+        { error: "phone and otp are required" },
+        { status: 400 }
+      );
     }
 
-    // Verified. Create or update user profile in Supabase. Determine profile_complete
-    let requiresProfileComplete = true;
-    let userProfile: any = null;
+    const e164Phone = normalizePhoneToE164(phone);
 
-    if (supabase) {
-      try {
-        // normalize phone for storage
-        const normalizedPhone = phone;
-
-        // try fetch existing profile
-        const { data: existing, error: selectErr } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("phone", normalizedPhone)
-          .limit(1);
-
-        if (selectErr) {
-          console.error("Supabase select error in verify-otp:", selectErr);
-        }
-
-        if (existing && existing.length > 0) {
-          userProfile = existing[0];
-        } else {
-          // no profile exists — create one with profile_complete = false
-          const { data: inserted, error: insertErr } = await supabase
-            .from("profiles")
-            .insert([{ phone: normalizedPhone, profile_complete: false }])
-            .select()
-            .limit(1);
-
-          if (insertErr) {
-            console.error("Supabase insert error in verify-otp:", insertErr);
-          } else if (inserted && inserted.length > 0) {
-            userProfile = inserted[0];
-          }
-        }
-
-        if (userProfile && userProfile.profile_complete === true) {
-          requiresProfileComplete = false;
-        } else {
-          requiresProfileComplete = true;
-        }
-      } catch (supErr: any) {
-        console.error("Supabase error in verify-otp:", supErr);
-        // don't block success; still return verified = true but default to requiring profile completion
-        requiresProfileComplete = true;
-      }
+    // 1) Verify OTP via Twilio Verify
+    const ok = await verifyWithTwilio(e164Phone, String(otp));
+    if (!ok) {
+      return NextResponse.json({ error: "Invalid OTP" }, { status: 401 });
     }
 
-    // Set cookie propnet_phone so client can fetch /api/auth/me
-    const cookie = cookieString("propnet_phone", phone, 60); // 60 days
+    // 2) Upsert or fetch user profile in Supabase by phone
+    const { data: existing, error: selErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("phone", e164Phone)
+      .maybeSingle();
 
-    const resp = NextResponse.json({
-      success: true,
-      message: "Phone verified",
-      requiresProfileComplete,
-      user: userProfile ?? null,
+    if (selErr) {
+      return NextResponse.json({ error: selErr.message }, { status: 500 });
+    }
+
+    let profile = existing;
+
+    if (!profile) {
+      const { data: created, error: insErr } = await supabase
+        .from("profiles")
+        .insert([{ phone: e164Phone, profile_complete: false }])
+        .select("*")
+        .single();
+
+      if (insErr) {
+        return NextResponse.json({ error: insErr.message }, { status: 500 });
+      }
+      profile = created;
+    }
+
+    // 3) Create signed session token & set secure, httpOnly cookie
+    const token = await signSession({ sub: profile.id, phone: profile.phone });
+
+    const res = NextResponse.json({
+      user: profile,
+      requiresProfileComplete: profile.profile_complete !== true,
     });
 
-    resp.headers.set("Set-Cookie", cookie);
-
-    return resp;
-  } catch (err: any) {
-    console.error("verify-otp route unexpected error:", err);
-    return NextResponse.json({ error: err?.message || "Verification failed" }, { status: 500 });
+    res.headers.set("Set-Cookie", getSessionCookieHeader(token));
+    return res;
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: e?.message || "Verification failed" },
+      { status: 500 }
+    );
   }
 }

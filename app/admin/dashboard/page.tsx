@@ -1,64 +1,61 @@
+// app/admin/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Shield,
   Users,
   Settings,
   LogOut,
-  Eye,
   Check,
   X,
   Clock,
   UserCheck,
   UserX,
   AlertTriangle,
+  MapPin,
+  Building2,
+  Phone,
+  Mail,
+  BadgeCheck,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface BetaSignup {
-  id: number;
-  name: string;
-  phone: string;
-  email: string;
-  businessName: string;
-  reraId: string;
-  experience: string;
-  workingRegions: string[];
-  areaOfExpertise: string[];
-  status: "pending" | "approved" | "rejected";
-  createdAt: string;
-  approvedAt?: string;
-  notes?: string;
-}
+type Profile = {
+  id: string;
+  phone: string | null;
+  name: string | null;
+  email: string | null;
+  bio: string | null;
+  agency_name: string | null;
+  rera_id: string | null;
+  city: string | null;
+  experience: string | null;
+  website: string | null;
+  area_of_expertise: string[] | null;
+  working_regions: string[] | null;
+  profile_photo_url: string | null;
+  profile_complete: boolean | null;
+  status: "pending" | "approved" | "rejected" | string | null;
+  created_at: string;
+  updated_at: string;
+};
 
-export default function AdminDashboard() {
+export default function AdminPortal() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("signups");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Auth / data states
+  // Admin (existing flow)
   const [authLoading, setAuthLoading] = useState(true);
   const [adminData, setAdminData] = useState<any | null>(null);
 
-  const [signupsLoading, setSignupsLoading] = useState(true);
-  const [signups, setSignups] = useState<BetaSignup[] | null>(null);
-
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  // Fetch admin info
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -66,14 +63,8 @@ export default function AdminDashboard() {
       try {
         const res = await fetch("/api/secure-portal/me");
         if (!mounted) return;
-        if (!res.ok) {
-          setAdminData(null);
-        } else {
-          const json = await res.json();
-          setAdminData(json);
-        }
-      } catch (err) {
-        console.error("Auth check failed:", err);
+        setAdminData(res.ok ? await res.json() : null);
+      } catch {
         setAdminData(null);
       } finally {
         if (mounted) setAuthLoading(false);
@@ -84,46 +75,47 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  // Fetch signups when adminData is present
   useEffect(() => {
-    let mounted = true;
-    if (!adminData) {
-      // redirect will be handled below
-      return;
-    }
-
-    (async () => {
-      setSignupsLoading(true);
-      try {
-        const res = await fetch("/api/secure-portal/beta-signups");
-        if (!mounted) return;
-        if (!res.ok) {
-          setSignups([]);
-        } else {
-          const json = await res.json();
-          setSignups(Array.isArray(json) ? json : json?.data ?? []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch signups:", err);
-        setSignups([]);
-      } finally {
-        if (mounted) setSignupsLoading(false);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [adminData]);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !adminData) {
-      router.push("/admin/login");
-    }
+    if (!authLoading && !adminData) router.push("/admin/login");
   }, [authLoading, adminData, router]);
 
-  if (authLoading) {
+  // Users
+  const { data: users, isLoading } = useQuery<Profile[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/users", { credentials: "same-origin" });
+      if (!res.ok) throw new Error("Failed to fetch users");
+      return res.json();
+    },
+    enabled: !!adminData,
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ status }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to update");
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Status Updated", description: "User status updated successfully." });
+    },
+    onError: (e: any) => {
+      toast({
+        title: "Update Failed",
+        description: e?.message || "Failed to update user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (authLoading || !adminData) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="flex items-center gap-2 text-white">
@@ -134,78 +126,14 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!adminData) {
-    return null; // redirected to login
-  }
+  const list = users || [];
+  const total = list.length;
+  const pending = list.filter((u) => (u.status || "pending").toLowerCase() === "pending");
+  const approved = list.filter((u) => (u.status || "").toLowerCase() === "approved");
+  const rejected = list.filter((u) => (u.status || "").toLowerCase() === "rejected");
 
-  const handleStatusUpdate = async (id: number, status: string, notes?: string) => {
-    setIsUpdating(true);
-    try {
-      const res = await fetch(`/api/secure-portal/beta-signups/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, notes }),
-      });
-
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(body || "Failed to update status");
-      }
-
-      // Refresh signups
-      const refresh = await fetch("/api/secure-portal/beta-signups");
-      const json = await refresh.json();
-      setSignups(Array.isArray(json) ? json : json?.data ?? []);
-      toast({
-        title: "Status Updated",
-        description: "Beta signup status has been updated successfully.",
-      });
-    } catch (error: any) {
-      console.error("Update Failed:", error);
-      toast({
-        title: "Update Failed",
-        description: error?.message || "Failed to update status",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      const res = await fetch("/api/secure-portal/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Logout failed");
-      }
-
-      // clear local token and redirect
-      try {
-        localStorage.removeItem("adminSessionToken");
-      } catch {
-        /* ignore */
-      }
-      router.push("/admin/login");
-    } catch (err) {
-      console.error("Logout failed:", err);
-      toast({
-        title: "Logout Failed",
-        description: "Unable to logout. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (status?: string | null) => {
+    switch ((status || "pending").toLowerCase()) {
       case "approved":
         return <Badge className="bg-green-500/20 text-green-400 border-green-500/50">Approved</Badge>;
       case "rejected":
@@ -215,20 +143,16 @@ export default function AdminDashboard() {
     }
   };
 
-  const getStats = () => {
-    if (!signups || !Array.isArray(signups)) return { pending: 0, approved: 0, rejected: 0, total: 0 };
-
-    return signups.reduce(
-      (acc: any, signup: BetaSignup) => {
-        acc.total++;
-        acc[signup.status]++;
-        return acc;
-      },
-      { pending: 0, approved: 0, rejected: 0, total: 0 }
-    );
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/secure-portal/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
+      if (!res.ok) throw new Error(await res.text());
+      try { localStorage.removeItem("adminSessionToken"); } catch {}
+      router.push("/admin/login");
+    } catch (err: any) {
+      toast({ title: "Logout Failed", description: err?.message || "Unable to logout", variant: "destructive" });
+    }
   };
-
-  const stats = getStats();
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -249,7 +173,6 @@ export default function AdminDashboard() {
               onClick={handleLogout}
               variant="outline"
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
-              disabled={isLoggingOut}
             >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -258,9 +181,9 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader className="pb-2">
@@ -269,7 +192,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-400" />
-                <span className="text-2xl font-bold text-white">{stats.total}</span>
+                <span className="text-2xl font-bold text-white">{total}</span>
               </div>
             </CardContent>
           </Card>
@@ -281,7 +204,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-yellow-400" />
-                <span className="text-2xl font-bold text-white">{stats.pending}</span>
+                <span className="text-2xl font-bold text-white">{pending.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -293,7 +216,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <UserCheck className="h-5 w-5 text-green-400" />
-                <span className="text-2xl font-bold text-white">{stats.approved}</span>
+                <span className="text-2xl font-bold text-white">{approved.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -305,106 +228,140 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <UserX className="h-5 w-5 text-red-400" />
-                <span className="text-2xl font-bold text-white">{stats.rejected}</span>
+                <span className="text-2xl font-bold text-white">{rejected.length}</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="pending">
           <TabsList className="bg-slate-800 border-slate-700">
-            <TabsTrigger value="signups" className="data-[state=active]:bg-slate-700">
-              Beta Signups
+            <TabsTrigger value="pending" className="data-[state=active]:bg-slate-700">
+              Pending Users
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-slate-700">
               Settings
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="signups" className="mt-6">
+          {/* Pending list */}
+          <TabsContent value="pending" className="mt-6">
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-white">Beta Signup Requests</CardTitle>
+                <CardTitle className="text-white">Pending User Approvals</CardTitle>
                 <CardDescription className="text-slate-400">
-                  Review and manage beta access requests from real estate brokers
+                  Review and manage brokers who signed up
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {signupsLoading ? (
+                {isLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   </div>
-                ) : signups && Array.isArray(signups) && signups.length > 0 ? (
+                ) : pending.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400">No pending users</div>
+                ) : (
                   <div className="space-y-4">
-                    {signups.map((signup: BetaSignup) => (
-                      <div key={signup.id} className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                    {pending.map((u) => (
+                      <div key={u.id} className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h3 className="font-semibold text-white">{signup.name}</h3>
-                            <p className="text-sm text-slate-400">{signup.businessName}</p>
+                            <h3 className="font-semibold text-white">
+                              {u.name || "Unnamed Broker"}{" "}
+                              {u.rera_id ? (
+                                <span className="inline-flex items-center ml-2 text-xs text-green-400">
+                                  <BadgeCheck className="h-4 w-4 mr-1" /> RERA: {u.rera_id}
+                                </span>
+                              ) : null}
+                            </h3>
+                            {u.agency_name && (
+                              <p className="text-sm text-slate-400">{u.agency_name}</p>
+                            )}
                           </div>
-                          {getStatusBadge(signup.status)}
+                          {getStatusBadge(u.status)}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-slate-400">
-                              Phone: <span className="text-white">{signup.phone}</span>
-                            </p>
-                            <p className="text-slate-400">
-                              Email: <span className="text-white">{signup.email}</span>
-                            </p>
-                            <p className="text-slate-400">
-                              RERA ID: <span className="text-white">{signup.reraId}</span>
-                            </p>
+                          <div className="space-y-1">
+                            {u.phone && (
+                              <p className="text-slate-400 flex items-center">
+                                <Phone className="h-4 w-4 mr-2" />
+                                <span className="text-white">{u.phone}</span>
+                              </p>
+                            )}
+                            {u.email && (
+                              <p className="text-slate-400 flex items-center">
+                                <Mail className="h-4 w-4 mr-2" />
+                                <span className="text-white">{u.email}</span>
+                              </p>
+                            )}
+                            {u.city && (
+                              <p className="text-slate-400 flex items-center">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                <span className="text-white">{u.city}</span>
+                              </p>
+                            )}
                           </div>
-                          <div>
-                            <p className="text-slate-400">
-                              Experience: <span className="text-white">{signup.experience}</span>
-                            </p>
-                            <p className="text-slate-400">
-                              Regions: <span className="text-white">{signup.workingRegions?.join(", ")}</span>
-                            </p>
-                            <p className="text-slate-400">
-                              Expertise: <span className="text-white">{signup.areaOfExpertise?.join(", ")}</span>
-                            </p>
+
+                          <div className="space-y-1">
+                            {u.experience && (
+                              <p className="text-slate-400 flex items-center">
+                                <Building2 className="h-4 w-4 mr-2" />
+                                <span className="text-white">Experience: {u.experience}</span>
+                              </p>
+                            )}
+                            {u.working_regions?.length ? (
+                              <p className="text-slate-400">
+                                Regions:{" "}
+                                <span className="text-white">
+                                  {u.working_regions.join(", ")}
+                                </span>
+                              </p>
+                            ) : null}
+                            {u.area_of_expertise?.length ? (
+                              <p className="text-slate-400">
+                                Expertise:{" "}
+                                <span className="text-white">
+                                  {u.area_of_expertise.join(", ")}
+                                </span>
+                              </p>
+                            ) : null}
                           </div>
                         </div>
 
-                        {signup.status === "pending" && (
-                          <div className="flex gap-2 mt-4">
-                            <Button
-                              size="sm"
-                              onClick={() => handleStatusUpdate(signup.id, "approved")}
-                              className="bg-green-600 hover:bg-green-700"
-                              disabled={isUpdating}
-                            >
-                              <Check className="h-4 w-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusUpdate(signup.id, "rejected")}
-                              className="border-red-500 text-red-400 hover:bg-red-500/10"
-                              disabled={isUpdating}
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Reject
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => updateStatus.mutate({ id: u.id, status: "approved" })}
+                            disabled={updateStatus.isPending}
+                            type="button"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateStatus.mutate({ id: u.id, status: "rejected" })}
+                            className="border-red-500 text-red-400 hover:bg-red-500/10"
+                            disabled={updateStatus.isPending}
+                            type="button"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-slate-400">No beta signups found</div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
+          {/* Settings (unchanged) */}
           <TabsContent value="settings" className="mt-6">
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
@@ -421,8 +378,8 @@ export default function AdminDashboard() {
                       <h3 className="font-medium text-white">Security Notice</h3>
                     </div>
                     <p className="text-sm text-slate-400">
-                      Your admin session is secured with device fingerprinting and encrypted tokens. Always logout
-                      when using shared devices.
+                      Your admin session is secured with device fingerprinting and encrypted tokens.
+                      Always logout when using shared devices.
                     </p>
                   </div>
 

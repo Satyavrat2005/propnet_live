@@ -1,7 +1,7 @@
 // app/requirements/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { safeFetch } from "@/lib/safeFetch";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 
@@ -31,8 +30,10 @@ const requirementSchema = z.object({
   propertyType: z.string().min(1, "Property type is required"),
   transactionType: z.string().min(1, "Transaction type is required"),
   location: z.string().min(1, "Location is required"),
+  // Prices are TEXT now (accepts "50 Lakh", "1.2 Cr", etc.)
   minPrice: z.string().optional(),
   maxPrice: z.string().optional(),
+  // Sizes remain numeric-like but we accept text and send as numbers only for size
   minSize: z.string().optional(),
   maxSize: z.string().optional(),
   sizeUnit: z.string().optional(),
@@ -43,21 +44,18 @@ const requirementSchema = z.object({
 type RequirementFormData = z.infer<typeof requirementSchema>;
 
 interface Requirement {
-  id: number;
+  requirement_id: string;
   propertyType: string;
   transactionType: string;
   location: string;
-  minPrice?: number;
-  maxPrice?: number;
-  minSize?: number;
-  maxSize?: number;
-  sizeUnit?: string;
-  bhk?: string;
-  description?: string;
+  minPrice?: string | null;
+  maxPrice?: string | null;
+  minSize?: number | null;
+  maxSize?: number | null;
+  sizeUnit?: string | null;
+  bhk?: number | null;
+  description?: string | null;
   createdAt: string;
-  user?: {
-    name: string;
-  };
 }
 
 export default function RequirementsPage() {
@@ -65,7 +63,7 @@ export default function RequirementsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRequirement, setEditingRequirement] = useState<any>(null);
+  const [editingRequirement, setEditingRequirement] = useState<Requirement | null>(null);
 
   const form = useForm<RequirementFormData>({
     resolver: zodResolver(requirementSchema),
@@ -97,34 +95,28 @@ export default function RequirementsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: RequirementFormData) => {
-      const res = await apiRequest("POST", "/api/property-requirements", data);
-      if (res && typeof (res as Response).json === "function") return (res as Response).json();
-      return res;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/my-requirements"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/property-requirements"] });
-      setIsDialogOpen(false);
-      form.reset();
-      toast({
-        title: "Success",
-        description: "Requirement created successfully",
+      const res = await fetch("/api/property-requirements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          propertyType: data.propertyType,
+          transactionType: data.transactionType,
+          preferredLocation: data.location,
+          // send as TEXT (no Number() casting)
+          minPrice: data.minPrice?.trim() || null,
+          maxPrice: data.maxPrice?.trim() || null,
+          // sizes can be numeric if supplied; keep numeric for DB numeric columns
+          minSize: data.minSize ? parseFloat(data.minSize) : null,
+          maxSize: data.maxSize ? parseFloat(data.maxSize) : null,
+          sizeUnit: data.sizeUnit || null,
+          bhk: data.bhk ? parseInt(data.bhk) || null : null,
+          additionalRequirement: data.description || null,
+        }),
       });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create requirement",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: RequirementFormData }) => {
-      const res = await apiRequest("PATCH", `/api/property-requirements/${id}`, data);
-      if (res && typeof (res as Response).json === "function") return (res as Response).json();
-      return res;
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to create requirement");
+      return json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-requirements"] });
@@ -132,90 +124,120 @@ export default function RequirementsPage() {
       setIsDialogOpen(false);
       setEditingRequirement(null);
       form.reset();
-      toast({
-        title: "Success",
-        description: "Requirement updated successfully",
-      });
+      toast({ title: "Success", description: "Requirement created successfully" });
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update requirement",
-        variant: "destructive",
-      });
+    onError: (e: any) => {
+      toast({ title: "Error", description: e?.message || "Failed to create requirement", variant: "destructive" });
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/property-requirements/${id}`);
-      if (res && typeof (res as Response).json === "function") return (res as Response).json();
-      return res;
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: RequirementFormData }) => {
+      const res = await fetch(`/api/property-requirements/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          propertyType: data.propertyType,
+          transactionType: data.transactionType,
+          preferredLocation: data.location,
+          // keep TEXT
+          minPrice: data.minPrice?.trim() || null,
+          maxPrice: data.maxPrice?.trim() || null,
+          minSize: data.minSize ? parseFloat(data.minSize) : null,
+          maxSize: data.maxSize ? parseFloat(data.maxSize) : null,
+          sizeUnit: data.sizeUnit || null,
+          bhk: data.bhk ? parseInt(data.bhk) || null : null,
+          additionalRequirement: data.description || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to update requirement");
+      return json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/my-requirements"] });
       queryClient.invalidateQueries({ queryKey: ["/api/property-requirements"] });
-      toast({
-        title: "Success",
-        description: "Requirement deleted successfully",
-      });
+      setIsDialogOpen(false);
+      setEditingRequirement(null);
+      form.reset();
+      toast({ title: "Success", description: "Requirement updated successfully" });
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete requirement",
-        variant: "destructive",
+    onError: (e: any) => {
+      toast({ title: "Error", description: e?.message || "Failed to update requirement", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/property-requirements/${id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
       });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to delete requirement");
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-requirements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/property-requirements"] });
+      toast({ title: "Success", description: "Requirement deleted successfully" });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e?.message || "Failed to delete requirement", variant: "destructive" });
     },
   });
 
   const onSubmit = (data: RequirementFormData) => {
     if (editingRequirement) {
-      updateMutation.mutate({ id: editingRequirement.id, data });
+      updateMutation.mutate({ id: editingRequirement.requirement_id, data });
     } else {
       createMutation.mutate(data);
     }
   };
 
-  const handleEdit = (requirement: any) => {
-    setEditingRequirement(requirement);
+  const handleEdit = (r: Requirement) => {
+    setEditingRequirement(r);
     form.reset({
-      propertyType: requirement.propertyType,
-      transactionType: requirement.transactionType,
-      location: requirement.location,
-      minPrice: requirement.minPrice?.toString() || "",
-      maxPrice: requirement.maxPrice?.toString() || "",
-      minSize: requirement.minSize?.toString() || "",
-      maxSize: requirement.maxSize?.toString() || "",
-      sizeUnit: requirement.sizeUnit || "sq.ft",
-      bhk: requirement.bhk?.toString() || "",
-      description: requirement.description || "",
+      propertyType: r.propertyType,
+      transactionType: r.transactionType,
+      location: r.location,
+      minPrice: r.minPrice ?? "",
+      maxPrice: r.maxPrice ?? "",
+      minSize: r.minSize?.toString() ?? "",
+      maxSize: r.maxSize?.toString() ?? "",
+      sizeUnit: r.sizeUnit ?? "sq.ft",
+      bhk: r.bhk?.toString() ?? "",
+      description: r.description ?? "",
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    // native confirm is fine in client component
+  const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this requirement?")) {
       deleteMutation.mutate(id);
     }
   };
 
-  const formatPrice = (price: string) => {
-    const numPrice = parseFloat(String(price || "") || "0");
-    if (Number.isNaN(numPrice)) return price;
-    if (numPrice >= 10000000) {
-      return `₹${(numPrice / 10000000).toFixed(1)} Cr`;
-    } else if (numPrice >= 100000) {
-      return `₹${(numPrice / 100000).toFixed(1)} L`;
-    } else {
-      return `₹${numPrice.toLocaleString("en-IN")}`;
-    }
-  };
+  const sizeUnitOptions = useMemo(() => ["sq.ft", "sq.m", "sq.yd", "acre"], []);
 
-  if (!user) {
-    return <div className="container mx-auto p-4">Please log in to view requirements</div>;
-  }
+  const SelectMenu = ({ children }: { children: React.ReactNode }) => (
+    <SelectContent className="bg-white border border-gray-200 shadow-lg">
+      {/* Apply consistent white background + emerald hover to all options */}
+      <div className="[&>[data-state=open]]:bg-white">{children}</div>
+    </SelectContent>
+  );
+
+  const SelectOpt = (props: { value: string; label: string }) => (
+    <SelectItem
+      value={props.value}
+      className="hover:bg-[#2ECC71] focus:bg-[#2ECC71] hover:text-white focus:text-white"
+    >
+      {props.label}
+    </SelectItem>
+  );
+
+  const formatPriceDisplay = (txt?: string | null) => (txt ? txt : "");
 
   return (
     <div className="container mx-auto p-4 max-w-4xl pb-20">
@@ -246,7 +268,7 @@ export default function RequirementsPage() {
             </DialogHeader>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -260,14 +282,14 @@ export default function RequirementsPage() {
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Apartment">Apartment</SelectItem>
-                            <SelectItem value="Villa">Villa</SelectItem>
-                            <SelectItem value="House">House</SelectItem>
-                            <SelectItem value="Office">Office</SelectItem>
-                            <SelectItem value="Shop">Shop</SelectItem>
-                            <SelectItem value="Plot">Plot</SelectItem>
-                          </SelectContent>
+                          <SelectMenu>
+                            <SelectOpt value="Apartment" label="Apartment" />
+                            <SelectOpt value="Villa" label="Villa" />
+                            <SelectOpt value="House" label="House" />
+                            <SelectOpt value="Office" label="Office" />
+                            <SelectOpt value="Shop" label="Shop" />
+                            <SelectOpt value="Plot" label="Plot" />
+                          </SelectMenu>
                         </Select>
                         <FormMessage />
                       </FormItem>
@@ -286,10 +308,10 @@ export default function RequirementsPage() {
                               <SelectValue placeholder="Buy or Rent" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="sale">Buy</SelectItem>
-                            <SelectItem value="rent">Rent</SelectItem>
-                          </SelectContent>
+                          <SelectMenu>
+                            <SelectOpt value="sale" label="Buy" />
+                            <SelectOpt value="rent" label="Rent" />
+                          </SelectMenu>
                         </Select>
                         <FormMessage />
                       </FormItem>
@@ -304,7 +326,7 @@ export default function RequirementsPage() {
                     <FormItem>
                       <FormLabel>Preferred Location</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter location" {...field} />
+                        <Input placeholder="e.g., Borivali West, Mumbai" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -319,7 +341,11 @@ export default function RequirementsPage() {
                       <FormItem>
                         <FormLabel>Min Price (₹)</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="Minimum price" {...field} />
+                          <Input
+                            type="text"
+                            placeholder="e.g., 40 Lakh"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -333,7 +359,11 @@ export default function RequirementsPage() {
                       <FormItem>
                         <FormLabel>Max Price (₹)</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="Maximum price" {...field} />
+                          <Input
+                            type="text"
+                            placeholder="e.g., 50 Lakh / 1.2 Cr"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -349,7 +379,11 @@ export default function RequirementsPage() {
                       <FormItem>
                         <FormLabel>Min Size</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="Min size" {...field} />
+                          <Input
+                            type="number"
+                            placeholder="e.g., 500"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -363,7 +397,11 @@ export default function RequirementsPage() {
                       <FormItem>
                         <FormLabel>Max Size</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="Max size" {...field} />
+                          <Input
+                            type="number"
+                            placeholder="e.g., 1200"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -379,15 +417,14 @@ export default function RequirementsPage() {
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Select unit" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="sq.ft">Square Feet</SelectItem>
-                            <SelectItem value="sq.m">Square Meters</SelectItem>
-                            <SelectItem value="sq.yd">Square Yards</SelectItem>
-                            <SelectItem value="acre">Acres</SelectItem>
-                          </SelectContent>
+                          <SelectMenu>
+                            {sizeUnitOptions.map((u) => (
+                              <SelectOpt key={u} value={u} label={u} />
+                            ))}
+                          </SelectMenu>
                         </Select>
                         <FormMessage />
                       </FormItem>
@@ -407,13 +444,13 @@ export default function RequirementsPage() {
                             <SelectValue placeholder="Select BHK" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="1">1 BHK</SelectItem>
-                          <SelectItem value="2">2 BHK</SelectItem>
-                          <SelectItem value="3">3 BHK</SelectItem>
-                          <SelectItem value="4">4 BHK</SelectItem>
-                          <SelectItem value="5">5+ BHK</SelectItem>
-                        </SelectContent>
+                        <SelectMenu>
+                          <SelectOpt value="1" label="1 BHK" />
+                          <SelectOpt value="2" label="2 BHK" />
+                          <SelectOpt value="3" label="3 BHK" />
+                          <SelectOpt value="4" label="4 BHK" />
+                          <SelectOpt value="5" label="5+ BHK" />
+                        </SelectMenu>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -427,7 +464,11 @@ export default function RequirementsPage() {
                     <FormItem>
                       <FormLabel>Additional Requirements (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe any specific requirements..." className="min-h-20" {...field} />
+                        <Textarea
+                          placeholder="e.g., Prefer higher floor, east facing, near metro"
+                          className="min-h-20"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -485,59 +526,64 @@ export default function RequirementsPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {requirements.map((requirement: any) => (
-              <Card key={requirement.id}>
+            {requirements.map((r: any) => (
+              <Card key={r.requirement_id}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{requirement.propertyType}</Badge>
-                        <Badge variant={requirement.transactionType === "sale" ? "default" : "secondary"}>
-                          {requirement.transactionType === "sale" ? "Buy" : "Rent"}
+                        <Badge variant="outline">{r.propertyType}</Badge>
+                        <Badge variant={r.transactionType === "sale" ? "default" : "secondary"}>
+                          {r.transactionType === "sale" ? "Buy" : "Rent"}
                         </Badge>
-                        {requirement.bhk && <Badge variant="outline">{requirement.bhk} BHK</Badge>}
+                        {r.bhk && <Badge variant="outline">{r.bhk} BHK</Badge>}
                       </div>
 
                       <div className="flex items-center text-gray-600 mb-2">
                         <MapPin size={16} className="mr-1" />
-                        {requirement.location}
+                        {r.location}
                       </div>
 
-                      {(requirement.minPrice || requirement.maxPrice) && (
+                      {(r.minPrice || r.maxPrice) && (
                         <div className="flex items-center text-gray-600 mb-2">
                           <DollarSign size={16} className="mr-1" />
-                          {requirement.minPrice && requirement.maxPrice
-                            ? `${formatPrice(requirement.minPrice)} - ${formatPrice(requirement.maxPrice)}`
-                            : requirement.minPrice
-                            ? `From ${formatPrice(requirement.minPrice)}`
-                            : `Up to ${formatPrice(requirement.maxPrice)}`}
+                          {r.minPrice && r.maxPrice
+                            ? `${formatPriceDisplay(r.minPrice)} - ${formatPriceDisplay(r.maxPrice)}`
+                            : r.minPrice
+                            ? `From ${formatPriceDisplay(r.minPrice)}`
+                            : `Up to ${formatPriceDisplay(r.maxPrice)}`}
                         </div>
                       )}
 
-                      {(requirement.minSize || requirement.maxSize) && (
+                      {(r.minSize || r.maxSize) && (
                         <div className="flex items-center text-gray-600 mb-2">
                           <Building size={16} className="mr-1" />
-                          {requirement.minSize && requirement.maxSize
-                            ? `${requirement.minSize} - ${requirement.maxSize} ${requirement.sizeUnit}`
-                            : requirement.minSize
-                            ? `From ${requirement.minSize} ${requirement.sizeUnit}`
-                            : `Up to ${requirement.maxSize} ${requirement.sizeUnit}`}
+                          {r.minSize && r.maxSize
+                            ? `${r.minSize} - ${r.maxSize} ${r.sizeUnit}`
+                            : r.minSize
+                            ? `From ${r.minSize} ${r.sizeUnit}`
+                            : `Up to ${r.maxSize} ${r.sizeUnit}`}
                         </div>
                       )}
 
-                      {requirement.description && <p className="text-gray-600 text-sm mt-2">{requirement.description}</p>}
+                      {r.description && <p className="text-gray-600 text-sm mt-2">{r.description}</p>}
 
                       <div className="flex items-center text-xs text-gray-400 mt-3">
                         <Calendar size={12} className="mr-1" />
-                        Created {new Date(requirement.createdAt).toLocaleDateString()}
+                        Created {new Date(r.createdAt).toLocaleDateString()}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 ml-4">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(requirement)}>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(r)}>
                         <Edit size={14} />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(requirement.id)} className="text-red-600 hover:text-red-700">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(r.requirement_id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
                         <Trash2 size={14} />
                       </Button>
                     </div>
@@ -562,39 +608,39 @@ export default function RequirementsPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {allRequirements.map((requirement: any) => (
-              <Card key={requirement.id}>
+            {allRequirements.map((r: any) => (
+              <Card key={r.requirement_id}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{requirement.propertyType}</Badge>
-                        <Badge variant={requirement.transactionType === "sale" ? "default" : "secondary"}>
-                          {requirement.transactionType === "sale" ? "Buy" : "Rent"}
+                        <Badge variant="outline">{r.propertyType}</Badge>
+                        <Badge variant={r.transactionType === "sale" ? "default" : "secondary"}>
+                          {r.transactionType === "sale" ? "Buy" : "Rent"}
                         </Badge>
-                        {requirement.bhk && <Badge variant="outline">{requirement.bhk} BHK</Badge>}
+                        {r.bhk && <Badge variant="outline">{r.bhk} BHK</Badge>}
                       </div>
 
                       <div className="flex items-center text-gray-600 mb-2">
                         <MapPin size={16} className="mr-1" />
-                        {requirement.location}
+                        {r.location}
                       </div>
 
-                      {(requirement.minPrice || requirement.maxPrice) && (
+                      {(r.minPrice || r.maxPrice) && (
                         <div className="flex items-center text-gray-600 mb-2">
                           <DollarSign size={16} className="mr-1" />
-                          {requirement.minPrice && requirement.maxPrice
-                            ? `${formatPrice(requirement.minPrice)} - ${formatPrice(requirement.maxPrice)}`
-                            : requirement.minPrice
-                            ? `From ${formatPrice(requirement.minPrice)}`
-                            : `Up to ${formatPrice(requirement.maxPrice)}`}
+                          {r.minPrice && r.maxPrice
+                            ? `${formatPriceDisplay(r.minPrice)} - ${formatPriceDisplay(r.maxPrice)}`
+                            : r.minPrice
+                            ? `From ${formatPriceDisplay(r.minPrice)}`
+                            : `Up to ${formatPriceDisplay(r.maxPrice)}`}
                         </div>
                       )}
 
-                      {requirement.description && <p className="text-gray-600 text-sm mt-2">{requirement.description}</p>}
+                      {r.description && <p className="text-gray-600 text-sm mt-2">{r.description}</p>}
 
                       <div className="text-xs text-gray-500 mt-3">
-                        By {requirement.user?.name} • {new Date(requirement.createdAt).toLocaleDateString()}
+                        {new Date(r.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>

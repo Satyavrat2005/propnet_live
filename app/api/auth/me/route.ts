@@ -1,98 +1,42 @@
-// app/api/auth/me/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifySession } from "@/lib/auth/session";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  console.warn("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in env");
+function readSessionCookie(req: NextRequest) {
+  const cookie = req.headers.get("cookie") || "";
+  const part = cookie.split(";").find((c) => c.trim().startsWith("session="));
+  if (!part) return null;
+  const token = part.split("=")[1];
+  return token || null;
 }
 
-const supabase = (supabaseUrl && supabaseServiceRoleKey) 
-  ? createClient(supabaseUrl, supabaseServiceRoleKey)
-  : null;
-
-/**
- * GET /api/auth/me
- * - tries to read phone from cookie 'propnet_phone'
- * - if present, returns profile where phone matches
- * - if no cookie, returns the most recently created profile as a fallback (helps after OTP flow)
- * Response: { user: { ...profile } } or { user: null }
- */
-export async function GET(req: Request) {
-  // Return early if Supabase is not configured - use mock user for development
-  if (!supabase) {
-    // Mock user for development/testing when Supabase is not configured
-    const mockUser = {
-      id: 1,
-      name: "Demo Agent",
-      email: "demo@propnet.com",
-      phone: "+919876543210",
-      agencyName: "PropNet Realty",
-      city: "Mumbai",
-      role: "agent",
-      isVerified: true,
-    };
-    return NextResponse.json({ user: mockUser });
-  }
-
+export async function GET(req: NextRequest) {
   try {
-    // read cookie
-    const cookieHeader = req.headers.get("cookie") || "";
-    // parse cookie manually (simple)
-    const cookies = Object.fromEntries(
-      cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .map((c) => {
-          const [k, ...v] = c.split("=");
-          return [k, decodeURIComponent(v.join("="))];
-        })
-    );
-
-    const phoneFromCookie = cookies["propnet_phone"] ?? null;
-
-    if (phoneFromCookie) {
-      // try to find profile by phone
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("phone", phoneFromCookie)
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error("supabase error in /api/auth/me (by phone):", error);
-        return NextResponse.json({ user: null });
-      }
-
-      if (data) {
-        return NextResponse.json({ user: data });
-      }
+    const token = readSessionCookie(req);
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // fallback: return most recent profile
-    const { data: recent, error: recentErr } = await supabase
+    const payload = await verifySession(token);
+    const userId = payload.sub;
+
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .eq("id", userId)
+      .single();
 
-    if (recentErr) {
-      console.error("supabase error in /api/auth/me (recent):", recentErr);
-      return NextResponse.json({ user: null });
+    if (error || !data) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
 
-    if (recent) {
-      return NextResponse.json({ user: recent });
-    }
-
-    return NextResponse.json({ user: null });
-  } catch (err: any) {
-    console.error("Unexpected error in /api/auth/me:", err);
-    return NextResponse.json({ user: null });
+    return NextResponse.json({ user: data }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "Invalid session" }, { status: 401 });
   }
 }

@@ -1,9 +1,9 @@
 // app/quickpost/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,20 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -26,23 +38,21 @@ import {
   FileText,
   Edit3,
   Trash2,
-  CheckCircle,
-  AlertCircle,
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
+import { Checkbox } from "@/components/ui/checkbox";
 import { z } from "zod";
 
-interface ExtractedProperty {
+type ExtractedProperty = {
   title?: string;
   propertyType?: string;
-  transactionType?: string;
+  transactionType?: "sale" | "rent";
   price?: string;
-  rentFrequency?: string;
+  rentFrequency?: "monthly" | "yearly";
   size?: string;
   sizeUnit?: string;
   location?: string;
@@ -56,8 +66,10 @@ interface ExtractedProperty {
   buildingSociety?: string;
   description?: string;
   confidence?: number;
-  listingType?: string;
-}
+  listingType?: "exclusive" | "shared" | "co-listing";
+  isPubliclyVisible?: boolean;
+  scopeOfWork?: string[];
+};
 
 const propertyFormSchema = z
   .object({
@@ -70,7 +82,7 @@ const propertyFormSchema = z
     sizeUnit: z.string().min(1, "Size unit is required"),
     location: z.string().min(1, "Location is required"),
     fullAddress: z.string().min(1, "Full address is required"),
-    bhk: z.number().min(1, "BHK is required"),
+    bhk: z.number().min(0),
     flatNumber: z.string().min(1, "Flat/Unit number is required"),
     buildingSociety: z.string().min(1, "Building/Society name is required"),
     floorNumber: z.string().optional(),
@@ -90,7 +102,8 @@ const propertyFormSchema = z
       return true;
     },
     {
-      message: "Owner details and commission terms required for exclusive/co-listing",
+      message:
+        "Owner details and commission terms required for exclusive/co-listing",
       path: ["ownerName"],
     }
   );
@@ -99,19 +112,29 @@ export default function QuickPostPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Redirect to login if not authenticated (do inside effect)
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/");
-    }
-  }, [authLoading, user, router]);
+  // Redirect to login if not authenticated
 
-  const [inputText, setInputText] = useState<string>("");
-  const [extractedProperties, setExtractedProperties] = useState<ExtractedProperty[]>([]);
-  const [selectedProperty, setSelectedProperty] = useState<ExtractedProperty | null>(null);
+  const [inputText, setInputText] = useState("");
+  const [extractedProperties, setExtractedProperties] = useState<
+    ExtractedProperty[]
+  >([]);
+  const [selectedProperty, setSelectedProperty] =
+    useState<ExtractedProperty | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Stable options (prevents re-renders that cause input "zapping")
+  const scopeOfWorkOptions = useMemo(
+    () => [
+      "Property Viewing Coordination",
+      "Marketing & Promotion",
+      "Documentation Support",
+      "Negotiation Assistance",
+      "Legal Compliance Check",
+      "Market Analysis",
+    ],
+    []
+  );
 
   const form = useForm<z.infer<typeof propertyFormSchema>>({
     resolver: zodResolver(propertyFormSchema),
@@ -139,13 +162,19 @@ export default function QuickPostPage() {
     },
   });
 
+  // ---- AI Extraction ----
   const extractMutation = useMutation({
     mutationFn: async (text: string) => {
-      const resp = await apiRequest("POST", "/api/quickpost/extract", { text });
-      if (resp && typeof (resp as Response).json === "function") return (resp as Response).json();
-      return resp;
+      const res = await fetch("/api/quickpost/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw { response: { data: json } };
+      return json as { properties: ExtractedProperty[]; count: number };
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setExtractedProperties(data.properties || []);
       toast({
         title: "Properties Extracted",
@@ -155,56 +184,95 @@ export default function QuickPostPage() {
     onError: (error: any) => {
       toast({
         title: "Extraction Failed",
-        description: error?.response?.data?.message || "Failed to extract properties from text.",
+        description:
+          error?.response?.data?.message ||
+          "Failed to extract properties from text.",
         variant: "destructive",
       });
     },
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (properties: ExtractedProperty[]) => {
-      const resp = await apiRequest("POST", "/api/quickpost/create", { properties });
-      if (resp && typeof (resp as Response).json === "function") return (resp as Response).json();
-      return resp;
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+  // ---- Create listings by reusing /api/my-properties (FormData) ----
+  const createAllMutation = useMutation({
+    mutationFn: async (props: ExtractedProperty[]) => {
+      // sequential (safe) — you can parallelize if you want
+      let created = 0;
+      const failed: { index: number; error: string }[] = [];
 
-      if (data.errors && data.errors.length > 0) {
+      for (let i = 0; i < props.length; i++) {
+        const p = props[i];
+        try {
+          const fd = new FormData();
+          // map fields to server field names expected by /api/my-properties
+          if (p.title) fd.append("title", p.title);
+          if (p.propertyType) fd.append("propertyType", p.propertyType);
+          if (p.transactionType) fd.append("transactionType", p.transactionType);
+          if (p.price) fd.append("price", p.price);
+          if (p.rentFrequency) fd.append("rentFrequency", p.rentFrequency);
+          if (p.size) fd.append("size", p.size);
+          if (p.sizeUnit) fd.append("sizeUnit", p.sizeUnit);
+          if (p.location) fd.append("location", p.location);
+          if (p.fullAddress) fd.append("fullAddress", p.fullAddress);
+          if (p.flatNumber) fd.append("flatNumber", p.flatNumber);
+          if (p.floorNumber) fd.append("floorNumber", p.floorNumber);
+          if (p.buildingSociety) fd.append("buildingSociety", p.buildingSociety);
+          if (p.description) fd.append("description", p.description);
+          if (typeof p.bhk === "number") fd.append("bhk", String(p.bhk));
+          if (p.listingType) fd.append("listingType", p.listingType);
+          fd.append(
+            "isPubliclyVisible",
+            String(p.isPubliclyVisible ?? p.listingType !== "exclusive")
+          );
+          if (p.ownerName) fd.append("ownerName", p.ownerName);
+          if (p.ownerPhone) fd.append("ownerPhone", p.ownerPhone);
+          if (p.commissionTerms) fd.append("commissionTerms", p.commissionTerms);
+          if (p.scopeOfWork?.length)
+            fd.append("scopeOfWork", JSON.stringify(p.scopeOfWork));
+
+          const res = await fetch("/api/my-properties", {
+            method: "POST",
+            body: fd,
+            credentials: "same-origin",
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            throw new Error(json?.message || "Insert failed");
+          }
+          created++;
+        } catch (e: any) {
+          failed.push({ index: i, error: e?.message || "Unknown error" });
+        }
+      }
+      return { created, failed };
+    },
+    onSuccess: ({ created, failed }) => {
+      if (created > 0) {
         toast({
-          title: "Incomplete Properties Found",
-          description: `${data.errors.length} properties need manual completion. Please fill in missing required fields and try again.`,
+          title: "Listings Created",
+          description: `${created} properties created successfully.`,
+        });
+      }
+      if (failed.length > 0) {
+        toast({
+          title: "Some Failed",
+          description: `${failed.length} properties need correction. Check fields and try again.`,
           variant: "destructive",
         });
-
-        console.log("Property creation errors:", data.errors);
-
-        const failedIndices = data.errors.map((e: any) => e.index);
-        const failedProperties = extractedProperties.filter((_, idx) => failedIndices.includes(idx));
-        const successfulCount = data.created ?? 0;
-
-        if (successfulCount > 0) {
-          toast({
-            title: "Partial Success",
-            description: `${successfulCount} properties created successfully.`,
-          });
-        }
-
-        setExtractedProperties(failedProperties);
-      } else {
-        toast({
-          title: "All Properties Created",
-          description: `Successfully created ${data.created ?? 0} properties.`,
-        });
-        setInputText("");
-        setExtractedProperties([]);
+        // keep only failed ones for user to edit
+        setExtractedProperties((prev) =>
+          prev.filter((_, idx) => failed.some((f) => f.index === idx))
+        );
+        return;
       }
+      // all good
+      setInputText("");
+      setExtractedProperties([]);
+      router.push("/my-listings");
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Creation Failed",
-        description: error?.response?.data?.message || "Failed to create properties.",
+        description: "Failed to create properties. Please try again.",
         variant: "destructive",
       });
     },
@@ -222,15 +290,24 @@ export default function QuickPostPage() {
     extractMutation.mutate(inputText);
   };
 
-  const handleEdit = (property: ExtractedProperty) => {
-    setSelectedProperty(property);
+  const handleEditInline = (
+    property: ExtractedProperty,
+    patch: Partial<ExtractedProperty>
+  ) => {
+    const updated = { ...property, ...patch };
+    setExtractedProperties((prev) =>
+      prev.map((p) => (p === property ? updated : p))
+    );
+  };
 
+  const handleEditDialog = (property: ExtractedProperty) => {
+    setSelectedProperty(property);
     form.reset({
       title: property.title || "",
       propertyType: property.propertyType || "",
-      transactionType: (property.transactionType as "sale" | "rent") || "sale",
+      transactionType: property.transactionType || "sale",
       price: property.price || "",
-      rentFrequency: (property.rentFrequency as "monthly" | "yearly") || "monthly",
+      rentFrequency: property.rentFrequency || "monthly",
       size: property.size || "",
       sizeUnit: property.sizeUnit || "sq.ft",
       location: property.location || "",
@@ -240,75 +317,35 @@ export default function QuickPostPage() {
       buildingSociety: property.buildingSociety || "",
       description: property.description || "",
       bhk: property.bhk || 0,
-      listingType: (property.listingType as "exclusive" | "shared" | "co-listing") || "shared",
-      isPubliclyVisible: property.listingType !== "exclusive",
+      listingType: property.listingType || "shared",
+      isPubliclyVisible:
+        property.isPubliclyVisible ?? property.listingType !== "exclusive",
       ownerName: property.ownerName || "",
       ownerPhone: property.ownerPhone || "",
       commissionTerms: property.commissionTerms || "",
-      scopeOfWork: [],
+      scopeOfWork: property.scopeOfWork || [],
     });
-
     setIsEditDialogOpen(true);
   };
 
   const handleSaveEdit = (values: z.infer<typeof propertyFormSchema>) => {
-    if (selectedProperty) {
-      const updatedProperty = { ...selectedProperty, ...values };
-      const updatedProperties = extractedProperties.map((p) => (p === selectedProperty ? updatedProperty : p));
-      setExtractedProperties(updatedProperties);
-      setIsEditDialogOpen(false);
-      setSelectedProperty(null);
-
-      toast({
-        title: "Property Updated",
-        description: "Property details have been updated successfully.",
-      });
-    }
+    if (!selectedProperty) return;
+    handleEditInline(selectedProperty, values);
+    setIsEditDialogOpen(false);
+    setSelectedProperty(null);
+    toast({
+      title: "Property Updated",
+      description: "Property details have been updated.",
+    });
   };
 
   const handleRemove = (property: ExtractedProperty) => {
     setExtractedProperties((prev) => prev.filter((p) => p !== property));
-    toast({
-      title: "Property Removed",
-      description: "Property has been removed from the list.",
-    });
-  };
-
-  const handleCreateAll = () => {
-    if (extractedProperties.length === 0) {
-      toast({
-        title: "No Properties",
-        description: "Please extract properties first before creating listings.",
-        variant: "destructive",
-      });
-      return;
-    }
-    createMutation.mutate(extractedProperties);
-  };
-
-  const getConfidenceBadge = (confidence?: number) => {
-    if (!confidence) return null;
-    const percentage = Math.round(confidence * 100);
-    let variant: "default" | "secondary" | "destructive" | "outline" = "default";
-    let color = "bg-green-100 text-green-800";
-
-    if (percentage < 60) {
-      variant = "destructive";
-      color = "bg-red-100 text-red-800";
-    } else if (percentage < 80) {
-      variant = "secondary";
-      color = "bg-yellow-100 text-yellow-800";
-    }
-
-    return (
-      <Badge variant={variant} className={color}>
-        {percentage}% confidence
-      </Badge>
-    );
+    toast({ title: "Removed", description: "Property removed from the list." });
   };
 
   const getValidationStatus = (property: ExtractedProperty) => {
-    const requiredFields = [
+    const required: (keyof ExtractedProperty)[] = [
       "title",
       "propertyType",
       "transactionType",
@@ -318,21 +355,45 @@ export default function QuickPostPage() {
       "bhk",
       "flatNumber",
       "buildingSociety",
+      "fullAddress",
     ];
-    const missingFields = requiredFields.filter((field) => !property[field as keyof ExtractedProperty]);
-
-    const listingType = property.listingType || "shared";
-    if (listingType === "exclusive" || listingType === "co-listing") {
-      if (!property.ownerName) missingFields.push("ownerName");
-      if (!property.ownerPhone) missingFields.push("ownerPhone");
-      if (!property.commissionTerms) missingFields.push("commissionTerms");
+    const missing = required.filter((k) => !property[k]);
+    const lt = property.listingType || "shared";
+    if (lt === "exclusive" || lt === "co-listing") {
+      if (!property.ownerName) missing.push("ownerName");
+      if (!property.ownerPhone) missing.push("ownerPhone");
+      if (!property.commissionTerms) missing.push("commissionTerms");
     }
+    return { isValid: missing.length === 0, missingFields: missing, missingCount: missing.length };
+  };
 
-    return {
-      isValid: missingFields.length === 0,
-      missingFields,
-      missingCount: missingFields.length,
-    };
+  const getConfidenceBadge = (confidence?: number) => {
+    if (!confidence && confidence !== 0) return null;
+    const pct = Math.round(confidence * 100);
+    const color =
+      pct < 60 ? "bg-red-100 text-red-800" : pct < 80 ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800";
+    return (
+      <Badge className={color}>
+        {pct}% confidence
+      </Badge>
+    );
+  };
+
+  const handleCreateAll = () => {
+    if (extractedProperties.length === 0) {
+      toast({
+        title: "No Properties",
+        description: "Please extract properties first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createAllMutation.mutate(extractedProperties);
+  };
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) router.back();
+    else router.push("/feed");
   };
 
   return (
@@ -342,25 +403,29 @@ export default function QuickPostPage() {
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center">
             <button
-              className="text-primary mr-4"
-              onClick={() => router.push("/feed")}
+              className="text-primary mr-4 hover:opacity-80"
+              onClick={handleBack}
               type="button"
-              aria-label="Back to feed"
+              aria-label="Go back"
             >
               <ArrowLeft size={24} />
             </button>
             <div>
-              <h2 className="text-lg font-semibold text-neutral-900">QuickPost</h2>
-              <p className="text-xs text-neutral-500">AI-powered property extraction</p>
+              <h2 className="text-lg font-semibold text-neutral-900">
+                QuickPost
+              </h2>
+              <p className="text-xs text-neutral-500">
+                AI-powered property extraction
+              </p>
             </div>
           </div>
           <Sparkles size={20} className="text-primary" />
         </div>
       </div>
 
-      {/* Content */}
+      {/* Body */}
       <div className="flex-1 px-6 py-6 space-y-6">
-        {/* Input Section */}
+        {/* Input */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center text-base">
@@ -373,18 +438,7 @@ export default function QuickPostPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
-              placeholder={`Paste your property text here... For example:
-
-2 BHK flat for sale in Bandra West, Mumbai
-Price: 2.5 Cr
-Area: 1200 sq ft
-Contact: Rajesh Kumar - 9876543210
-Commission: 2%
-
-3 BHK villa for rent in Koramangala, Bangalore
-Monthly rent: 75,000
-Size: 2000 sq ft
-Owner: Priya Sharma - 9123456789`}
+              placeholder={`Paste your property text here...`}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               rows={8}
@@ -392,7 +446,12 @@ Owner: Priya Sharma - 9123456789`}
             />
 
             <div className="flex space-x-2">
-              <Button onClick={handleExtract} disabled={extractMutation.isPending || !inputText.trim()} className="flex-1" type="button">
+              <Button
+                onClick={handleExtract}
+                disabled={extractMutation.isPending || !inputText.trim()}
+                className="flex-1"
+                type="button"
+              >
                 {extractMutation.isPending ? (
                   <>
                     <Wand2 size={16} className="mr-2 animate-spin" />
@@ -418,284 +477,315 @@ Owner: Priya Sharma - 9123456789`}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Extracted Properties ({extractedProperties.length})</CardTitle>
-                <Button onClick={handleCreateAll} disabled={createMutation.isPending} size="sm" type="button">
-                  {createMutation.isPending ? "Creating..." : "Create All Listings"}
+                <CardTitle className="text-base">
+                  Extracted Properties ({extractedProperties.length})
+                </CardTitle>
+                <Button
+                  onClick={handleCreateAll}
+                  disabled={createAllMutation.isPending}
+                  size="sm"
+                  type="button"
+                >
+                  {createAllMutation.isPending ? "Creating..." : "Create All Listings"}
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {extractedProperties.map((property, index) => {
-                const validationStatus = getValidationStatus(property);
+                const validation = getValidationStatus(property);
                 return (
                   <Card
                     key={index}
-                    className={`border ${validationStatus.isValid ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
+                    className={`border ${
+                      validation.isValid
+                        ? "border-green-200 bg-green-50"
+                        : "border-red-200 bg-red-50"
+                    }`}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="font-semibold text-neutral-900">{property.title || `Property ${index + 1}`}</h3>
-                            {!validationStatus.isValid && (
+                            <h3 className="font-semibold text-neutral-900">
+                              {property.title || `Property ${index + 1}`}
+                            </h3>
+                            {!validation.isValid ? (
                               <Badge variant="destructive" className="text-xs">
-                                {validationStatus.missingCount} fields missing
+                                {validation.missingCount} fields missing
                               </Badge>
-                            )}
-                            {validationStatus.isValid && (
-                              <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
                                 Ready to create
                               </Badge>
                             )}
-                          </div>
-
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Badge variant="outline">{property.propertyType || "Not specified"}</Badge>
-                            <Badge variant="outline">{property.transactionType || "Not specified"}</Badge>
-                            {property.bhk && <Badge variant="outline">{property.bhk} BHK</Badge>}
                             {getConfidenceBadge(property.confidence)}
                           </div>
 
-                          {!validationStatus.isValid && (
-                            <p className="text-xs text-red-600 mb-2">Missing: {validationStatus.missingFields.join(", ")}</p>
+                          {!validation.isValid && (
+                            <p className="text-xs text-red-600 mb-2">
+                              Missing: {validation.missingFields.join(", ")}
+                            </p>
                           )}
                         </div>
 
                         <div className="flex items-center space-x-1">
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(property)} type="button">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditDialog(property)}
+                            type="button"
+                          >
                             <Edit3 size={14} />
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleRemove(property)} type="button">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemove(property)}
+                            type="button"
+                          >
                             <Trash2 size={14} />
                           </Button>
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-neutral-500">Price:</span>
-                            <span className="ml-2 font-medium">{property.price || "Not specified"}</span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">Size:</span>
-                            <span className="ml-2">{property.size ? `${property.size} ${property.sizeUnit || "sq.ft"}` : "Not specified"}</span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">Location:</span>
-                            <span className="ml-2">{property.location || "Not specified"}</span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">BHK:</span>
-                            <span className="ml-2">{property.bhk || "Not specified"}</span>
-                          </div>
-                        </div>
-
-                        {validationStatus.missingFields.length > 0 && (
-                          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-xs text-red-600 font-medium mb-2">Please fill the missing required fields:</p>
-                            <div className="grid grid-cols-2 gap-2">
-                              {validationStatus.missingFields.includes("title") && (
-                                <div className="col-span-2">
-                                  <label className="text-xs text-neutral-600">Property Title</label>
-                                  <Input
-                                    placeholder="e.g., Beautiful 2 BHK Apartment"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.title || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, title: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("propertyType") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">Property Type</label>
-                                  <Select
-                                    onValueChange={(value) => {
-                                      const updatedProperty = { ...property, propertyType: value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs">
-                                      <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Apartment">Apartment</SelectItem>
-                                      <SelectItem value="Villa">Villa</SelectItem>
-                                      <SelectItem value="Commercial">Commercial</SelectItem>
-                                      <SelectItem value="Plot">Plot</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("transactionType") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">Transaction Type</label>
-                                  <Select
-                                    onValueChange={(value) => {
-                                      const updatedProperty = { ...property, transactionType: value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs">
-                                      <SelectValue placeholder="Select transaction" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="sale">Sale</SelectItem>
-                                      <SelectItem value="rent">Rent</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("price") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">Price</label>
-                                  <Input
-                                    placeholder="e.g., 50000"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.price || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, price: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("size") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">Size</label>
-                                  <Input
-                                    placeholder="e.g., 1200"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.size || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, size: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("location") && (
-                                <div className="col-span-2">
-                                  <label className="text-xs text-neutral-600">Location</label>
-                                  <Input
-                                    placeholder="e.g., Bandra West, Mumbai"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.location || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, location: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("bhk") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">BHK</label>
-                                  <Input
-                                    type="number"
-                                    placeholder="e.g., 2"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.bhk?.toString() || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, bhk: parseInt(e.target.value) || undefined };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("flatNumber") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">Flat/Unit Number</label>
-                                  <Input
-                                    placeholder="e.g., A-101"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.flatNumber || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, flatNumber: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("buildingSociety") && (
-                                <div className="col-span-2">
-                                  <label className="text-xs text-neutral-600">Building/Society Name</label>
-                                  <GooglePlacesAutocomplete
-                                    value={property.buildingSociety || ""}
-                                    onChange={(value) => {
-                                      const updatedProperty = { ...property, buildingSociety: value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                    placeholder="Search for building or society..."
-                                    types={["establishment"]}
-                                    className="text-xs"
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("ownerName") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">Owner Name</label>
-                                  <Input
-                                    placeholder="e.g., John Doe"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.ownerName || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, ownerName: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("ownerPhone") && (
-                                <div>
-                                  <label className="text-xs text-neutral-600">Owner Phone</label>
-                                  <Input
-                                    placeholder="e.g., 9999999999"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.ownerPhone || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, ownerPhone: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
-
-                              {validationStatus.missingFields.includes("commissionTerms") && (
-                                <div className="col-span-2">
-                                  <label className="text-xs text-neutral-600">Commission Terms</label>
-                                  <Input
-                                    placeholder="e.g., 2% of property value"
-                                    className="h-8 text-xs"
-                                    defaultValue={property.commissionTerms || ""}
-                                    onBlur={(e) => {
-                                      const updatedProperty = { ...property, commissionTerms: e.target.value };
-                                      setExtractedProperties((prev) => prev.map((p) => (p === property ? updatedProperty : p)));
-                                    }}
-                                  />
-                                </div>
-                              )}
+                      {/* Quick inline fixes for missing fields */}
+                      {validation.missingFields.length > 0 && (
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          {validation.missingFields.includes("title") && (
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Property Title
+                              </label>
+                              <Input
+                                defaultValue={property.title || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    title: e.target.value,
+                                  })
+                                }
+                              />
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {property.description && (
-                          <p className="text-sm text-neutral-600 mt-3 p-2 bg-neutral-50 rounded">{property.description}</p>
-                        )}
-                      </div>
+                          {validation.missingFields.includes("propertyType") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Property Type
+                              </label>
+                              <Select
+                                onValueChange={(v) =>
+                                  handleEditInline(property, {
+                                    propertyType: v as ExtractedProperty["propertyType"],
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Apartment">Apartment</SelectItem>
+                                  <SelectItem value="Villa">Villa</SelectItem>
+                                  <SelectItem value="Commercial">Commercial</SelectItem>
+                                  <SelectItem value="Plot">Plot</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("transactionType") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Transaction Type
+                              </label>
+                              <Select
+                                onValueChange={(v) =>
+                                  handleEditInline(property, {
+                                    transactionType: v as "sale" | "rent",
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Select transaction" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="sale">Sale</SelectItem>
+                                  <SelectItem value="rent">Rent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("price") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">Price</label>
+                              <Input
+                                defaultValue={property.price || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    price: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("size") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">Size</label>
+                              <Input
+                                defaultValue={property.size || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, { size: e.target.value })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("location") && (
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Location
+                              </label>
+                              <Input
+                                defaultValue={property.location || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    location: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("bhk") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">BHK</label>
+                              <Input
+                                type="number"
+                                defaultValue={
+                                  typeof property.bhk === "number"
+                                    ? String(property.bhk)
+                                    : ""
+                                }
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    bhk: parseInt(e.target.value) || 0,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("flatNumber") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Flat/Unit Number
+                              </label>
+                              <Input
+                                defaultValue={property.flatNumber || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    flatNumber: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("buildingSociety") && (
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Building/Society
+                              </label>
+                              <GooglePlacesAutocomplete
+                                value={property.buildingSociety || ""}
+                                onChange={(v) =>
+                                  handleEditInline(property, {
+                                    buildingSociety: v,
+                                  })
+                                }
+                                placeholder="Search building..."
+                                types={["establishment"]}
+                                className="text-xs"
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("fullAddress") && (
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Full Address
+                              </label>
+                              <Input
+                                defaultValue={property.fullAddress || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    fullAddress: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("ownerName") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Owner Name
+                              </label>
+                              <Input
+                                defaultValue={property.ownerName || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    ownerName: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("ownerPhone") && (
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Owner Phone
+                              </label>
+                              <Input
+                                defaultValue={property.ownerPhone || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    ownerPhone: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+
+                          {validation.missingFields.includes("commissionTerms") && (
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Commission Terms
+                              </label>
+                              <Input
+                                defaultValue={property.commissionTerms || ""}
+                                className="h-8 text-xs"
+                                onBlur={(e) =>
+                                  handleEditInline(property, {
+                                    commissionTerms: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -704,9 +794,9 @@ Owner: Priya Sharma - 9123456789`}
           </Card>
         )}
 
-        {/* Edit Dialog */}
+        {/* Edit Dialog (full form) */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
             <DialogHeader>
               <DialogTitle>Edit Property Details</DialogTitle>
             </DialogHeader>
@@ -780,7 +870,7 @@ Owner: Priya Sharma - 9123456789`}
                       <FormItem>
                         <FormLabel>Price</FormLabel>
                         <FormControl>
-                          <Input placeholder="2500000" {...field} />
+                          <Input placeholder="₹ 50,00,000" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -826,7 +916,9 @@ Owner: Priya Sharma - 9123456789`}
                             type="number"
                             placeholder="2"
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            onChange={(e) =>
+                              field.onChange(parseInt(e.target.value) || 0)
+                            }
                           />
                         </FormControl>
                         <FormMessage />
@@ -855,7 +947,12 @@ Owner: Priya Sharma - 9123456789`}
                       <FormItem>
                         <FormLabel>Building/Society Name</FormLabel>
                         <FormControl>
-                          <GooglePlacesAutocomplete value={field.value || ""} onChange={(v) => field.onChange(v)} placeholder="Search for building or society..." types={["establishment"]} />
+                          <GooglePlacesAutocomplete
+                            value={field.value || ""}
+                            onChange={(v) => field.onChange(v)}
+                            placeholder="Search for building or society..."
+                            types={["establishment"]}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -940,10 +1037,61 @@ Owner: Priya Sharma - 9123456789`}
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="commissionTerms"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Commission Terms</FormLabel>
+                        <FormControl>
+                          <Input placeholder="2% of sale value" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="scopeOfWork"
+                    render={({ field }) => (
+                      <FormItem className="col-span-2">
+                        <FormLabel>Scope of Work</FormLabel>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {scopeOfWorkOptions.map((opt) => (
+                            <div
+                              key={opt}
+                              className="flex items-center space-x-2 p-2 border border-gray-200 rounded-md bg-white"
+                            >
+                              <Checkbox
+                                checked={field.value?.includes(opt) || false}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  field.onChange(
+                                    checked
+                                      ? [...current, opt]
+                                      : current.filter((x: string) => x !== opt)
+                                  );
+                                }}
+                              />
+                              <span className="text-sm">{opt}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="flex-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditDialogOpen(false)}
+                    className="flex-1"
+                  >
                     Cancel
                   </Button>
                   <Button type="submit" className="flex-1">
