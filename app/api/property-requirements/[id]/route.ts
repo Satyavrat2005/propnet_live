@@ -7,7 +7,7 @@ import { verifySession } from "@/lib/auth/session";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 async function getUserFromCookie(req: NextRequest) {
@@ -150,27 +150,39 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const userId = await getUserFromCookie(req);
-    if (!userId) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+    const id = params.id;
 
-    const requirementId = params.id;
+    if (!id) {
+      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+    }
 
-    const { data: existing, error: readErr } = await supabase
-      .from("requirements")
-      .select("requirement_id, id")
-      .eq("requirement_id", requirementId)
-      .single();
-    if (readErr || !existing) return NextResponse.json({ message: "Requirement not found" }, { status: 404 });
-    if (existing.id !== userId) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    const { error } = await supabase
+      .from("property_requirements")
+      .delete()
+      .eq("id", id);
 
-    const { error } = await supabase.from("requirements").delete().eq("requirement_id", requirementId);
-    if (error) return NextResponse.json({ message: `Database error: ${error.message}` }, { status: 500 });
+    if (error) {
+      console.error("Error deleting:", error.message);
+      return NextResponse.json(
+        { error: "Failed to delete property requirement" },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (e: any) {
-    console.error("[DELETE /api/property-requirements/:id] ", e);
-    return NextResponse.json({ message: e?.message || "Unexpected error" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Property requirement deleted successfully" },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return NextResponse.json(
+      { error: "Unexpected error occurred" },
+      { status: 500 }
+    );
   }
 }
