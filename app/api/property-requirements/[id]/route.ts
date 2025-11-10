@@ -151,11 +151,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: Request,
+  context: { params: Record<string, string> }
 ) {
   try {
-    const id = params.id;
+    const id = context.params.id;
 
     if (!id) {
       return NextResponse.json({ error: "Missing ID" }, { status: 400 });
@@ -167,7 +167,7 @@ export async function DELETE(
       .eq("id", id);
 
     if (error) {
-      console.error("Error deleting:", error.message);
+      console.error("Supabase delete error:", error);
       return NextResponse.json(
         { error: "Failed to delete property requirement" },
         { status: 500 }
