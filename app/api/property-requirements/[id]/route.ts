@@ -7,17 +7,22 @@ import { verifySession } from "@/lib/auth/session";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-async function getUserFromCookie(req: NextRequest) {
-  const cookie = req.headers.get("cookie") || "";
-  const part = cookie.split(";").find((c) => c.trim().startsWith("session="));
-  if (!part) return null;
+// UUID validator
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function getUserIdFromCookie(req: NextRequest) {
+  const cookie = (req.headers.get("cookie") || "")
+    .split(";")
+    .find((c) => c.trim().startsWith("session="));
+  if (!cookie) return null;
+  const token = cookie.split("=").slice(1).join("="); // handle '=' in value
   try {
-    const token = part.split("=")[1];
     const session = await verifySession(token);
-    return session.sub as string;
+    return String(session.sub);
   } catch {
     return null;
   }
@@ -29,7 +34,9 @@ async function geocodeAddress(input: string) {
   if (!key) return null;
   try {
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(input)}&key=${key}`,
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        input
+      )}&key=${key}`,
       { cache: "no-store" }
     );
     const data = await res.json();
@@ -45,22 +52,33 @@ async function geocodeAddress(input: string) {
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> } // params is a Promise in your Next version
+) {
   try {
-    const userId = await getUserFromCookie(req);
+    const userId = await getUserIdFromCookie(req);
     if (!userId) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
 
-    const requirementId = params.id;
+    const { id } = await ctx.params;
+    if (!id || !UUID_RE.test(id)) {
+      return NextResponse.json({ message: "Invalid requirement id" }, { status: 400 });
+    }
+
     const body = await req.json();
 
-    // Ownership
+    // Check ownership
     const { data: existing, error: readErr } = await supabase
       .from("requirements")
       .select("requirement_id, id")
-      .eq("requirement_id", requirementId)
+      .eq("requirement_id", id)
       .single();
-    if (readErr || !existing) return NextResponse.json({ message: "Requirement not found" }, { status: 404 });
-    if (existing.id !== userId) return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    if (readErr || !existing) {
+      return NextResponse.json({ message: "Requirement not found" }, { status: 404 });
+    }
+    if (existing.id !== userId) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
 
     let lat: number | null | undefined = undefined;
     let lng: number | null | undefined = undefined;
@@ -84,10 +102,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       property_type: body.propertyType,
       transaction_type: body.transactionType,
       preferred_location: formatted ?? body.preferredLocation,
-      // PRICES AS TEXT
+      // Prices are TEXT (as per your schema decision)
       min_price: body.minPrice,
       max_price: body.maxPrice,
-      // sizes remain numeric if columns are numeric
+      // Sizes remain numeric if columns are numeric
       min_size: body.minSize,
       max_size: body.maxSize,
       size_unit: body.sizeUnit,
@@ -100,7 +118,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { data, error } = await supabase
       .from("requirements")
       .update(patch)
-      .eq("requirement_id", requirementId)
+      .eq("requirement_id", id)
       .select(
         `
         requirement_id,
@@ -122,7 +140,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       )
       .single();
 
-    if (error) return NextResponse.json({ message: `Database error: ${error.message}` }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ message: `Database error: ${error.message}` }, { status: 500 });
+    }
 
     return NextResponse.json(
       {
@@ -151,38 +171,39 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(
-  req: Request,
-  context: { params: Record<string, string> }
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> } // ✅ Fix: type matches Next expectation
 ) {
   try {
-    const id = context.params.id;
+    const userId = await getUserIdFromCookie(req);
+    if (!userId) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
 
-    if (!id) {
-      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+    const { id } = await ctx.params;
+    if (!id || !UUID_RE.test(id)) {
+      return NextResponse.json({ message: "Invalid requirement id" }, { status: 400 });
     }
 
-    const { error } = await supabase
-      .from("property_requirements")
-      .delete()
-      .eq("id", id);
+    // Ownership check
+    const { data: existing, error: readErr } = await supabase
+      .from("requirements")
+      .select("requirement_id, id")
+      .eq("requirement_id", id)
+      .single();
+    if (readErr || !existing) {
+      return NextResponse.json({ message: "Requirement not found" }, { status: 404 });
+    }
+    if (existing.id !== userId) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
 
+    const { error } = await supabase.from("requirements").delete().eq("requirement_id", id);
     if (error) {
-      console.error("Supabase delete error:", error);
-      return NextResponse.json(
-        { error: "Failed to delete property requirement" },
-        { status: 500 }
-      );
+      return NextResponse.json({ message: `Database error: ${error.message}` }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { message: "Property requirement deleted successfully" },
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    return NextResponse.json(
-      { error: "Unexpected error occurred" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (e: any) {
+    console.error("[DELETE /api/property-requirements/:id] ", e);
+    return NextResponse.json({ message: e?.message || "Unexpected error" }, { status: 500 });
   }
 }
