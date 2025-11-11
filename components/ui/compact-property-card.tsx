@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Heart, Share2, MapPin, Phone, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/ui/contact-modal";
-import { formatPrice, formatArea, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
+import { formatPrice as globalFormatPrice, formatArea, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
 import { asMediaUrl } from "@/lib/utils";
 
 interface CompactPropertyCardProps {
@@ -32,7 +32,7 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
   };
 
   const handleShare = () => {
-    const formattedPrice = formatPrice(property.price, property.transactionType, property.rentFrequency);
+    const formattedPrice = getSafeFormattedPrice(property.price, property.transactionType, property.rentFrequency);
     const formattedArea = formatArea(property.size, property.sizeUnit);
     const shareText = `${property.title}\n📍 ${property.location}\n💰 ${formattedPrice}\n📐 ${formattedArea}`;
     
@@ -170,7 +170,7 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
           </div>
           
           <div className="text-lg font-bold text-gray-900">
-            {formatPrice(property.price, property.transactionType, property.rentFrequency)}
+            {getSafeFormattedPrice(property.price, property.transactionType, property.rentFrequency)}
           </div>
         </div>
       </div>
@@ -183,4 +183,79 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
       />
     </>
   );
+}
+
+/* -------------------------
+   Helpers (local, robust)
+   ------------------------- */
+
+/**
+ * Parse a textual price into a numeric rupee amount.
+ * Understands inputs like:
+ *  - "50 Lakh", "50 lakh", "50lakh", "50 lac", "50lac"
+ *  - "1.2 Cr", "1.2 cr", "1.2 crore", "2 Crore"
+ *  - "5,000,000" or "50,00,000" or plain "5000000"
+ */
+function parsePriceToNumber(input: any): number {
+  if (input == null) return 0;
+  const raw = String(input).toLowerCase().trim();
+
+  // If it's already a plain number (or contains commas)
+  const digitsOnly = raw.replace(/[, ]+/g, "");
+  if (/^[\d.]+$/.test(digitsOnly)) {
+    return parseFloat(digitsOnly) || 0;
+  }
+
+  // Match number part
+  const numMatch = raw.match(/[\d,.]*\.?\d+/);
+  const num = numMatch ? parseFloat(numMatch[0].replace(/,/g, "")) : NaN;
+
+  if (isNaN(num)) {
+    return 0;
+  }
+
+  // Determine multiplier
+  if (raw.includes("lakh") || raw.includes("lac")) {
+    return num * 100000;
+  }
+  if (raw.includes("crore") || raw.includes("cr")) {
+    return num * 10000000;
+  }
+
+  // Also support shorthand like "50k" (thousand) or "50m" (million) just in case
+  if (raw.endsWith("k")) return num * 1000;
+  if (raw.endsWith("m")) return num * 1000000;
+
+  // Fallback: return parsed number (assume rupees)
+  return num;
+}
+
+/**
+ * Format a rupee number for display using en-IN grouping (gives 50,00,000)
+ */
+function formatRupeeValue(num: number): string {
+  if (!isFinite(num) || num === 0) return "—";
+  const formatted = new Intl.NumberFormat("en-IN").format(Math.round(num));
+  return `₹${formatted}`;
+}
+
+/**
+ * Safely return a formatted price string.
+ * - Try your global formatter first (keeps existing site formatting).
+ * - If it returns falsy or contains 'NaN', fall back to parsing and local formatting.
+ */
+function getSafeFormattedPrice(rawPrice: any, transactionType?: string, rentFrequency?: string) {
+  try {
+    // try global formatter (may expect numbers)
+    const maybe = globalFormatPrice(rawPrice, transactionType, rentFrequency);
+    if (maybe && typeof maybe === "string" && !maybe.toLowerCase().includes("nan")) {
+      return maybe;
+    }
+  } catch (e) {
+    // ignore and fall back
+  }
+
+  // fallback: parse textual price to number and format
+  const numeric = parsePriceToNumber(rawPrice);
+  return formatRupeeValue(numeric);
 }

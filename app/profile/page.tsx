@@ -67,16 +67,7 @@ export default function ProfilePage() {
   });
 
   // If user is not present, redirect to home (same behaviour as original)
-  useEffect(() => {
-    if (!user) {
-      router.replace("/");
-    }
-  }, [user, router]);
-
-  if (!user) {
-    // Keep behavior consistent with original: don't render profile when user missing
-    return null;
-  }
+ 
 
   const pendingRequests = (colistingRequests as any[]).filter((req: any) => req.status === "pending").length;
 

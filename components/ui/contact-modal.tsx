@@ -24,7 +24,6 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
     } else if (contactMethod === "email" && propertyOwner.email) {
       window.open(`mailto:${propertyOwner.email}?subject=Inquiry about ${propertyTitle}&body=${message}`);
     } else {
-      // In-app messaging would be implemented here
       toast({
         title: "Message Sent",
         description: "Your message has been sent to the property owner.",
@@ -36,11 +35,15 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto">
+      <DialogContent
+        className="max-w-md mx-auto bg-white shadow-lg border border-neutral-200 rounded-2xl p-6 !backdrop-blur-none !bg-white"
+      >
         <DialogHeader>
-          <DialogTitle>Contact Agent</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-neutral-900">
+            Contact Agent
+          </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {/* Agent Info */}
           <div className="flex items-center space-x-3 p-3 bg-neutral-50 rounded-lg">
@@ -101,6 +104,7 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
+                className="bg-white"
               />
             </div>
           )}
@@ -113,8 +117,11 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
             <Button onClick={handleContact} className="flex-1 flex items-center space-x-2">
               <Send size={16} />
               <span>
-                {contactMethod === "phone" ? "Call Now" : 
-                 contactMethod === "email" ? "Send Email" : "Send Message"}
+                {contactMethod === "phone"
+                  ? "Call Now"
+                  : contactMethod === "email"
+                  ? "Send Email"
+                  : "Send Message"}
               </span>
             </Button>
           </div>
