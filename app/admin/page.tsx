@@ -1,13 +1,14 @@
 // app/admin/page.tsx
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, Users, MapPin, Building2, IndianRupee } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Users, MapPin, IndianRupee } from "lucide-react";
 
 type Property = {
   property_id: string;
@@ -39,6 +40,37 @@ type Property = {
 export default function AdminProperties() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const router = useRouter();
+
+  // Auth guard
+  const [authLoading, setAuthLoading] = useState(true);
+  const [adminData, setAdminData] = useState<any | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setAuthLoading(true);
+      try {
+        const res = await fetch("/api/secure-portal/me");
+        if (!mounted) return;
+        setAdminData(res.ok ? await res.json() : null);
+      } catch {
+        if (!mounted) return;
+        setAdminData(null);
+      } finally {
+        if (mounted) setAuthLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && !adminData) {
+      router.push("/admin/login");
+    }
+  }, [authLoading, adminData, router]);
 
   const { data: properties, isLoading } = useQuery<Property[]>({
     queryKey: ["/api/admin/properties"],
@@ -48,6 +80,7 @@ export default function AdminProperties() {
       return res.json();
     },
     retry: false,
+    enabled: !!adminData,
   });
 
   const updateStatusMutation = useMutation({
@@ -74,6 +107,18 @@ export default function AdminProperties() {
   const handleStatusUpdate = (id: string, status: "approved" | "rejected") => {
     updateStatusMutation.mutate({ id, status });
   };
+
+  // show verifying spinner while checking auth
+  if (authLoading || !adminData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-700">
+          <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+          Verifying authentication...
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

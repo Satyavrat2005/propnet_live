@@ -1,4 +1,4 @@
-// app/admin/page.tsx
+// app/admin/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -115,6 +115,22 @@ export default function AdminPortal() {
     },
   });
 
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/secure-portal/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
+      if (!res.ok) throw new Error(await res.text());
+      try { localStorage.removeItem("adminSessionToken"); } catch {}
+      router.push("/admin/login");
+    } catch (err: any) {
+      toast({ title: "Logout Failed", description: err?.message || "Unable to logout", variant: "destructive" });
+    }
+  };
+
+  // Manage Property button handler
+  const goToManageProperty = () => {
+    router.push("/admin");
+  };
+
   if (authLoading || !adminData) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -143,17 +159,6 @@ export default function AdminPortal() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      const res = await fetch("/api/secure-portal/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
-      if (!res.ok) throw new Error(await res.text());
-      try { localStorage.removeItem("adminSessionToken"); } catch {}
-      router.push("/admin/login");
-    } catch (err: any) {
-      toast({ title: "Logout Failed", description: err?.message || "Unable to logout", variant: "destructive" });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
@@ -169,14 +174,26 @@ export default function AdminPortal() {
                 <p className="text-sm text-slate-400">Welcome, {adminData?.admin?.username}</p>
               </div>
             </div>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-700"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+
+            {/* Buttons: Manage Property (new) + Logout (existing) */}
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={goToManageProperty}
+                variant="outline"
+                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              >
+                Manage Property
+              </Button>
+
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </div>
