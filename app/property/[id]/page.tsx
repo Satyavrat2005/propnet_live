@@ -93,25 +93,30 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const handleShareWhatsApp = () => {
-    const message = `🏠 ${property.title}\n📍 ${property.location}\n💰 ${priceLabel}\n📐 ${sizeLabel}\n\nContact me for more details!`;
+    const rawPhone = property.owner?.phone ?? null;
+    const digitsOnly = rawPhone?.replace(/\D/g, "") || "";
+    const whatsappNumber = (() => {
+      if (!digitsOnly) return null;
+      if (digitsOnly.length === 12 && digitsOnly.startsWith("91")) return digitsOnly;
+      if (digitsOnly.length === 11 && digitsOnly.startsWith("0")) return `91${digitsOnly.slice(1)}`;
+      if (digitsOnly.length === 10) return `91${digitsOnly}`;
+      return digitsOnly;
+    })();
 
-    if (typeof navigator !== "undefined" && (navigator as any).share) {
-      (navigator as any).share({
-        title: property.title,
-        text: message,
-      });
-    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(message);
+    if (!whatsappNumber) {
       toast({
-        title: "Copied",
-        description: "Property details copied for WhatsApp sharing!",
-      });
-    } else {
-      toast({
-        title: "Unavailable",
-        description: "Sharing is not supported in this browser.",
+        title: "Phone number unavailable",
+        description: "We couldn't find a valid broker number for WhatsApp sharing.",
         variant: "destructive",
       });
+      return;
+    }
+
+    const message = `🏠 ${property.title}\n📍 ${property.location}\n💰 ${priceLabel}\n📐 ${sizeLabel}\n\nContact me for more details!`;
+    const shareUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+
+    if (typeof window !== "undefined") {
+      window.open(shareUrl, "_blank");
     }
   };
 
