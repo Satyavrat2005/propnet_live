@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use } from "react";
+import React, { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,9 +56,41 @@ export default function OwnerConsentClient({ consentId }: { consentId: string })
   const queryClient = useQueryClient();
 
   // Fetch consent details
-  const { data: consentData, isLoading } = useQuery<ConsentData>({
+  const {
+    data: consentData,
+    isLoading,
+    error: consentError,
+  } = useQuery<ConsentData | null>({
     queryKey: [`/api/consent/${consentId}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/consent/${consentId}`, { cache: "no-store" });
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        const { message } = await response.json().catch(() => ({ message: "Failed to load consent" }));
+        throw new Error(message || "Failed to load consent");
+      }
+      return response.json();
+    },
+    retry: false,
   });
+
+  const hasShownError = useRef(false);
+
+  useEffect(() => {
+    if (consentError && !hasShownError.current) {
+      hasShownError.current = true;
+      toast({
+        title: "Unable to load consent",
+        description: consentError.message || "Failed to load consent details.",
+        variant: "destructive",
+      });
+    }
+    if (!consentError) {
+      hasShownError.current = false;
+    }
+  }, [consentError, toast]);
 
   // Approve / Reject actions
   const approveConsentMutation = useMutation({
@@ -103,8 +135,6 @@ export default function OwnerConsentClient({ consentId }: { consentId: string })
       </div>
     );
   }
-
-  // No consent data
   if (!consentData) {
     return (
       <div className="min-h-screen flex items-center justify-center">

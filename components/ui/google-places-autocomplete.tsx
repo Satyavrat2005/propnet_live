@@ -45,9 +45,28 @@ export default function GooglePlacesAutocomplete({
     try {
       const response = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(input)}&types=${types.join(',')}`);
       const data = await response.json();
-      
-      if (data.success && data.predictions) {
-        setSuggestions(data.predictions);
+      // Accept both Google API (status === 'OK') and custom (success === true)
+      if ((data.status === "OK" || data.success) && Array.isArray(data.predictions)) {
+        const normalized: PlaceSuggestion[] = data.predictions.map((prediction: any) => ({
+          place_id: prediction.place_id,
+          description: prediction.description,
+          structured_formatting: {
+            main_text:
+              prediction.structured_formatting?.main_text ||
+              prediction.description?.split(",")[0]?.trim() ||
+              prediction.description ||
+              "",
+            secondary_text:
+              prediction.structured_formatting?.secondary_text ||
+              prediction.description
+                ?.split(",")
+                .slice(1)
+                .join(",")
+                .trim() ||
+              "",
+          },
+        }));
+        setSuggestions(normalized);
       } else {
         setSuggestions([]);
       }
@@ -147,7 +166,7 @@ export default function GooglePlacesAutocomplete({
               onClick={() => handleSuggestionClick(suggestion)}
             >
               <div className="flex items-start space-x-3">
-                <Building2 size={16} className="text-neutral-400 mt-1 flex-shrink-0" />
+                <Building2 size={16} className="text-neutral-400 mt-1 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-900 truncate">
                     {suggestion.structured_formatting.main_text}
@@ -163,7 +182,7 @@ export default function GooglePlacesAutocomplete({
       )}
 
       {showSuggestions && suggestions.length === 0 && value.length >= 2 && !loading && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-amber-200 rounded-lg shadow-lg p-4 bg-amber-50">
+  <div className="absolute z-50 w-full mt-1 border border-amber-200 rounded-lg shadow-lg p-4 bg-amber-50">
           <div className="text-center text-amber-700">
             <Building2 size={24} className="mx-auto mb-2" />
             <p className="text-sm font-medium">Google Places API Setup Required</p>

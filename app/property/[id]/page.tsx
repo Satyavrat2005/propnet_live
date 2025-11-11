@@ -1,18 +1,19 @@
 // app/property/[id]/page.tsx
 "use client";
 
-import React from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { use } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Share, Heart, FileText, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { asMediaUrl } from "@/lib/utils";
+import { formatPrice, formatArea } from "@/utils/formatters";
 
-export default function PropertyDetailPage() {
-  const params = useParams();
-  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
+export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -79,6 +80,11 @@ export default function PropertyDetailPage() {
   const isCoAgent = Array.isArray(property.coAgents) ? property.coAgents.some((agent: any) => agent.id === user?.id) : false;
   const canShare = isOwner || isCoAgent;
 
+  const primaryPhoto = asMediaUrl(property.photos?.[0])
+    || "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500";
+  const priceLabel = formatPrice(Number(property.price) || 0, property.transactionType, property.rentFrequency);
+  const sizeLabel = property.size ? formatArea(property.size, property.sizeUnit || "sq ft") : "N/A";
+
   const handleGeneratePDF = () => {
     toast({
       title: "PDF Generated",
@@ -87,7 +93,7 @@ export default function PropertyDetailPage() {
   };
 
   const handleShareWhatsApp = () => {
-    const message = `🏠 ${property.title}\n📍 ${property.location}\n💰 ${property.price}\n📐 ${property.size}\n\nContact me for more details!`;
+    const message = `🏠 ${property.title}\n📍 ${property.location}\n💰 ${priceLabel}\n📐 ${sizeLabel}\n\nContact me for more details!`;
 
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       (navigator as any).share({
@@ -134,11 +140,7 @@ export default function PropertyDetailPage() {
           {/* keep same image markup */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={
-              property.photos?.[0]
-                ? `/uploads/${property.photos[0]}`
-                : "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=500"
-            }
+            src={primaryPhoto}
             alt={property.title}
             className="w-full h-64 object-cover"
           />
@@ -166,12 +168,12 @@ export default function PropertyDetailPage() {
           <div className="bg-neutral-50 rounded-lg p-4 mb-6">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-2xl font-bold text-primary">{property.price}</div>
+                <div className="text-2xl font-bold text-primary">{priceLabel}</div>
                 <div className="text-sm text-neutral-500">Price</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-neutral-900">{property.size}</div>
-                <div className="text-sm text-neutral-500">sq ft</div>
+                <div className="text-2xl font-bold text-neutral-900">{sizeLabel}</div>
+                <div className="text-sm text-neutral-500">Size</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-neutral-900">{property.bhk || "N/A"}</div>

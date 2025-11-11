@@ -1,75 +1,121 @@
 // app/api/properties/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import { PROPERTIES, Property, uploadDir, nextPropertyId } from "@/lib/properties-data";
+import { createClient } from "@supabase/supabase-js";
 
-export async function POST(req: NextRequest) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+function parseScopeOfWork(value: any): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
   try {
-    const formData = await req.formData();
-
-    const dataStr = formData.get("data");
-    const payload = dataStr && typeof dataStr === "string" ? JSON.parse(dataStr) : {};
-
-    const files = formData.getAll("photos") as File[]; // may be empty
-    const agreementFile = formData.get("agreementDocument") as File | null;
-
-    // save photos
-    const savedPhotos: string[] = [];
-    for (const f of files) {
-      const bytes = await f.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const filename = `${Date.now()}-${f.name.replace(/\s+/g, "_")}`;
-      const p = path.join(uploadDir, filename);
-      fs.writeFileSync(p, buffer);
-      savedPhotos.push(`/uploads/${filename}`);
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    if (typeof value === "string") {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
     }
-
-    // save agreement doc if present
-    let savedAgreement: string | undefined;
-    if (agreementFile && agreementFile.name) {
-      const bytes = await agreementFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const filename = `${Date.now()}-agreement-${agreementFile.name.replace(/\s+/g, "_")}`;
-      const p = path.join(uploadDir, filename);
-      fs.writeFileSync(p, buffer);
-      savedAgreement = `/uploads/${filename}`;
-    }
-
-    // Create property object (mock ownerId = 1)
-    const newProperty: Property = {
-      id: nextPropertyId(),
-      title: String(payload.title ?? payload.name ?? "Untitled property"),
-      propertyType: String(payload.propertyType ?? "Apartment"),
-      transactionType: payload.transactionType ?? "sale",
-      price: String(payload.price ?? ""),
-      size: String(payload.size ?? ""),
-      sizeUnit: payload.sizeUnit ?? "sq.ft",
-      location: String(payload.location ?? ""),
-      fullAddress: String(payload.fullAddress ?? ""),
-      description: String(payload.description ?? ""),
-      bhk: payload.bhk ?? null,
-      listingType: String(payload.listingType ?? "exclusive"),
-      photos: savedPhotos,
-      agreementDocument: savedAgreement ?? null,
-      createdAt: new Date().toISOString(),
-      ownerId: 1,
-      ownerName: payload.ownerName ?? undefined,
-      ownerPhone: payload.ownerPhone ?? undefined,
-      ownerApprovalStatus: payload.ownerApprovalStatus ?? "pending",
-      approvalTimestamp: payload.approvalTimestamp ?? null,
-    };
-
-    PROPERTIES.push(newProperty);
-
-    return NextResponse.json({ success: true, property: newProperty });
-  } catch (err: any) {
-    console.error("POST /api/properties error:", err);
-    return NextResponse.json({ success: false, message: String(err?.message ?? "Internal error") }, { status: 500 });
+    return [];
   }
 }
 
-export async function GET() {
-  // Return public feed (all properties)
-  return NextResponse.json(PROPERTIES);
+function toOwnerObject(row: any) {
+  return {
+    name: row.owner_name ?? null,
+    phone: row.owner_phone ?? null,
+    email: null,
+  };
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const includePending = searchParams.get("includePending") === "true";
+
+    let query = supabase
+      .from("properties")
+      .select(
+        `
+        property_id,
+        id,
+        property_title,
+        property_type,
+        transaction_type,
+        sale_price,
+        area,
+        area_unit,
+        bhk,
+        location,
+        full_address,
+        description,
+        listing_type,
+        property_photos,
+        commission_terms,
+        scope_of_work,
+        approval_status,
+        public_property,
+        latitude,
+        longitude,
+        owner_name,
+        owner_phone,
+        created_at,
+        updated_at
+      `
+      )
+      .order("created_at", { ascending: false });
+
+    if (!includePending) {
+      query = query.eq("approval_status", "approved");
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("[GET /api/properties] Supabase error:", error);
+      return NextResponse.json({ message: "Failed to load properties" }, { status: 500 });
+    }
+
+    const mapped = (data || []).map((row) => ({
+      id: row.property_id,
+      ownerId: row.id,
+      title: row.property_title,
+      propertyType: row.property_type,
+      transactionType: row.transaction_type,
+      price: row.sale_price,
+      size: row.area,
+      sizeUnit: row.area_unit,
+      bhk: row.bhk,
+      location: row.location,
+      fullAddress: row.full_address,
+      description: row.description,
+      listingType: row.listing_type,
+      photos: Array.isArray(row.property_photos) ? row.property_photos : [],
+      commissionTerms: row.commission_terms,
+      scopeOfWork: parseScopeOfWork(row.scope_of_work),
+      owner: toOwnerObject(row),
+      ownerApprovalStatus: row.approval_status,
+      isPubliclyVisible: row.public_property,
+      lat: row.latitude,
+      lng: row.longitude,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+
+    return NextResponse.json(mapped, { status: 200 });
+  } catch (err: any) {
+    console.error("[GET /api/properties] Unexpected error:", err);
+    return NextResponse.json({ message: err?.message || "Unexpected error" }, { status: 500 });
+  }
+}
+
+export async function POST() {
+  return NextResponse.json(
+    { message: "Property creation moved to /api/my-properties" },
+    { status: 405 }
+  );
 }

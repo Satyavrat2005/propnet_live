@@ -65,6 +65,7 @@ type PropertyFormProps = {
   agreementFiles: File[];
   setAgreementFiles: (files: File[]) => void;
   editingProperty: any;
+  onCancel: () => void;
 };
 
 function PropertyForm({
@@ -75,6 +76,7 @@ function PropertyForm({
   agreementFiles,
   setAgreementFiles,
   editingProperty,
+  onCancel,
 }: PropertyFormProps) {
   const scopeOfWorkOptions = useMemo(
     () => [
@@ -589,13 +591,14 @@ function PropertyForm({
             variant="outline"
             onClick={() => {
               form.reset();
+              onCancel();
             }}
             className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </Button>
           <Button type="submit" className="flex-1">
-            Create Listing
+            {editingProperty ? "Save Changes" : "Create Listing"}
           </Button>
         </div>
       </form>
@@ -675,10 +678,13 @@ export default function MyListings() {
 
   const updatePropertyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: FormData }) => {
-      // keep your existing JSON helper for PUT if it expects JSON; adjust if it is also FormData
+      console.log('[UPDATE] Updating property with ID:', id);
       const res = await fetch(`/api/properties/${id}`, { method: "PUT", body: data, credentials: "same-origin" });
       const json = await res.json();
-      if (!res.ok) throw { response: { data: json } };
+      if (!res.ok) {
+        console.error('[UPDATE] Failed:', json);
+        throw { response: { data: json } };
+      }
       return json;
     },
     onSuccess: () => {
@@ -688,7 +694,10 @@ export default function MyListings() {
       form.reset();
       setSelectedFiles([]);
       setAgreementFiles([]);
-      toast({ title: "Property Updated Successfully", description: "Your property listing has been updated." });
+      toast({ 
+        title: "Property Updated Successfully", 
+        description: "Owner approval request has been sent. Property will be updated after approval." 
+      });
     },
     onError: (error: any) => {
       const msg = error?.response?.data?.message || "Failed to update property listing. Please try again.";
@@ -698,9 +707,13 @@ export default function MyListings() {
 
   const deletePropertyMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log('[DELETE] Deleting property with ID:', id);
       const res = await fetch(`/api/properties/${id}`, { method: "DELETE", credentials: "same-origin" });
       const json = await res.json();
-      if (!res.ok) throw { response: { data: json } };
+      if (!res.ok) {
+        console.error('[DELETE] Failed:', json);
+        throw { response: { data: json } };
+      }
       return json;
     },
     onSuccess: () => {
@@ -736,6 +749,9 @@ export default function MyListings() {
     });
 
     selectedFiles.forEach((file) => formData.append("photos", file));
+    if (editingProperty && selectedFiles.length === 0 && Array.isArray(editingProperty.photos)) {
+      formData.append("existingPhotos", JSON.stringify(editingProperty.photos));
+    }
     if (agreementFiles.length > 0) formData.append("agreementDocument", agreementFiles[0]);
 
     if (editingProperty) {
@@ -778,8 +794,15 @@ export default function MyListings() {
 
   const handlePdfDownload = async (propertyId: string, propertyTitle: string) => {
     try {
-      const response = await fetch(`/api/properties/${propertyId}/pdf`);
-      if (!response.ok) throw new Error("Failed to generate PDF");
+      console.log('[PDF] Downloading PDF for property:', propertyId);
+      const response = await fetch(`/api/properties/${propertyId}/pdf`, {
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[PDF] Failed:', errorText);
+        throw new Error("Failed to generate PDF");
+      }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -791,7 +814,8 @@ export default function MyListings() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       toast({ title: "PDF Downloaded", description: "Property listing PDF has been downloaded successfully." });
-    } catch {
+    } catch (err) {
+      console.error('[PDF] Error:', err);
       toast({ title: "Download Failed", description: "Failed to download PDF. Please try again.", variant: "destructive" });
     }
   };
@@ -858,7 +882,18 @@ export default function MyListings() {
             <h2 className="text-lg font-semibold text-gray-900">My Listings</h2>
           </div>
 
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <Dialog
+            open={isAddDialogOpen}
+            onOpenChange={(open) => {
+              setIsAddDialogOpen(open);
+              if (!open) {
+                setEditingProperty(null);
+                form.reset();
+                setSelectedFiles([]);
+                setAgreementFiles([]);
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button size="sm" className="flex items-center space-x-2" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus size={16} />
@@ -882,11 +917,28 @@ export default function MyListings() {
                 agreementFiles={agreementFiles}
                 setAgreementFiles={setAgreementFiles}
                 editingProperty={editingProperty}
+                onCancel={() => {
+                  setIsAddDialogOpen(false);
+                  setEditingProperty(null);
+                  setSelectedFiles([]);
+                  setAgreementFiles([]);
+                }}
               />
             </DialogContent>
           </Dialog>
 
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <Dialog
+            open={isEditDialogOpen}
+            onOpenChange={(open) => {
+              setIsEditDialogOpen(open);
+              if (!open) {
+                setEditingProperty(null);
+                form.reset();
+                setSelectedFiles([]);
+                setAgreementFiles([]);
+              }
+            }}
+          >
             <DialogContent className="w/[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
               <DialogHeader className="bg-white pb-4 border-gray-100">
                 <DialogTitle className="text-xl font-semibold text-gray-900">Edit Property Listing</DialogTitle>
@@ -904,6 +956,12 @@ export default function MyListings() {
                 agreementFiles={agreementFiles}
                 setAgreementFiles={setAgreementFiles}
                 editingProperty={editingProperty}
+                onCancel={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingProperty(null);
+                  setSelectedFiles([]);
+                  setAgreementFiles([]);
+                }}
               />
             </DialogContent>
           </Dialog>
@@ -963,7 +1021,7 @@ export default function MyListings() {
                           <Eye size={14} className="mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setEditingProperty(property)} className="cursor-pointer">
+                        <DropdownMenuItem onClick={() => handleEdit(property)} className="cursor-pointer">
                           <Edit size={14} className="mr-2" />
                           Edit Property
                         </DropdownMenuItem>
@@ -1022,7 +1080,7 @@ export default function MyListings() {
                           ? property.ownerPhone
                           : `${property.ownerPhone?.slice(0, 3)}****${property.ownerPhone?.slice(-2)}`}
                       </span>
-                      <button onClick={() => setShowOwnerPhone(property.id)} className="ml-2 text-primary hover:text-primary/80">
+                      <button onClick={() => toggleOwnerPhone(property.id)} className="ml-2 text-primary hover:text-primary/80">
                         {showOwnerPhone[property.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
                     </div>
@@ -1048,7 +1106,9 @@ export default function MyListings() {
                   <div className="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
                     <p className="text-xs text-yellow-800 flex items-center">
                       <AlertCircle size={12} className="mr-1" />
-                      Waiting for owner approval. You'll be notified once the owner responds.
+                      {property.updatedAt && new Date(property.updatedAt).getTime() > new Date(property.createdAt).getTime() + 60000
+                        ? "Property changes are awaiting owner approval. Owner has been notified via SMS."
+                        : "Waiting for owner approval. You'll be notified once the owner responds."}
                     </p>
                   </div>
                 )}

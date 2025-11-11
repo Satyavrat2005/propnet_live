@@ -30,28 +30,28 @@ declare global {
   interface Window {
     google: any;
     initMap: () => void;
-    openListing?: (propertyId: number) => void;
+    openListing?: (propertyId: string | number) => void;
   }
 }
 
 interface Property {
-  id: number;
+  id: string;
   title: string;
   propertyType: string;
   transactionType: string;
   price: string;
   location: string;
   fullAddress?: string;
-  size: string;
-  sizeUnit: string;
+  size?: number | string | null;
+  sizeUnit?: string | null;
   bhk?: number;
   buildingSociety?: string;
   owner: {
-    name: string;
-    phone: string;
+    name: string | null;
+    phone: string | null;
   };
-  latitude?: number;
-  longitude?: number;
+  lat?: number | null;
+  lng?: number | null;
   createdAt?: string;
 }
 
@@ -63,11 +63,12 @@ export default function MapPage() {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentMarkers, setCurrentMarkers] = useState<any[]>([]);
   const [visibleProperties, setVisibleProperties] = useState<Property[]>([]);
-  const [propertyCoordinates, setPropertyCoordinates] = useState<{ [key: number]: { lat: number; lng: number } }>({});
-  const [markersMap, setMarkersMap] = useState<{ [key: number]: { marker: any; infoWindow: any } }>({});
+  const [propertyCoordinates, setPropertyCoordinates] = useState<{ [key: string]: { lat: number; lng: number } }>({});
+  const [markersMap, setMarkersMap] = useState<{ [key: string]: { marker: any; infoWindow: any } }>({});
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsProperty, setDetailsProperty] = useState<Property | null>(null);
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInitializedRef = useRef(false);
 
   const { data: properties = [], isLoading } = useQuery({
     queryKey: ["/api/properties"],
@@ -95,8 +96,9 @@ export default function MapPage() {
   // Load Google Maps script and initialize
   useEffect(() => {
     // expose global function for listing opening from external scripts
-    window.openListing = (propertyId: number) => {
-      const property = visibleProperties.find((p) => p.id === propertyId);
+    window.openListing = (propertyId: string | number) => {
+      const normalizedId = String(propertyId);
+      const property = visibleProperties.find((p) => p.id === normalizedId);
       if (property) {
         setSelectedProperty(property);
         const listElement = document.querySelector(".property-list-section");
@@ -108,9 +110,14 @@ export default function MapPage() {
 
     let scriptEl: HTMLScriptElement | null = null;
     let didCancel = false;
+    const SCRIPT_DATA_ATTR = "data-propnet-google-maps";
+    const getExistingScript = () =>
+      document.querySelector<HTMLScriptElement>(
+        `script[${SCRIPT_DATA_ATTR}="true"], script[src*="maps.googleapis.com/maps/api/js"]`
+      );
 
     const initializeMap = () => {
-      if (!mapRef.current || didCancel) return;
+      if (!mapRef.current || didCancel || mapInitializedRef.current) return;
       // Default to Ahmedabad coordinates as original
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: { lat: 23.0225, lng: 72.5714 },
@@ -126,9 +133,31 @@ export default function MapPage() {
 
       setMap(mapInstance);
       setIsMapLoaded(true);
+      mapInitializedRef.current = true;
+    };
+
+    const handleScriptLoad = () => {
+      if (didCancel) return;
+      const existingScript = getExistingScript();
+      existingScript?.removeEventListener("load", handleScriptLoad);
+      if (window.google?.maps) {
+        initializeMap();
+      }
     };
 
     const loadGoogleMaps = async () => {
+      const existingScript = getExistingScript();
+      if (existingScript) {
+        existingScript.setAttribute(SCRIPT_DATA_ATTR, "true");
+        window.initMap = initializeMap;
+        if (window.google?.maps) {
+          initializeMap();
+        } else {
+          existingScript.addEventListener("load", handleScriptLoad);
+        }
+        return;
+      }
+
       if ((window as any).google && (window as any).google.maps) {
         initializeMap();
         return;
@@ -148,6 +177,8 @@ export default function MapPage() {
         scriptEl.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initMap`;
         scriptEl.async = true;
         scriptEl.defer = true;
+        scriptEl.setAttribute(SCRIPT_DATA_ATTR, "true");
+        scriptEl.addEventListener("load", handleScriptLoad);
         document.head.appendChild(scriptEl);
       } catch (err) {
         console.error("Failed to load Google Maps API key:", err);
@@ -162,8 +193,12 @@ export default function MapPage() {
       try {
         (window as any).initMap = undefined;
       } catch {}
-      if (scriptEl && scriptEl.parentNode) {
-        scriptEl.parentNode.removeChild(scriptEl);
+      const existingScript = getExistingScript();
+      if (existingScript) {
+        existingScript.removeEventListener("load", handleScriptLoad);
+      }
+      if (scriptEl) {
+        scriptEl.removeEventListener("load", handleScriptLoad);
       }
     };
     // we intentionally do not add visibleProperties/map etc here — this effect only concerns loading the Maps script
@@ -219,11 +254,11 @@ export default function MapPage() {
 
     setVisibleProperties(filteredProps);
 
-    const newMarkers: any[] = [];
-    const newMarkersMap: { [key: number]: any } = {};
+  const newMarkers: any[] = [];
+  const newMarkersMap: { [key: string]: any } = {};
 
     // helper to attach detail button click safely
-    const attachDetailsBtnListener = (propertyId: number, property: Property, infoWindow: any) => {
+  const attachDetailsBtnListener = (propertyId: string, property: Property, infoWindow: any) => {
       // when info window DOM is attached, add listener to details button
       setTimeout(() => {
         const detailsBtn = document.getElementById(`details-btn-${propertyId}`);
@@ -271,7 +306,7 @@ export default function MapPage() {
           ? `<div style="color: #888; font-size: 12px; margin-bottom: 4px;">${property.buildingSociety}</div>`
           : "";
 
-        const priceNumber = typeof property.price === "string" ? parseFloat(property.price) : property.price;
+  const priceNumber = Number(property.price) || 0;
 
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
@@ -358,12 +393,14 @@ export default function MapPage() {
 
   // geocode property via your API or fallback to distributed coordinates
   const geocodeProperty = async (property: Property) => {
-    if (property.latitude && property.longitude) {
-      return { lat: property.latitude, lng: property.longitude };
+    const cacheKey = property.id.toString();
+
+    if (typeof property.lat === "number" && typeof property.lng === "number") {
+      return { lat: property.lat, lng: property.lng };
     }
 
-    if (propertyCoordinates[property.id]) {
-      return propertyCoordinates[property.id];
+    if (propertyCoordinates[cacheKey]) {
+      return propertyCoordinates[cacheKey];
     }
 
     try {
@@ -376,7 +413,7 @@ export default function MapPage() {
         const coords = { lat: data.latitude, lng: data.longitude };
         setPropertyCoordinates((prev) => ({
           ...prev,
-          [property.id]: coords,
+          [cacheKey]: coords,
         }));
         return coords;
       }
@@ -387,14 +424,15 @@ export default function MapPage() {
     // fallback distributed placement around Ahmedabad
     const ahmedabadLat = 23.0225;
     const ahmedabadLng = 72.5714;
-    const angle = ((property.id ?? 1) * 2 * Math.PI) / 10;
-    const radius = 0.02 + ((property.id ?? 1) % 3) * 0.01;
+    const numericKey = Array.from(cacheKey).reduce((acc, char) => acc + char.charCodeAt(0), 0) || 1;
+    const angle = (numericKey * 2 * Math.PI) / 10;
+    const radius = 0.02 + (numericKey % 3) * 0.01;
 
     const fallback = {
       lat: ahmedabadLat + Math.cos(angle) * radius,
       lng: ahmedabadLng + Math.sin(angle) * radius,
     };
-    setPropertyCoordinates((prev) => ({ ...prev, [property.id]: fallback }));
+    setPropertyCoordinates((prev) => ({ ...prev, [cacheKey]: fallback }));
     return fallback;
   };
 
@@ -458,7 +496,7 @@ export default function MapPage() {
         <div ref={mapRef} className="h-full w-full" style={{ minHeight: "400px" }} />
 
         {!isMapLoaded && (
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-linear-to-br from-blue-50 to-green-50 flex items-center justify-center">
             <div className="text-center text-neutral-500">
               <MapPin size={48} className="mx-auto mb-2 text-neutral-400" />
               <p className="text-sm">Loading Interactive Map...</p>
@@ -468,7 +506,7 @@ export default function MapPage() {
         )}
 
         {/* Map Controls */}
-        <div className="absolute top-4 right-4 flex flex-col space-y-2 z-[1000]">
+  <div className="absolute top-4 right-4 flex flex-col space-y-2 z-1000">
           <Button
             variant="outline"
             size="sm"
@@ -514,7 +552,7 @@ export default function MapPage() {
                     <p className="text-xs text-neutral-600 mb-2">{property.location}</p>
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-primary">
-                        {formatPrice(typeof property.price === "string" ? parseFloat(property.price) : property.price, property.transactionType)}
+                        {formatPrice(Number(property.price) || 0, property.transactionType)}
                       </span>
                       <div className="flex items-center space-x-2">
                         <Button
@@ -522,8 +560,11 @@ export default function MapPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(`tel:${property.owner.phone}`, "_self");
+                            if (property.owner.phone) {
+                              window.open(`tel:${property.owner.phone}`, "_self");
+                            }
                           }}
+                          disabled={!property.owner.phone}
                         >
                           <Phone size={12} className="mr-1" />
                           Contact
@@ -575,13 +616,15 @@ export default function MapPage() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Price</p>
                   <p className="font-semibold text-primary">
-                    {formatPrice(typeof detailsProperty.price === "string" ? parseFloat(detailsProperty.price) : detailsProperty.price, detailsProperty.transactionType)}
+                    {formatPrice(Number(detailsProperty.price) || 0, detailsProperty.transactionType)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Size</p>
                   <p className="font-semibold">
-                    {detailsProperty.size} {detailsProperty.sizeUnit}
+                    {detailsProperty.size
+                      ? `${detailsProperty.size}${detailsProperty.sizeUnit ? ` ${detailsProperty.sizeUnit}` : ""}`
+                      : "Not specified"}
                   </p>
                 </div>
               </div>
@@ -611,17 +654,25 @@ export default function MapPage() {
                 <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <User size={16} className="text-muted-foreground" />
-                    <span className="text-sm font-medium">{detailsProperty.owner.name}</span>
+                    <span className="text-sm font-medium">{detailsProperty.owner.name || "Not provided"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone size={16} className="text-muted-foreground" />
-                    <span className="text-sm">{detailsProperty.owner.phone}</span>
+                    <span className="text-sm">{detailsProperty.owner.phone || "Not provided"}</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button className="flex-1" onClick={() => window.open(`tel:${detailsProperty.owner.phone}`, "_self")}>
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    if (detailsProperty.owner.phone) {
+                      window.open(`tel:${detailsProperty.owner.phone}`, "_self");
+                    }
+                  }}
+                  disabled={!detailsProperty.owner.phone}
+                >
                   <Phone size={16} className="mr-2" />
                   Call Owner
                 </Button>

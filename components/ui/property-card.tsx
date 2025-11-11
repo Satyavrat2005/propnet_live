@@ -1,6 +1,8 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { asMediaUrl } from "@/lib/utils";
+import { formatPrice, formatArea } from "@/utils/formatters";
 
 interface PropertyCardProps {
   property: any;
@@ -12,11 +14,17 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
 
   const isOwner = currentUserId === property.ownerId;
   const hasCoAgents = property.coAgents && property.coAgents.length > 0;
+  const primaryPhoto = asMediaUrl(property.photos?.[0]) ||
+    "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400";
+  const ownerName = property.owner?.name || "Property Owner";
+  const ownerInitial = ownerName.charAt(0) || "P";
+  const priceLabel = formatPrice(Number(property.price) || 0, property.transactionType, property.rentFrequency);
+  const sizeLabel = property.size ? formatArea(property.size, property.sizeUnit || "sq.ft") : "";
 
   return (
     <div className="bg-white rounded-xl border border-neutral-200 mb-4 overflow-hidden shadow-sm">
       <img 
-        src={property.photos?.[0] ? `/uploads/${property.photos[0]}` : "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"} 
+        src={primaryPhoto}
         alt={property.title}
         className="w-full h-48 object-cover"
       />
@@ -38,8 +46,8 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
         <p className="text-neutral-600 text-sm mb-3">{property.location}</p>
         
         <div className="flex items-center justify-between mb-3">
-          <div className="text-2xl font-bold text-primary">{property.price}</div>
-          <div className="text-sm text-neutral-500">{property.size}</div>
+          <div className="text-2xl font-bold text-primary">{priceLabel}</div>
+          <div className="text-sm text-neutral-500">{sizeLabel}</div>
         </div>
         
         <div className="flex items-center justify-between">
@@ -49,7 +57,7 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
                 <div className="flex -space-x-2">
                   <div className="w-8 h-8 bg-neutral-200 rounded-full border-2 border-white flex items-center justify-center">
                     <span className="text-xs text-neutral-500">
-                      {property.owner.name?.charAt(0) || "A"}
+                      {ownerInitial}
                     </span>
                   </div>
                   <div className="w-8 h-8 bg-primary rounded-full border-2 border-white flex items-center justify-center">
@@ -59,17 +67,17 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
                   </div>
                 </div>
                 <span className="text-sm text-neutral-600">
-                  {property.owner.name} & {property.coAgents.length} other{property.coAgents.length > 1 ? "s" : ""}
+                  {ownerName} & {property.coAgents.length} other{property.coAgents.length > 1 ? "s" : ""}
                 </span>
               </div>
             ) : (
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-neutral-200 rounded-full flex items-center justify-center">
                   <span className="text-xs text-neutral-500">
-                    {property.owner.name?.charAt(0) || "A"}
+                    {ownerInitial}
                   </span>
                 </div>
-                <span className="text-sm text-neutral-600">{property.owner.name}</span>
+                <span className="text-sm text-neutral-600">{ownerName}</span>
               </div>
             )}
           </div>

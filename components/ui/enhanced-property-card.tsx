@@ -6,6 +6,7 @@ import { Heart, Share2, MapPin, Calendar, Eye, TrendingUp, Phone, FileText, Down
 import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/ui/contact-modal";
 import { formatPrice, formatArea, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
+import { asMediaUrl } from "@/lib/utils";
 
 interface EnhancedPropertyCardProps {
   property: any;
@@ -20,6 +21,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
 
   const isOwner = currentUserId === property.ownerId;
   const hasCoAgents = property.coAgents && property.coAgents.length > 0;
+  const contactInfo = property.owner || { name: "", phone: "", agencyName: "" };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -41,7 +43,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
   };
 
   const handleShare = () => {
-    const formattedPrice = formatPrice(property.price, property.transactionType, property.rentFrequency);
+  const formattedPrice = formatPrice(Number(property.price) || 0, property.transactionType, property.rentFrequency);
     const formattedArea = formatArea(property.size, property.sizeUnit);
     const shareText = `${property.title}\n📍 ${property.location}\n💰 ${formattedPrice}\n📐 ${formattedArea}`;
     
@@ -91,14 +93,15 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
     }
   };
 
-  const hasPhotos = property.photos && property.photos.length > 0;
+  const hasPhotos = Array.isArray(property.photos) && property.photos.length > 0;
+  const primaryPhoto = hasPhotos ? asMediaUrl(property.photos[0]) : null;
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 mb-4 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      {hasPhotos ? (
+      {primaryPhoto ? (
         <div className="relative">
           <img 
-            src={`/uploads/${property.photos[0]}`} 
+            src={primaryPhoto}
             alt={property.title}
             className="w-full h-48 object-cover"
           />
@@ -143,7 +146,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
       ) : null}
       
       <div className="p-4">
-        {!hasPhotos && (
+  {!primaryPhoto && (
           <div className="flex items-center justify-between mb-3">
             <Badge className={`text-xs font-medium ${
               property.propertyType === "Villa" 
@@ -174,7 +177,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
         
         <div className="flex items-center justify-between mb-4">
           <div className="text-2xl font-bold text-primary">
-            {formatPrice(property.price, property.transactionType, property.rentFrequency)}
+            {formatPrice(Number(property.price) || 0, property.transactionType, property.rentFrequency)}
           </div>
           <div className="text-right">
             <div className="text-sm text-neutral-500">
@@ -287,7 +290,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
       <ContactModal
         isOpen={showContactModal}
         onClose={() => setShowContactModal(false)}
-        propertyOwner={property.owner}
+        propertyOwner={contactInfo}
         propertyTitle={property.title}
       />
     </div>

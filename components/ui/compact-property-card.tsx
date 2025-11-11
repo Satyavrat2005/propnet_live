@@ -6,6 +6,7 @@ import { Heart, Share2, MapPin, Phone, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/ui/contact-modal";
 import { formatPrice, formatArea, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
+import { asMediaUrl } from "@/lib/utils";
 
 interface CompactPropertyCardProps {
   property: any;
@@ -19,7 +20,8 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
   const { toast } = useToast();
 
   const isOwner = currentUserId === property.ownerId;
-  const hasPhotos = property.photos && property.photos.length > 0;
+  const hasPhotos = Array.isArray(property.photos) && property.photos.length > 0;
+  const primaryPhoto = hasPhotos ? asMediaUrl(property.photos[0]) : null;
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -131,11 +133,11 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
           </div>
 
           {/* Image Section - Right */}
-          <div className="w-[120px] flex-shrink-0 relative">
-            {hasPhotos ? (
+          <div className="w-[120px] shrink-0 relative">
+            {primaryPhoto ? (
               <div className="relative h-full w-full">
                 <img 
-                  src={`/uploads/${property.photos[0]}`} 
+                  src={primaryPhoto} 
                   alt={property.title}
                   className="w-full h-full object-cover rounded-tr-2xl rounded-br-2xl"
                 />
@@ -146,7 +148,7 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
                 )}
               </div>
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center rounded-tr-2xl rounded-br-2xl">
+              <div className="w-full h-full bg-linear-to-br from-blue-50 to-blue-100 flex items-center justify-center rounded-tr-2xl rounded-br-2xl">
                 <div className="text-blue-400 text-center">
                   <div className="w-6 h-6 mx-auto mb-1 rounded-full bg-blue-200 flex items-center justify-center">
                     <span className="text-blue-600 text-xs font-medium">
@@ -163,7 +165,7 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
         {/* Bottom Info Bar */}
         <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
           <div className="flex items-center text-gray-600 text-sm">
-            <MapPin size={12} className="mr-1 flex-shrink-0" />
+            <MapPin size={12} className="mr-1 shrink-0" />
             <span className="truncate text-xs">{property.location}</span>
           </div>
           

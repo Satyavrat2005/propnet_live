@@ -2,12 +2,71 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 import { verifySession } from "@/lib/auth/session";
+import { sendSms } from "@/lib/twilio";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+const adminSupabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  : supabase;
+
+function normalizePhone(raw: FormDataEntryValue | null): string | null {
+  if (!raw) return null;
+  const input = String(raw).trim();
+  if (!input) return null;
+  if (input.startsWith("+")) return input;
+
+  const digits = input.replace(/[^\d]/g, "");
+  if (!digits) return null;
+
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return `+${digits}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith("0")) {
+    return `+91${digits.slice(1)}`;
+  }
+
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+
+  return `+${digits}`;
+}
+
+function parseScopeOfWork(value: any): string[] | null {
+  if (!value) return null;
+  if (Array.isArray(value)) return value.filter(Boolean);
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : null;
+  } catch {
+    if (typeof value === "string") {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+    return null;
+  }
+}
+
+function getAppBaseUrl(req: NextRequest): string {
+  const origin = req.headers.get("origin");
+  if (origin) return origin;
+  if (process.env.NEXT_PUBLIC_APP_BASE_URL) return process.env.NEXT_PUBLIC_APP_BASE_URL;
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl) {
+    return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+  }
+  return "https://propnet.live";
+}
 
 async function getUserFromCookie(req: NextRequest) {
   const cookie = req.headers.get("cookie") || "";
@@ -146,7 +205,7 @@ export async function GET(req: NextRequest) {
       ownerName: r.owner_name,
       ownerPhone: r.owner_phone,
       commissionTerms: r.commission_terms,
-      scopeOfWork: r.scope_of_work,
+    scopeOfWork: parseScopeOfWork(r.scope_of_work),
       agreementDocument: r.agreement_document,
       ownerApprovalStatus: r.approval_status,
       createdAt: r.created_at,
@@ -166,6 +225,10 @@ export async function POST(req: NextRequest) {
     if (!userId) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
 
     const form = await req.formData();
+    const scopeOfWorkRaw = form.get("scopeOfWork");
+    const ownerPhoneInput = form.get("ownerPhone");
+    const ownerPhoneStored = ownerPhoneInput ? String(ownerPhoneInput).trim() : null;
+    const ownerPhoneE164 = normalizePhone(ownerPhoneInput);
 
     const photoFiles: File[] = form.getAll("photos").filter(Boolean) as File[];
     if (photoFiles.length > 10) {
@@ -220,9 +283,9 @@ export async function POST(req: NextRequest) {
       latitude: lat,
       longitude: lng,
       owner_name: form.get("ownerName"),
-      owner_phone: form.get("ownerPhone"),
+      owner_phone: ownerPhoneStored,
       commission_terms: form.get("commissionTerms"),
-      scope_of_work: form.get("scopeOfWork")?.toString() || null,
+      scope_of_work: scopeOfWorkRaw ? String(scopeOfWorkRaw) : null,
       agreement_document: null,
       approval_status: "pending",
     };
@@ -267,7 +330,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: `Database error: ${error.message}` }, { status: 500 });
     }
 
-    const mapped = {
+    const mapped: Record<string, any> = {
       id: data.property_id,
       userId: data.id,
       title: data.property_title,
@@ -291,14 +354,111 @@ export async function POST(req: NextRequest) {
       ownerName: data.owner_name,
       ownerPhone: data.owner_phone,
       commissionTerms: data.commission_terms,
-      scopeOfWork: data.scope_of_work,
+  scopeOfWork: parseScopeOfWork(data.scope_of_work),
       agreementDocument: data.agreement_document,
       ownerApprovalStatus: data.approval_status,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
 
-    return NextResponse.json(mapped, { status: 201 });
+    let ownerConsentToken: string | null = null;
+    let ownerConsentUrl: string | null = null;
+    let smsStatus: "sent" | "failed" | "skipped" = "skipped";
+    let smsError: string | null = null;
+
+    try {
+      const nowIso = new Date().toISOString();
+      const generatedToken = randomUUID();
+
+      const { data: consentRow, error: consentError } = await adminSupabase
+        .from("properties")
+        .update({
+          owner_consent_token: generatedToken,
+          owner_consent_sent_at: nowIso,
+        })
+        .eq("property_id", data.property_id)
+        .select("owner_consent_token, owner_consent_sent_at, approval_status")
+        .single();
+
+      if (consentError) {
+        console.error("Consent token update error:", consentError);
+        ownerConsentToken = generatedToken;
+      } else {
+        ownerConsentToken = consentRow?.owner_consent_token ?? generatedToken;
+        mapped.ownerApprovalStatus = consentRow?.approval_status ?? mapped.ownerApprovalStatus;
+        mapped.ownerConsentSentAt = consentRow?.owner_consent_sent_at ?? nowIso;
+      }
+
+      if (ownerConsentToken) {
+        ownerConsentUrl = `${getAppBaseUrl(req)}/consent/${ownerConsentToken}`;
+
+        const envReady = Boolean(
+          process.env.TWILIO_ACCOUNT_SID &&
+            process.env.TWILIO_AUTH_TOKEN &&
+            (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_SMS_FROM)
+        );
+
+        if (!ownerPhoneE164) {
+          smsStatus = "skipped";
+          smsError = "Owner phone missing or invalid";
+        } else if (!envReady) {
+          smsStatus = "skipped";
+          smsError = "Twilio messaging credentials missing";
+        } else {
+          const { data: agentProfile } = await supabase
+            .from("profiles")
+            .select("name, agency_name, phone")
+            .eq("id", userId)
+            .single();
+
+          const ownerFirstName = mapped.ownerName ? String(mapped.ownerName).split(" ")[0] : "Hi";
+          const agentName = agentProfile?.name || "Your agent";
+          const listingTypeLabel = mapped.listingType ? mapped.listingType.toString() : "Listing";
+          const areaSnippet = mapped.size
+            ? `${mapped.size}${mapped.sizeUnit ? ` ${mapped.sizeUnit}` : ""}`
+            : null;
+          const priceSnippet = mapped.price ? String(mapped.price) : "Price on request";
+
+          const smsBodyLines = [
+            `${ownerFirstName}, ${agentName} wants to list your property on PropNet.`,
+            `"${mapped.title}" at ${mapped.location}`,
+            [mapped.propertyType, mapped.bhk ? `${mapped.bhk} BHK` : null, areaSnippet]
+              .filter(Boolean)
+              .join(" • "),
+            `Price: ${priceSnippet}`,
+            `Review & approve: ${ownerConsentUrl}`,
+            `Listing type: ${listingTypeLabel}`,
+          ].filter(Boolean);
+
+          const smsBody = smsBodyLines.join("\n");
+
+          try {
+            await sendSms({ to: ownerPhoneE164, body: smsBody });
+            smsStatus = "sent";
+          } catch (smsErr: any) {
+            smsStatus = "failed";
+            smsError = smsErr?.message || "Failed to send SMS";
+            console.error("Twilio SMS error:", smsErr);
+          }
+        }
+      }
+    } catch (consentErr: any) {
+      console.error("Owner consent setup error:", consentErr);
+      smsStatus = "failed";
+      if (!smsError) smsError = consentErr?.message || "Failed to prepare owner consent";
+    }
+
+    const responsePayload = {
+      ...mapped,
+      ownerConsent: {
+        token: ownerConsentToken,
+        url: ownerConsentUrl,
+        smsStatus,
+        smsError,
+      },
+    };
+
+    return NextResponse.json(responsePayload, { status: 201 });
   } catch (e: any) {
     console.error("[POST /api/my-properties] ", e);
     return NextResponse.json({ message: e?.message || "Unexpected error" }, { status: 500 });
