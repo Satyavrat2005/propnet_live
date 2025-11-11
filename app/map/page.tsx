@@ -282,31 +282,40 @@ export default function MapPage() {
       try {
         const coords = await geocodeProperty(property);
 
+        // Properly encode SVG for Google Maps marker icons
+        function encodeSvg(svg: string) {
+          return (
+            'data:image/svg+xml;utf8,' +
+            encodeURIComponent(svg)
+              .replace(/'/g, '%27')
+              .replace(/"/g, '%22')
+          );
+        }
+
+        const saleSvg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="15" fill="#00C853" stroke="white" stroke-width="2"/><path d="M10 18V14.5L16 10L22 14.5V18C22 18.5523 21.5523 19 21 19H11C10.4477 19 10 18.5523 10 18Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="13" y="19" width="6" height="3" rx="1" fill="white"/></svg>`;
+        const rentSvg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="15" fill="#D50000" stroke="white" stroke-width="2"/><text x="16" y="22" text-anchor="middle" font-size="18" font-family="Arial" fill="white" font-weight="bold">₹</text></svg>`;
+
+        const saleIcon = {
+          url: encodeSvg(saleSvg),
+          scaledSize: new window.google.maps.Size(32, 32),
+        };
+        const rentIcon = {
+          url: encodeSvg(rentSvg),
+          scaledSize: new window.google.maps.Size(32, 32),
+        };
+
         const marker = new window.google.maps.Marker({
           position: { lat: coords.lat, lng: coords.lng },
           map,
           title: property.title,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 15,
-            fillColor: property.transactionType === "sale" ? "#3B82F6" : "#10B981",
-            fillOpacity: 1,
-            strokeWeight: 2,
-            strokeColor: "#FFFFFF",
-          },
-          label: {
-            text: property.bhk?.toString() || "P",
-            color: "white",
-            fontSize: "12px",
-            fontWeight: "bold",
-          },
+          icon: property.transactionType === "sale" ? saleIcon : rentIcon,
         });
 
         const buildingInfo = property.buildingSociety
-          ? `<div style="color: #888; font-size: 12px; margin-bottom: 4px;">${property.buildingSociety}</div>`
+          ? `<div style=\"color: #888; font-size: 12px; margin-bottom: 4px;\">${property.buildingSociety}</div>`
           : "";
 
-  const priceNumber = Number(property.price) || 0;
+        const priceNumber = Number(property.price) || 0;
 
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
