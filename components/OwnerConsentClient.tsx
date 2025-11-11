@@ -58,7 +58,6 @@ export default function OwnerConsentClient({ consentId }: { consentId: string })
   // Fetch consent details
   const { data: consentData, isLoading } = useQuery<ConsentData>({
     queryKey: [`/api/consent/${consentId}`],
-    queryKey: [`/api/consent/${consentId}`],
   });
 
   // Approve / Reject actions
