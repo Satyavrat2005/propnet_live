@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("properties")
-      .select(
+      .select<PropertyRow>(
         `
         property_id,
         id,
