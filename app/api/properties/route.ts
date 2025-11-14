@@ -19,6 +19,9 @@ type PropertyRow = {
   bhk: number | null;
   location: string | null;
   full_address: string | null;
+  flat_number : string | null;
+  floor : string | null;
+  building_society : string | null;
   description: string | null;
   listing_type: string | null;
   property_photos: string[] | null;
@@ -79,6 +82,9 @@ export async function GET(req: NextRequest) {
         bhk,
         location,
         full_address,
+        flat_number,
+        floor,
+        building_society,
         description,
         listing_type,
         property_photos,
@@ -120,6 +126,9 @@ export async function GET(req: NextRequest) {
       bhk: row.bhk,
       location: row.location,
       fullAddress: row.full_address,
+      flatNumber: row.flat_number,
+      floor: row.floor,
+      buildingSociety: row.building_society,
       description: row.description,
       listingType: row.listing_type,
       photos: Array.isArray(row.property_photos) ? row.property_photos : [],
