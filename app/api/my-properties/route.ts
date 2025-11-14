@@ -56,6 +56,14 @@ function parseScopeOfWork(value: any): string[] | null {
   }
 }
 
+function escapeForILike(value: string): string {
+  return value.replace(/([\\%_])/g, "\\$1");
+}
+
+function buildContainsPattern(value: string): string {
+  return `%${escapeForILike(value)}%`;
+}
+
 function getAppBaseUrl(req: NextRequest): string {
   const origin = req.headers.get("origin");
   if (origin) return origin;
@@ -238,7 +246,85 @@ export async function POST(req: NextRequest) {
     const fullAddress = (form.get("fullAddress") || "").toString().trim();
     const buildingSociety = (form.get("buildingSociety") || "").toString().trim();
     const location = (form.get("location") || "").toString().trim();
+    const flatNumber = (form.get("flatNumber") || "").toString().trim();
+    const floorNumber = (form.get("floorNumber") || "").toString().trim();
+    const ownerName = (form.get("ownerName") || "").toString().trim();
+    const listingTypeInput = (form.get("listingType") || "").toString().trim();
     const addressForGeocode = fullAddress || [buildingSociety, location].filter(Boolean).join(", ");
+
+    const hasDuplicateKeyValues = Boolean(
+      flatNumber &&
+        floorNumber &&
+        buildingSociety &&
+        ownerName &&
+        ownerPhoneStored
+    );
+
+    if (hasDuplicateKeyValues) {
+      const { data: duplicateCandidates, error: duplicateError } = await supabase
+        .from("properties")
+        .select("property_id")
+        .eq("id", userId)
+        .eq("owner_phone", ownerPhoneStored!)
+        .ilike("flat_number", escapeForILike(flatNumber))
+        .ilike("floor", escapeForILike(floorNumber))
+        .ilike("building_society", escapeForILike(buildingSociety))
+        .ilike("owner_name", escapeForILike(ownerName))
+        .limit(1);
+
+      if (duplicateError) {
+        console.error("Duplicate property lookup failed", duplicateError);
+        return NextResponse.json({ message: "Unable to validate property uniqueness." }, { status: 500 });
+      }
+
+      if (duplicateCandidates && duplicateCandidates.length > 0) {
+        return NextResponse.json(
+          {
+            message: "You have already added this property. Please update the existing listing instead.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    const exclusivePatterns: Array<{ column: string; pattern: string }> = [];
+    if (fullAddress) exclusivePatterns.push({ column: "full_address", pattern: buildContainsPattern(fullAddress) });
+    if (buildingSociety) exclusivePatterns.push({ column: "building_society", pattern: buildContainsPattern(buildingSociety) });
+    if (!fullAddress && location)
+      exclusivePatterns.push({ column: "location", pattern: buildContainsPattern(location) });
+
+    let exclusiveConflictDetected = false;
+    for (const { column, pattern } of exclusivePatterns) {
+      const { data: exclusiveMatches, error: exclusiveError } = await supabase
+        .from("properties")
+        .select("property_id, id")
+        .eq("listing_type", "exclusive")
+        .ilike(column, pattern)
+        .limit(5);
+
+      if (exclusiveError) {
+        console.error("Exclusive listing lookup failed", exclusiveError);
+        return NextResponse.json({ message: "Unable to verify exclusive listings." }, { status: 500 });
+      }
+
+      if (exclusiveMatches?.length) {
+        const conflictingRow = exclusiveMatches.find((row) => !row.id || row.id !== userId);
+        if (conflictingRow) {
+          exclusiveConflictDetected = true;
+          break;
+        }
+      }
+    }
+
+    if (exclusiveConflictDetected) {
+      return NextResponse.json(
+        {
+          message:
+            "This address is already listed exclusively by another broker. Please collaborate instead of creating a new listing.",
+        },
+        { status: 409 }
+      );
+    }
 
     let lat: number | null = null;
     let lng: number | null = null;
@@ -273,16 +359,16 @@ export async function POST(req: NextRequest) {
       sale_price: form.get("price"),
       location,
       full_address: formatted || fullAddress || null,
-      flat_number: form.get("flatNumber"),
-      floor: form.get("floorNumber"),
+      flat_number: flatNumber || null,
+      floor: floorNumber || null,
       building_society: buildingSociety || null,
       description: form.get("description"),
       property_photos: photoUrls.length ? photoUrls : null,
-      listing_type: form.get("listingType"),
+      listing_type: listingTypeInput || null,
       public_property: String(form.get("isPubliclyVisible")) === "true",
       latitude: lat,
       longitude: lng,
-      owner_name: form.get("ownerName"),
+      owner_name: ownerName || null,
       owner_phone: ownerPhoneStored,
       commission_terms: form.get("commissionTerms"),
       scope_of_work: scopeOfWorkRaw ? String(scopeOfWorkRaw) : null,

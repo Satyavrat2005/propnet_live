@@ -7,7 +7,34 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-function parseScopeOfWork(value: any): string[] {
+type PropertyRow = {
+  property_id: string;
+  id: string | null;
+  property_title: string | null;
+  property_type: string | null;
+  transaction_type: string | null;
+  sale_price: string | null;
+  area: number | string | null;
+  area_unit: string | null;
+  bhk: number | null;
+  location: string | null;
+  full_address: string | null;
+  description: string | null;
+  listing_type: string | null;
+  property_photos: string[] | null;
+  commission_terms: string | null;
+  scope_of_work: unknown;
+  approval_status: string | null;
+  public_property: boolean | null;
+  latitude: number | null;
+  longitude: number | null;
+  owner_name: string | null;
+  owner_phone: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+function parseScopeOfWork(value: unknown): string[] {
   if (!value) return [];
   if (Array.isArray(value)) return value.filter(Boolean);
   try {
@@ -24,7 +51,7 @@ function parseScopeOfWork(value: any): string[] {
   }
 }
 
-function toOwnerObject(row: any) {
+function toOwnerObject(row: PropertyRow) {
   return {
     name: row.owner_name ?? null,
     phone: row.owner_phone ?? null,
@@ -39,7 +66,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("properties")
-      .select(
+      .select<PropertyRow>(
         `
         property_id,
         id,
@@ -67,7 +94,8 @@ export async function GET(req: NextRequest) {
         updated_at
       `
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(0, 4999);
 
     if (!includePending) {
       query = query.eq("approval_status", "approved");
@@ -107,9 +135,10 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json(mapped, { status: 200 });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[GET /api/properties] Unexpected error:", err);
-    return NextResponse.json({ message: err?.message || "Unexpected error" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Unexpected error";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
 

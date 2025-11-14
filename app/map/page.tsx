@@ -1,7 +1,7 @@
 // app/map/page.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,49 @@ import {
   User,
 } from "lucide-react";
 import MobileNavigation from "@/components/layout/mobile-navigation";
-import { formatPrice, getListingTypeBadgeColor } from "@/utils/formatters";
+import { formatPrice, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
 import { safeFetch } from "@/lib/safeFetch";
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache freshness
+const CACHE_GC_MS = 30 * 60 * 1000; // keep cached data in memory for 30 minutes
+const PROPERTY_CACHE_KEY = "propnet_map_properties";
+const PRIMARY_CACHE_KEY = "propnet_map_primary";
+const GEOCODE_CACHE_KEY = "propnet_map_geocode";
+
+type SessionCacheEntry<T> = {
+  data: T;
+  timestamp: number;
+};
+
+function readSessionCache<T>(key: string): SessionCacheEntry<T> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.timestamp !== "number" || !("data" in parsed)) return null;
+    return parsed as SessionCacheEntry<T>;
+  } catch (error) {
+    console.warn(`[map] Failed to read cache for ${key}`, error);
+    return null;
+  }
+}
+
+function writeSessionCache<T>(key: string, data: T) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (error) {
+    console.warn(`[map] Failed to write cache for ${key}`, error);
+  }
+}
+
+function getRemainingStaleTime(entry: SessionCacheEntry<unknown> | null): number {
+  if (!entry) return 0;
+  const age = Date.now() - entry.timestamp;
+  if (age >= CACHE_TTL_MS) return 0;
+  return CACHE_TTL_MS - age;
+}
 
 declare global {
   interface Window {
@@ -39,13 +80,13 @@ interface Property {
   title: string;
   propertyType: string;
   transactionType: string;
-  price: string;
+  price: string | number | null;
   location: string;
-  fullAddress?: string;
+  fullAddress?: string | null;
   size?: number | string | null;
   sizeUnit?: string | null;
   bhk?: number;
-  buildingSociety?: string;
+  buildingSociety?: string | null;
   owner: {
     name: string | null;
     phone: string | null;
@@ -53,12 +94,21 @@ interface Property {
   lat?: number | null;
   lng?: number | null;
   createdAt?: string;
+  description?: string | null;
+  promoter?: string | null;
+  details?: string | null;
+  blocks?: string | null;
+  landArea?: number | null;
+  totalAreaOfLand?: number | null;
+  totalCarpetArea?: number | string | null;
+  listingSource?: "property" | "primary";
 }
 
 export default function MapPage() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [map, setMap] = useState<any>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentMarkers, setCurrentMarkers] = useState<any[]>([]);
@@ -67,13 +117,96 @@ export default function MapPage() {
   const [markersMap, setMarkersMap] = useState<{ [key: string]: { marker: any; infoWindow: any } }>({});
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsProperty, setDetailsProperty] = useState<Property | null>(null);
+  const PAGE_SIZE = 6;
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInitializedRef = useRef(false);
+  const geocodeCacheRef = useRef<Record<string, { lat: number; lng: number }>>({});
 
-  const { data: properties = [], isLoading } = useQuery({
+  const propertyCacheEntry = useMemo(() => readSessionCache<Property[]>(PROPERTY_CACHE_KEY), []);
+  const primaryCacheEntry = useMemo(() => readSessionCache<Property[]>(PRIMARY_CACHE_KEY), []);
+
+  const propertyQuery = useQuery<Property[]>({
     queryKey: ["/api/properties"],
     queryFn: () => safeFetch("/api/properties", []),
+    initialData: propertyCacheEntry?.data,
+    staleTime: getRemainingStaleTime(propertyCacheEntry),
+    gcTime: CACHE_GC_MS,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
+
+  const primaryQuery = useQuery<Property[]>({
+    queryKey: ["/api/primarly-listing"],
+    queryFn: async () => {
+      const data = await safeFetch("/api/primarly-listing", []);
+      console.log("[Primary Listings] Total fetched:", Array.isArray(data) ? data.length : 0);
+      return data;
+    },
+    initialData: primaryCacheEntry?.data,
+    staleTime: getRemainingStaleTime(primaryCacheEntry),
+    gcTime: CACHE_GC_MS,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const propertyData = propertyQuery.data ?? [];
+  const primaryListings = primaryQuery.data ?? [];
+  const isPropertyLoading = propertyQuery.isLoading && !propertyCacheEntry?.data;
+  const isPrimaryLoading = primaryQuery.isLoading && !primaryCacheEntry?.data;
+
+  useEffect(() => {
+    if (propertyQuery.data && propertyQuery.isSuccess) {
+      writeSessionCache(PROPERTY_CACHE_KEY, propertyQuery.data);
+    }
+  }, [propertyQuery.data, propertyQuery.isSuccess]);
+
+  useEffect(() => {
+    if (primaryQuery.data && primaryQuery.isSuccess) {
+      writeSessionCache(PRIMARY_CACHE_KEY, primaryQuery.data);
+    }
+  }, [primaryQuery.data, primaryQuery.isSuccess]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const cached = window.sessionStorage.getItem(GEOCODE_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === "object") {
+          geocodeCacheRef.current = parsed;
+        }
+      }
+    } catch (error) {
+      console.warn("[map] Failed to hydrate geocode cache", error);
+    }
+  }, []);
+
+  const persistGeocodeCache = () => {
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(geocodeCacheRef.current));
+    } catch (error) {
+      console.warn("[map] Failed to persist geocode cache", error);
+    }
+  };
+
+  const allListings = useMemo(() => {
+    const normalizedPrimary = (Array.isArray(primaryListings) ? primaryListings : []).map((listing: Property) => ({
+      ...listing,
+      transactionType: (listing.transactionType || "primary").toLowerCase(),
+      listingSource: "primary" as const,
+    }));
+
+    const normalizedProperties = (Array.isArray(propertyData) ? propertyData : []).map((listing: Property) => ({
+      ...listing,
+      transactionType: (listing.transactionType || "").toLowerCase(),
+      listingSource: "property" as const,
+    }));
+
+    return [...normalizedProperties, ...normalizedPrimary];
+  }, [propertyData, primaryListings]);
+
+  const isLoading = isPropertyLoading || isPrimaryLoading;
 
   // Get user's current location
   useEffect(() => {
@@ -208,11 +341,11 @@ export default function MapPage() {
 
   // Add markers whenever map, isMapLoaded, properties or filterType changes
   useEffect(() => {
-    if (map && isMapLoaded && Array.isArray(properties)) {
+    if (map && isMapLoaded && Array.isArray(allListings)) {
       addMarkersToMap().catch((e) => console.error("addMarkersToMap error:", e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, isMapLoaded, properties, filterType, userLocation]);
+  }, [map, isMapLoaded, allListings, filterType, userLocation]);
 
   // cleanup markers on unmount
   useEffect(() => {
@@ -226,6 +359,50 @@ export default function MapPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(visibleProperties.length / PAGE_SIZE) || 1);
+    setCurrentPage((previous) => Math.min(previous, totalPages));
+  }, [visibleProperties.length]);
+
+  const resolveTransactionMeta = (type?: string) => {
+    const normalized = (type || "").toLowerCase();
+    switch (normalized) {
+      case "rent":
+        return { bg: "#dcfce7", color: "#166534", label: "Rent" };
+      case "primary":
+        return { bg: "#fef3c7", color: "#92400e", label: "Primary" };
+      case "sale":
+        return { bg: "#dbeafe", color: "#1d4ed8", label: "Sale" };
+      default:
+        return { bg: "#e5e7eb", color: "#374151", label: getListingTypeLabel(type) };
+    }
+  };
+
+  const resolvePriceLabel = (property: Property) => {
+    const normalizedType = (property.transactionType || "").toLowerCase();
+    if (normalizedType === "primary") {
+      if (property.price && typeof property.price === "string" && property.price.trim().length > 0) {
+        return property.price;
+      }
+      if (property.details) return property.details;
+      return "Primary listing";
+    }
+
+    const numericPrice = typeof property.price === "number"
+      ? property.price
+      : Number(String(property.price || "").replace(/[^0-9.]/g, ""));
+
+    if (!numericPrice) {
+      return "Price on request";
+    }
+
+    return formatPrice(numericPrice, property.transactionType);
+  };
 
   const addMarkersToMap = async () => {
     if (!map || typeof window === "undefined" || !window.google) return;
@@ -245,10 +422,10 @@ export default function MapPage() {
     setCurrentMarkers([]);
     setMarkersMap({});
 
-    const filteredProps: Property[] = Array.isArray(properties)
-      ? properties.filter((property: Property) => {
+    const filteredProps: Property[] = Array.isArray(allListings)
+      ? allListings.filter((property: Property) => {
           if (filterType === "all") return true;
-          return property.transactionType === filterType;
+          return (property.transactionType || "").toLowerCase() === filterType;
         })
       : [];
 
@@ -294,6 +471,7 @@ export default function MapPage() {
 
         const saleSvg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="15" fill="#00C853" stroke="white" stroke-width="2"/><path d="M10 18V14.5L16 10L22 14.5V18C22 18.5523 21.5523 19 21 19H11C10.4477 19 10 18.5523 10 18Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="13" y="19" width="6" height="3" rx="1" fill="white"/></svg>`;
         const rentSvg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="15" fill="#D50000" stroke="white" stroke-width="2"/><text x="16" y="22" text-anchor="middle" font-size="18" font-family="Arial" fill="white" font-weight="bold">₹</text></svg>`;
+        const primarySvg = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="15" fill="#F97316" stroke="white" stroke-width="2"/><path d="M16 8L18.4721 13.009L24 13.8197L19.8 17.8619L20.9443 23.1803L16 20.4L11.0557 23.1803L12.2 17.8619L8 13.8197L13.5279 13.009L16 8Z" fill="white"/></svg>`;
 
         const saleIcon = {
           url: encodeSvg(saleSvg),
@@ -303,32 +481,42 @@ export default function MapPage() {
           url: encodeSvg(rentSvg),
           scaledSize: new window.google.maps.Size(32, 32),
         };
+        const primaryIcon = {
+          url: encodeSvg(primarySvg),
+          scaledSize: new window.google.maps.Size(36, 36),
+        };
+
+        const normalizedType = (property.transactionType || "").toLowerCase();
+        const markerIcon =
+          normalizedType === "rent" ? rentIcon : normalizedType === "primary" ? primaryIcon : saleIcon;
 
         const marker = new window.google.maps.Marker({
           position: { lat: coords.lat, lng: coords.lng },
           map,
           title: property.title,
-          icon: property.transactionType === "sale" ? saleIcon : rentIcon,
+          icon: markerIcon,
         });
 
         const buildingInfo = property.buildingSociety
           ? `<div style=\"color: #888; font-size: 12px; margin-bottom: 4px;\">${property.buildingSociety}</div>`
           : "";
-
-        const priceNumber = Number(property.price) || 0;
+        const priceLabel = resolvePriceLabel(property);
+        const transactionMeta = resolveTransactionMeta(property.transactionType);
+        const descriptionBlock = property.description
+          ? `<div style="color: #4b5563; font-size: 12px; margin-bottom: 6px;">${property.description}</div>`
+          : "";
 
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
             <div id="info-${property.id}" style="min-width: 200px; padding: 8px;">
               <div style="font-weight: bold; margin-bottom: 8px;">${property.title}</div>
               ${buildingInfo}
+              ${descriptionBlock}
               <div style="color: #666; margin-bottom: 8px; font-size: 14px;">${property.location}</div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="font-weight: bold; color: #2563eb;">${formatPrice(priceNumber, property.transactionType)}</span>
-                <span style="background: ${
-                  property.transactionType === "sale" ? "#dbeafe" : "#dcfce7"
-                }; color: ${property.transactionType === "sale" ? "#1d4ed8" : "#166534"}; padding: 2px 8px; border-radius: 4px; font-size: 12px;">
-                  ${property.transactionType}
+                <span style="font-weight: bold; color: #2563eb;">${priceLabel}</span>
+                <span style="background: ${transactionMeta.bg}; color: ${transactionMeta.color}; padding: 2px 8px; border-radius: 4px; font-size: 12px;">
+                  ${transactionMeta.label}
                 </span>
               </div>
               <button id="details-btn-${property.id}" style="width: 100%; background: #3b82f6; color: white; border: none; padding: 8px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">
@@ -403,6 +591,7 @@ export default function MapPage() {
   // geocode property via your API or fallback to distributed coordinates
   const geocodeProperty = async (property: Property) => {
     const cacheKey = property.id.toString();
+    const geocodeAddressKey = property.fullAddress || property.buildingSociety || property.location || cacheKey;
 
     if (typeof property.lat === "number" && typeof property.lng === "number") {
       return { lat: property.lat, lng: property.lng };
@@ -412,8 +601,17 @@ export default function MapPage() {
       return propertyCoordinates[cacheKey];
     }
 
+    if (geocodeCacheRef.current[geocodeAddressKey]) {
+      const coords = geocodeCacheRef.current[geocodeAddressKey];
+      setPropertyCoordinates((prev) => ({
+        ...prev,
+        [cacheKey]: coords,
+      }));
+      return coords;
+    }
+
     try {
-      const addressParts = [property.buildingSociety, property.location, "Gujarat, India"].filter(Boolean);
+      const addressParts = [property.fullAddress, property.buildingSociety, property.location, "Gujarat, India"].filter(Boolean);
       const address = addressParts.join(", ");
       const response = await fetch(`/api/places/geocode?address=${encodeURIComponent(address)}`);
       const data = await response.json();
@@ -424,6 +622,8 @@ export default function MapPage() {
           ...prev,
           [cacheKey]: coords,
         }));
+        geocodeCacheRef.current[geocodeAddressKey] = coords;
+        persistGeocodeCache();
         return coords;
       }
     } catch (error) {
@@ -445,7 +645,15 @@ export default function MapPage() {
     return fallback;
   };
 
-  const propertyTypes = ["all", "sale", "rent"];
+  const propertyTypes = ["all", "sale", "rent", "primary"];
+  const getFilterLabel = (type: string) => (type === "all" ? "All" : getListingTypeLabel(type));
+  const totalPages = Math.max(1, Math.ceil(visibleProperties.length / PAGE_SIZE) || 1);
+  const paginatedProperties = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return visibleProperties.slice(start, start + PAGE_SIZE);
+  }, [visibleProperties, currentPage]);
+  const pageStart = visibleProperties.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, visibleProperties.length);
 
   if (isLoading) {
     return (
@@ -491,9 +699,8 @@ export default function MapPage() {
                 variant={filterType === type ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFilterType(type)}
-                className="capitalize"
               >
-                {type}
+                {getFilterLabel(type)}
               </Button>
             ))}
           </div>
@@ -541,63 +748,101 @@ export default function MapPage() {
           Properties in View ({visibleProperties.length})
         </h2>
         <div className="space-y-3">
-          {visibleProperties.slice(0, 5).map((property: Property) => (
-            <Card
-              key={property.id}
-              className={`cursor-pointer transition-all hover:shadow-lg ${
-                selectedProperty?.id === property.id ? "ring-2 ring-primary" : ""
-              }`}
-              onClick={() => centerOnProperty(property)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h3 className="font-semibold text-neutral-900 text-sm">{property.title}</h3>
-                      <Badge className={`text-xs ${getListingTypeBadgeColor(property.transactionType)}`}>
-                        {property.transactionType}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-neutral-600 mb-2">{property.location}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-primary">
-                        {formatPrice(Number(property.price) || 0, property.transactionType)}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (property.owner.phone) {
-                              window.open(`tel:${property.owner.phone}`, "_self");
-                            }
-                          }}
-                          disabled={!property.owner.phone}
-                        >
-                          <Phone size={12} className="mr-1" />
-                          Contact
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDetailsProperty(property);
-                            setShowDetailsModal(true);
-                          }}
-                        >
-                          <Eye size={12} className="mr-1" />
-                          Details
-                        </Button>
+          {paginatedProperties.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center text-sm text-neutral-500">
+                No properties match the current filters.
+              </CardContent>
+            </Card>
+          )}
+          {paginatedProperties.map((property: Property) => {
+            const priceDisplay = resolvePriceLabel(property);
+            const badgeLabel = getListingTypeLabel(property.transactionType);
+
+            return (
+              <Card
+                key={property.id}
+                className={`cursor-pointer transition-all hover:shadow-lg ${
+                  selectedProperty?.id === property.id ? "ring-2 ring-primary" : ""
+                }`}
+                onClick={() => centerOnProperty(property)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="font-semibold text-neutral-900 text-sm">{property.title}</h3>
+                        <Badge className={`text-xs ${getListingTypeBadgeColor(property.transactionType)}`}>
+                          {badgeLabel}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-neutral-600 mb-1">{property.location}</p>
+                      {property.description && (
+                        <p className="text-xs text-neutral-500 mb-2">{property.description}</p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-primary">{priceDisplay}</span>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (property.owner.phone) {
+                                window.open(`tel:${property.owner.phone}`, "_self");
+                              }
+                            }}
+                            disabled={!property.owner.phone}
+                          >
+                            <Phone size={12} className="mr-1" />
+                            Contact
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetailsProperty(property);
+                              setShowDetailsModal(true);
+                            }}
+                          >
+                            <Eye size={12} className="mr-1" />
+                            Details
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+        {visibleProperties.length > 0 && (
+          <div className="flex items-center justify-between mt-4 text-xs text-neutral-600">
+            <span>
+              Showing {pageStart}-{pageEnd} of {visibleProperties.length}
+            </span>
+            <div className="space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom spacing for navigation */}
@@ -614,83 +859,128 @@ export default function MapPage() {
             </DialogTitle>
           </DialogHeader>
 
-          {detailsProperty && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg">{detailsProperty.title}</h3>
-                <p className="text-sm text-muted-foreground">{detailsProperty.propertyType}</p>
-              </div>
+          {detailsProperty && (() => {
+            const isPrimaryListing = (detailsProperty.transactionType || "").toLowerCase() === "primary";
+            const priceDisplay = resolvePriceLabel(detailsProperty);
 
-              <div className="grid grid-cols-2 gap-4">
+            return (
+              <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Price</p>
-                  <p className="font-semibold text-primary">
-                    {formatPrice(Number(detailsProperty.price) || 0, detailsProperty.transactionType)}
-                  </p>
+                  <h3 className="font-semibold text-lg">{detailsProperty.title}</h3>
+                  <p className="text-sm text-muted-foreground">{detailsProperty.propertyType}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Size</p>
-                  <p className="font-semibold">
-                    {detailsProperty.size
-                      ? `${detailsProperty.size}${detailsProperty.sizeUnit ? ` ${detailsProperty.sizeUnit}` : ""}`
-                      : "Not specified"}
-                  </p>
-                </div>
-              </div>
 
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Location</p>
-                <div className="flex items-start gap-2">
-                  <MapPin size={16} className="mt-0.5 text-muted-foreground" />
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm">{detailsProperty.location}</p>
-                    {detailsProperty.buildingSociety && (
-                      <p className="text-xs text-muted-foreground">{detailsProperty.buildingSociety}</p>
-                    )}
+                    <p className="text-sm font-medium text-muted-foreground">Price</p>
+                    <p className="font-semibold text-primary">{priceDisplay}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Size</p>
+                    <p className="font-semibold">
+                      {detailsProperty.size
+                        ? `${detailsProperty.size}${detailsProperty.sizeUnit ? ` ${detailsProperty.sizeUnit}` : ""}`
+                        : "Not specified"}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              {detailsProperty.bhk && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Configuration</p>
-                  <p className="text-sm">{detailsProperty.bhk} BHK</p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Owner Details</p>
-                <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <User size={16} className="text-muted-foreground" />
-                    <span className="text-sm font-medium">{detailsProperty.owner.name || "Not provided"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone size={16} className="text-muted-foreground" />
-                    <span className="text-sm">{detailsProperty.owner.phone || "Not provided"}</span>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Location</p>
+                  <div className="flex items-start gap-2">
+                    <MapPin size={16} className="mt-0.5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm">{detailsProperty.location}</p>
+                      {detailsProperty.buildingSociety && (
+                        <p className="text-xs text-muted-foreground">{detailsProperty.buildingSociety}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    if (detailsProperty.owner.phone) {
-                      window.open(`tel:${detailsProperty.owner.phone}`, "_self");
-                    }
-                  }}
-                  disabled={!detailsProperty.owner.phone}
-                >
-                  <Phone size={16} className="mr-2" />
-                  Call Owner
-                </Button>
-                <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
-                  Close
-                </Button>
+                {detailsProperty.bhk && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Configuration</p>
+                    <p className="text-sm">{detailsProperty.bhk} BHK</p>
+                  </div>
+                )}
+
+                {detailsProperty.description && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
+                    <p className="text-sm text-neutral-700">{detailsProperty.description}</p>
+                  </div>
+                )}
+
+                {isPrimaryListing && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Promoter</p>
+                      <p className="text-sm">{detailsProperty.promoter || "Not provided"}</p>
+                    </div>
+                    {detailsProperty.details && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Project Details</p>
+                        <p className="text-sm text-neutral-700">{detailsProperty.details}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                      {detailsProperty.landArea && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Land Area</p>
+                          <p className="text-sm">{detailsProperty.landArea}</p>
+                        </div>
+                      )}
+                      {detailsProperty.totalAreaOfLand && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Total Area of Land</p>
+                          <p className="text-sm">{detailsProperty.totalAreaOfLand}</p>
+                        </div>
+                      )}
+                      {detailsProperty.totalCarpetArea && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Total Carpet Area</p>
+                          <p className="text-sm">{detailsProperty.totalCarpetArea}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Owner Details</p>
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <User size={16} className="text-muted-foreground" />
+                      <span className="text-sm font-medium">{detailsProperty.owner.name || "Not provided"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone size={16} className="text-muted-foreground" />
+                      <span className="text-sm">{detailsProperty.owner.phone || "Not provided"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      if (detailsProperty.owner.phone) {
+                        window.open(`tel:${detailsProperty.owner.phone}`, "_self");
+                      }
+                    }}
+                    disabled={!detailsProperty.owner.phone}
+                  >
+                    <Phone size={16} className="mr-2" />
+                    Call Owner
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
+                    Close
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

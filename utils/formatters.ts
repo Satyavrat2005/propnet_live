@@ -41,9 +41,11 @@ export function formatArea(
 export function getListingTypeBadgeColor(type?: string): string {
   const colorMap: Record<string, string> = {
     "rent": "bg-blue-100 text-blue-800",
+    "sale": "bg-green-100 text-green-800",
     "buy": "bg-green-100 text-green-800",
     "sell": "bg-orange-100 text-orange-800",
     "lease": "bg-purple-100 text-purple-800",
+    "primary": "bg-amber-100 text-amber-800",
   };
 
   return colorMap[type?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
@@ -55,9 +57,11 @@ export function getListingTypeBadgeColor(type?: string): string {
 export function getListingTypeLabel(type?: string): string {
   const labelMap: Record<string, string> = {
     "rent": "For Rent",
+    "sale": "For Sale",
     "buy": "Buy",
     "sell": "For Sale",
     "lease": "Lease",
+    "primary": "Primary Listing",
   };
 
   return labelMap[type?.toLowerCase() || ""] || type || "Property";
