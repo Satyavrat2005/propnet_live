@@ -393,7 +393,7 @@ export default function QuickPostPage() {
 
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) router.back();
-    else router.push("/feed");
+    else router.push("/dashboard");
   };
 
   return (

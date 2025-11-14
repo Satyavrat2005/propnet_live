@@ -1,3 +1,4 @@
+// app/api/properties/[propertyId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { verifySession } from "@/lib/auth/session";
@@ -141,6 +142,9 @@ export async function GET(
         bhk,
         location,
         full_address,
+        flat_number,
+        floor,
+        building_society,
         description,
         listing_type,
         property_photos,
@@ -196,6 +200,11 @@ export async function GET(
       lng: data.longitude,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
+      flatNumber: data.flat_number ?? null,
+      flat_number: data.flat_number ?? null,
+      floor: data.floor ?? null,
+      buildingSociety: data.building_society ?? null,
+      building_society: data.building_society ?? null,
     };
 
     return NextResponse.json(payload, { status: 200 });

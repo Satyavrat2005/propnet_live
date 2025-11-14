@@ -827,7 +827,7 @@ export default function MyListings() {
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/feed");
+      router.push("/dashboard");
     }
   };
 

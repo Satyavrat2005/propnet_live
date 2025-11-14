@@ -1,1286 +1,768 @@
-'use client';
+// app/clients/page.tsx
+"use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Plus, Users, TrendingUp, Clock, DollarSign, IndianRupee, Calendar, Search, Filter, MoreVertical, User, Building, FileText, CheckCircle, XCircle, AlertCircle, Target, Star, ChevronRight, Activity, Zap, ArrowUpRight, BarChart3, PieChart } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import MobileNavigation from "@/components/layout/mobile-navigation";
-import { AgentNotificationModal } from "@/components/ui/agent-notification-modal";
-import { useAuth } from "@/hooks/use-auth";
+import { Users, TrendingUp, Clock, Target, Plus, ChevronRight } from "lucide-react";
 
-// Client form schema
-const clientSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  email: z.string().email().optional().or(z.literal("")),
-  type: z.enum(["owner", "buyer", "tenant", "lead"]),
-  budget: z.string().optional(),
-  preferredLocation: z.string().optional(),
-  requirements: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-// Deal form schema
-const dealSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  clientId: z.number(),
-  propertyId: z.number().optional(),
-  dealType: z.enum(["sale", "rent", "lease"]),
-  value: z.string().optional(),
-  commissionType: z.enum(["percentage", "fixed"]).optional(),
-  commissionValue: z.string().optional(),
-  expectedClosure: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-// Task form schema
-const taskSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  description: z.string().optional(),
-  dealId: z.number(),
-  priority: z.enum(["low", "medium", "high"]),
-  dueDate: z.string().optional(),
-});
+/**
+ * app/clients/page.tsx
+ * Fixed: normalization for flat/floor/building, owner object handling,
+ * unique keys for lists, deals tab uses /api/properties.
+ */
 
 export default function ClientsPage() {
-  const { toast } = useToast();
-  const router = useRouter();
-  const [isCreateClientOpen, setIsCreateClientOpen] = useState(false);
-  const [isCreateDealOpen, setIsCreateDealOpen] = useState(false);
-  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
-  const [newClientData, setNewClientData] = useState<any>(null);
-  const [selectedClientType, setSelectedClientType] = useState("lead");
-  const [isEditClientOpen, setIsEditClientOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<any>(null);
+  const queryClient = useQueryClient();
 
-  // User data for agent notifications
-  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<"overview" | "clients" | "deals" | "tasks">("overview");
 
-  // Queries
-  const { data: clients, isLoading: isLoadingClients } = useQuery({
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [clientModalData, setClientModalData] = useState<any | null>(null);
+  const [clientModalLoading, setClientModalLoading] = useState(false);
+
+  const [dealModalOpen, setDealModalOpen] = useState(false);
+  const [dealDetail, setDealDetail] = useState<any | null>(null);
+  const [dealLoading, setDealLoading] = useState(false);
+
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [taskText, setTaskText] = useState("");
+
+  // === DATA FETCHERS ===
+  const { data: rawClients = [] } = useQuery({
     queryKey: ["/api/clients"],
+    queryFn: async () => {
+      const r = await fetch("/api/clients");
+      if (!r.ok) return [];
+      return r.json();
+    },
+    staleTime: 30_000,
   });
 
-  const { data: deals, isLoading: isLoadingDeals } = useQuery({
-    queryKey: ["/api/deals"],
+  // Use properties for deals tab (you said you don't have a deals table)
+  const { data: rawProperties = [] } = useQuery({
+    queryKey: ["/api/properties"],
+    queryFn: async () => {
+      const r = await fetch("/api/properties");
+      if (!r.ok) return [];
+      return r.json();
+    },
+    staleTime: 30_000,
   });
 
-  const { data: tasks, isLoading: isLoadingTasks } = useQuery({
+  const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
+    queryFn: async () => {
+      const r = await fetch("/api/tasks");
+      if (!r.ok) return [];
+      return r.json();
+    },
+    staleTime: 15_000,
   });
 
-  // Agent notification handler
-  const handleSendNotification = async (message: string): Promise<boolean> => {
+  // Derived metrics
+  const totalClients = Array.isArray(rawClients) ? rawClients.length : 0;
+  const totalDeals = Array.isArray(rawProperties) ? rawProperties.length : 0;
+  const pendingTasks = Array.isArray(tasks) ? tasks.filter((t: any) => !t.status).length : 0;
+
+  const monthlyDeals = useMemo(() => {
+    if (!Array.isArray(rawProperties)) return 0;
+    const now = new Date();
+    return rawProperties.filter((d: any) => {
+      const created = d.created_at ?? d.createdAt ?? d.created;
+      if (!created) return false;
+      const dt = new Date(created);
+      return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+    }).length;
+  }, [rawProperties]);
+
+  const activeDealsCount = Array.isArray(rawProperties)
+    ? rawProperties.filter((d: any) => (d.approval_status ?? d.ownerApprovalStatus ?? "pending") !== "pending").length
+    : 0;
+  const activeDealPct = totalDeals ? Math.round((activeDealsCount / totalDeals) * 100) : 0;
+  const taskCompletionPct = tasks && tasks.length ? Math.round(((tasks.length - pendingTasks) / tasks.length) * 100) : 0;
+
+  // ==== utilities ====
+  const parsePhotos = (raw: any) => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return [raw];
+      }
+    }
+    return [];
+  };
+
+  // Normalizes property record fields (handles camelCase, snake_case, nested owner)
+  function normalizePropertyFields(obj: any) {
+    if (!obj) return obj;
+    const normalized: any = { ...obj };
+
+    // canonical id
+    normalized.property_id = obj.property_id ?? obj.id ?? obj.propertyId ?? obj._id ?? null;
+
+    // flat mapping - accept many variants
+    normalized.flat_number =
+      obj.flat_number ??
+      obj.flatNo ??
+      obj.flat_no ??
+      obj.flat ??
+      obj.flatNumber ??
+      obj.flatnumber ??
+      obj.flatNo ??
+      null;
+
+    normalized.floor =
+      obj.floor ??
+      obj.floor_no ??
+      obj.floorNo ??
+      obj.floor_number ??
+      obj.floorNumber ??
+      null;
+
+    normalized.building_society =
+      obj.building_society ??
+      obj.building ??
+      obj.society ??
+      obj.buildingSociety ??
+      obj.society_name ??
+      null;
+
+    normalized.created_at =
+      obj.created_at ??
+      obj.createdAt ??
+      obj.created ??
+      obj.timestamp ??
+      obj.created_at_iso ??
+      null;
+
+    normalized.property_photos = parsePhotos(obj.property_photos ?? obj.photos ?? obj.images ?? obj.propertyPhotos ?? obj.photos_list);
+
+    // Owner normalization: either nested owner object or separate fields
+    if (obj.owner && typeof obj.owner === "object") {
+      normalized.owner_name = obj.owner.name ?? obj.owner.fullname ?? obj.owner.displayName ?? obj.owner_name ?? null;
+      normalized.owner_phone = obj.owner.phone ?? obj.owner.mobile ?? obj.owner_phone ?? null;
+    } else {
+      normalized.owner_name = obj.owner_name ?? obj.owner ?? obj.ownerName ?? obj.ownerId ?? obj.name ?? null;
+      normalized.owner_phone = obj.owner_phone ?? obj.ownerPhone ?? obj.owner_phone_number ?? obj.phone ?? null;
+    }
+
+    normalized.sale_price = obj.sale_price ?? obj.price ?? obj.salePrice ?? null;
+    normalized.property_title = obj.property_title ?? obj.title ?? obj.name ?? null;
+    normalized.location = obj.location ?? obj.full_address ?? obj.fullAddress ?? obj.address ?? null;
+    normalized.property_type = obj.property_type ?? obj.propertyType ?? obj.type ?? null;
+    normalized.transaction_type = obj.transaction_type ?? obj.transactionType ?? null;
+    normalized.bhk = obj.bhk ?? obj.bedrooms ?? null;
+    normalized.area = obj.area ?? obj.size ?? null;
+    normalized.area_unit = obj.area_unit ?? obj.sizeUnit ?? obj.areaUnit ?? null;
+    normalized.approval_status = obj.approval_status ?? obj.ownerApprovalStatus ?? obj.approvalStatus ?? null;
+
+    return normalized;
+  }
+
+  function normalizeClientFields(c: any) {
+    if (!c) return c;
+    const norm: any = { ...(c ?? {}) };
+
+    // owner normalization (client responses can have owner object)
+    if (c.owner && typeof c.owner === "object") {
+      norm.owner_name = c.owner.name ?? c.owner.fullname ?? c.owner_name ?? c.name ?? null;
+      norm.owner_phone = c.owner.phone ?? c.owner.mobile ?? c.owner_phone ?? null;
+    } else {
+      norm.owner_name = c.owner_name ?? c.owner ?? c.name ?? null;
+      norm.owner_phone = c.owner_phone ?? c.phone ?? c.mobile ?? null;
+    }
+
+    // properties nested on client
+    if (Array.isArray(c.properties)) {
+      norm.properties = c.properties.map((p: any) => normalizePropertyFields(p));
+    } else if (Array.isArray(c.property)) {
+      norm.properties = c.property.map((p: any) => normalizePropertyFields(p));
+    } else if (c.property && typeof c.property === "object") {
+      norm.properties = [normalizePropertyFields(c.property)];
+    } else {
+      norm.properties = c.properties ?? [];
+    }
+
+    norm.count = c.count ?? (Array.isArray(norm.properties) ? norm.properties.length : 0);
+    return norm;
+  }
+
+  // normalized lists for UI
+  const clients = Array.isArray(rawClients) ? rawClients.map(normalizeClientFields) : [];
+  const properties = Array.isArray(rawProperties) ? rawProperties.map(normalizePropertyFields) : [];
+
+  // fetch single property endpoint (canonical detail)
+  async function fetchPropertyById(propertyId: string | number) {
     try {
-      const response = await fetch(`/api/clients/${newClientData.id}/send-notification`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-      const data = await response.json();
-      return data.success;
-    } catch (error) {
-      console.error("Notification error:", error);
-      return false;
+      const r = await fetch(`/api/properties/${encodeURIComponent(String(propertyId))}`);
+      if (!r.ok) return null;
+      const json = await r.json();
+      return normalizePropertyFields(json);
+    } catch {
+      return null;
+    }
+  }
+
+  // open client modal (compositeId format kept the same)
+  const openClientModal = async (compositeId: string) => {
+    setClientModalOpen(true);
+    setClientModalData(null);
+    setClientModalLoading(true);
+
+    try {
+      const r = await fetch(`/api/clients/${encodeURIComponent(compositeId)}`);
+      if (!r.ok) {
+        setClientModalLoading(false);
+        setClientModalData(null);
+        return;
+      }
+      const data = await r.json();
+      const normalizedClient = normalizeClientFields(data ?? {});
+      setClientModalData(normalizedClient);
+    } catch {
+      setClientModalData(null);
+    } finally {
+      setClientModalLoading(false);
     }
   };
 
-  // Mutations
-  const createClientMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof clientSchema>) => {
-      const response = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create client");
-      return response.json();
-    },
-    onSuccess: (createdClient, formData) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      setIsCreateClientOpen(false);
-      clientForm.reset();
-      
-      // Set up notification modal data
-      setNewClientData({
-        ...createdClient,
-        requirementType: formData.type,
-        propertyType: formData.requirements
-      });
-      setIsNotificationModalOpen(true);
-      
-      toast({ title: "Client created successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to create client", variant: "destructive" });
-    },
-  });
+  // open deal/property modal
+  const openDealModal = async (propertyId: string | number) => {
+    setDealModalOpen(true);
+    setDealDetail(null);
+    setDealLoading(true);
 
-  const updateClientMutation = useMutation({
-    mutationFn: async (data: { id: number; updates: Partial<z.infer<typeof clientSchema>> }) => {
-      const response = await fetch(`/api/clients/${data.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data.updates),
-      });
-      if (!response.ok) throw new Error("Failed to update client");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      setIsEditClientOpen(false);
-      setEditingClient(null);
-      editClientForm.reset();
-      toast({ title: "Client updated successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update client", variant: "destructive" });
-    },
-  });
+    try {
+      const canonical = await fetchPropertyById(String(propertyId));
+      const fallback = !canonical ? properties.find((p: any) => {
+        const ids = [p.property_id, p.id, p.propertyId].filter(Boolean);
+        return ids.some((x: any) => String(x) === String(propertyId));
+      }) : null;
 
-  const createDealMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof dealSchema>) => {
-      const response = await fetch("/api/deals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create deal");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-      setIsCreateDealOpen(false);
-      dealForm.reset();
-      toast({ title: "Deal created successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to create deal", variant: "destructive" });
-    },
-  });
+      setDealDetail(canonical ?? fallback ?? null);
+    } catch {
+      setDealDetail(null);
+    } finally {
+      setDealLoading(false);
+    }
+  };
 
+  // tasks mutations (unchanged)
   const createTaskMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof taskSchema>) => {
-      const response = await fetch("/api/tasks", {
+    mutationFn: async (payload: { task_text: string; user_id?: string }) => {
+      const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
-      if (!response.ok) throw new Error("Failed to create task");
-      return response.json();
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error || body?.message || "Failed to create task");
+      return body;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      setIsCreateTaskOpen(false);
-      taskForm.reset();
-      toast({ title: "Task created successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to create task", variant: "destructive" });
+      setShowAddTask(false);
+      setTaskText("");
     },
   });
 
-  // Forms
-  const clientForm = useForm<z.infer<typeof clientSchema>>({
-    resolver: zodResolver(clientSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      email: "",
-      type: "lead",
-      budget: "",
-      preferredLocation: "",
-      requirements: "",
-      notes: "",
+  const toggleTaskMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: boolean }) => {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error || body?.message || "Failed to toggle task");
+      return body;
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }),
   });
 
-  const editClientForm = useForm<z.infer<typeof clientSchema>>({
-    resolver: zodResolver(clientSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      email: "",
-      type: "lead",
-      budget: "",
-      preferredLocation: "",
-      requirements: "",
-      notes: "",
-    },
-  });
-
-  const dealForm = useForm<z.infer<typeof dealSchema>>({
-    resolver: zodResolver(dealSchema),
-    defaultValues: {
-      title: "",
-      dealType: "sale",
-      value: "",
-      commissionType: "percentage",
-      commissionValue: "",
-      expectedClosure: "",
-      notes: "",
-    },
-  });
-
-  const taskForm = useForm<z.infer<typeof taskSchema>>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      priority: "medium",
-      dueDate: "",
-    },
-  });
-
-  // Form handlers
-  const onCreateClient = (data: z.infer<typeof clientSchema>) => {
-    createClientMutation.mutate(data);
+  const handleAddTask = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!taskText || taskText.trim().length === 0) return alert("Enter a task");
+    let user_id: string | undefined;
+    try {
+      const me = await fetch("/api/auth/me");
+      if (me.ok) {
+        const j = await me.json();
+        user_id = j?.id || j?.user?.id || undefined;
+      }
+    } catch {}
+    await createTaskMutation.mutateAsync({ task_text: taskText.trim(), user_id });
   };
 
-  const onEditClient = (data: z.infer<typeof clientSchema>) => {
-    if (!editingClient) return;
-    updateClientMutation.mutate({ id: editingClient.id, updates: data });
-  };
-
-  const handleEditClient = (client: any) => {
-    setEditingClient(client);
-    editClientForm.reset({
-      name: client.name || "",
-      phone: client.phone || "",
-      email: client.email || "",
-      type: client.type || "lead",
-      budget: client.budget || "",
-      preferredLocation: client.preferredLocation || "",
-      requirements: client.requirements || "",
-      notes: client.notes || "",
-    });
-    setSelectedClientType(client.type || "lead");
-    setIsEditClientOpen(true);
-  };
-
-  const onCreateDeal = (data: z.infer<typeof dealSchema>) => {
-    createDealMutation.mutate(data);
-  };
-
-  const onCreateTask = (data: z.infer<typeof taskSchema>) => {
-    createTaskMutation.mutate(data);
-  };
-
-  // Loading state
-  if (isLoadingClients || isLoadingDeals || isLoadingTasks) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600"></div>
-          <div className="absolute inset-0 animate-pulse rounded-full h-16 w-16 border-4 border-purple-200 opacity-20"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate metrics safely
-  const clientsArray = Array.isArray(clients) ? clients : [];
-  const dealsArray = Array.isArray(deals) ? deals : [];
-  const tasksArray = Array.isArray(tasks) ? tasks : [];
-  
-  const totalClients = clientsArray.length;
-  const activeDeals = dealsArray.filter((deal: any) => deal.status === 'active').length;
-  const pendingTasks = tasksArray.filter((task: any) => task.status === 'pending').length;
-  const monthlyClosures = dealsArray.filter((deal: any) => {
-    if (!deal.actualClosure) return false;
-    const closureDate = new Date(deal.actualClosure);
-    const now = new Date();
-    return closureDate.getMonth() === now.getMonth() && closureDate.getFullYear() === now.getFullYear();
-  }).length;
-
+  // === UI ===
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-950">
-      {/* Mobile-Optimized Header */}
-      <div className="relative overflow-hidden bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-white/20 dark:border-gray-800/50">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/5 to-indigo-600/10"></div>
-        <div className="relative px-4 py-4">
-          {/* Mobile Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                  Client Management
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Relationship & deals
-                </p>
-              </div>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f4f7fb_0%,#eef6ff_100%)]">
+      <div className="px-8 pt-8 pb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl p-3 bg-gradient-to-br from-[#6b5cff] to-[#a84dff] shadow-md">
+              <Users className="w-6 h-6 text-white" />
             </div>
-            <Dialog open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg shadow-lg">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+            <div>
+              <h1 className="text-2xl font-extrabold text-slate-900">Client Management</h1>
+              <p className="mt-1 text-sm text-slate-500">Relationship & deals</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="rounded-xl p-6 bg-gradient-to-br from-[#2b74ff] to-[#2a5bff] shadow-md text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm opacity-90">Clients</p>
+                <p className="text-3xl font-extrabold mt-2">{totalClients}</p>
+              </div>
+              <Users className="w-8 h-8 opacity-80" />
+            </div>
           </div>
 
-          {/* Mobile-Optimized Metrics Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-xs font-medium">Clients</p>
-                    <p className="text-2xl font-bold">{totalClients}</p>
-                  </div>
-                  <Users className="h-6 w-6 text-blue-200" />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="rounded-xl p-6 bg-gradient-to-br from-[#02b875] to-[#00a56a] shadow-md text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm opacity-90">Deals</p>
+                <p className="text-3xl font-extrabold mt-2">{totalDeals}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 opacity-80" />
+            </div>
+          </div>
 
-            <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-600 border-0 text-white">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-emerald-100 text-xs font-medium">Deals</p>
-                    <p className="text-2xl font-bold">{activeDeals}</p>
-                  </div>
-                  <TrendingUp className="h-6 w-6 text-emerald-200" />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="rounded-xl p-6 bg-gradient-to-br from-[#ff9100] to-[#ff6d00] shadow-md text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm opacity-90">Tasks</p>
+                <p className="text-3xl font-extrabold mt-2">{pendingTasks}</p>
+              </div>
+              <Clock className="w-8 h-8 opacity-80" />
+            </div>
+          </div>
 
-            <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-500 border-0 text-white">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-amber-100 text-xs font-medium">Tasks</p>
-                    <p className="text-2xl font-bold">{pendingTasks}</p>
-                  </div>
-                  <Clock className="h-6 w-6 text-amber-200" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-xs font-medium">Month</p>
-                    <p className="text-2xl font-bold">{monthlyClosures}</p>
-                  </div>
-                  <Target className="h-6 w-6 text-purple-200" />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="rounded-xl p-6 bg-gradient-to-br from-[#9b5cff] to-[#7b38ff] shadow-md text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm opacity-90">Month</p>
+                <p className="text-3xl font-extrabold mt-2">{monthlyDeals}</p>
+              </div>
+              <Target className="w-8 h-8 opacity-80" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile-Optimized Tabs */}
-      <div className="px-4 py-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-1 mb-6 shadow-lg">
-            <TabsTrigger 
-              value="dashboard" 
-              className="rounded-lg font-medium text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white py-2"
-            >
-              <BarChart3 className="h-3 w-3 mr-1" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger 
-              value="clients"
-              className="rounded-lg font-medium text-xs data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white py-2"
-            >
-              <Users className="h-3 w-3 mr-1" />
-              Clients
-            </TabsTrigger>
-            <TabsTrigger 
-              value="deals"
-              className="rounded-xl font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Deals
-            </TabsTrigger>
-            <TabsTrigger 
-              value="tasks"
-              className="rounded-xl font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Tasks
-            </TabsTrigger>
-          </TabsList>
+      {/* Tabs */}
+      <div className="px-8 pt-6">
+        <div className="bg-white rounded-2xl p-2 shadow-sm">
+          <div className="flex items-center gap-4 px-4">
+            <button onClick={() => setActiveTab("overview")} className={`rounded-lg px-5 py-3 ${activeTab === "overview" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Overview</button>
+            <button onClick={() => setActiveTab("clients")} className={`rounded-lg px-5 py-3 ${activeTab === "clients" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Clients</button>
+            <button onClick={() => setActiveTab("deals")} className={`rounded-lg px-5 py-3 ${activeTab === "deals" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Deals</button>
+            <button onClick={() => setActiveTab("tasks")} className={`rounded-lg px-5 py-3 ${activeTab === "tasks" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Tasks</button>
+          </div>
+        </div>
+      </div>
 
-          {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Activity */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-700/50 shadow-xl rounded-2xl">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
-                      <Activity className="h-5 w-5 text-white" />
+      <div className="px-8 py-8">
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="rounded-2xl shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {clients.length === 0 ? (
+                  <div className="py-16 text-center text-slate-400">
+                    <div className="flex items-center justify-center mb-6">
+                      <svg className="w-14 h-14 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 12c2.761 0 5-2.239 5-5S14.761 2 12 2 7 4.239 7 7s2.239 5 5 5zm0 2c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z" /></svg>
                     </div>
-                    <CardTitle className="text-xl">Recent Activity</CardTitle>
+                    <p className="text-lg font-medium">No clients yet. Add your first client to get started!</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {clientsArray.slice(0, 3).map((client: any, index) => (
-                      <div key={index} className="flex items-center space-x-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 rounded-xl">
-                        <div className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                          <User className="h-4 w-4 text-blue-600" />
+                ) : (
+                  <div className="space-y-3 py-2">
+                    {clients.slice(0, 6).map((c: any, idx: number) => (
+                      <div
+                        key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${idx}`}
+                        onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
+                        className="flex items-center justify-between rounded-xl p-6 bg-gradient-to-r from-[#fff7ff] to-[#f6fbff] hover:shadow-md transition cursor-pointer"
+                        style={{ paddingLeft: 18 }}
+                      >
+                        <div>
+                          <p className="font-semibold text-lg text-slate-900">{c.owner_name ?? "—"}</p>
+                          <p className="text-sm text-slate-500 mt-1">{c.owner_phone ?? "—"}</p>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900 dark:text-white">{client.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">New {client.type} added</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                        <div className="text-sm text-slate-400">Clients</div>
                       </div>
                     ))}
-                    {clientsArray.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No clients yet. Add your first client to get started!</p>
-                      </div>
-                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold">Pipeline Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-slate-600">Active Deals</div>
+                    <div className="font-semibold text-slate-700">{activeDealsCount}/{totalDeals}</div>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div className="h-3 rounded-full" style={{ width: `${activeDealPct}%`, background: "linear-gradient(90deg,#22c55e,#06b6d4)", transition: "width .4s ease" }} />
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-slate-600">Task Completion</div>
+                    <div className="font-semibold text-slate-700">{tasks.length - pendingTasks}/{tasks.length || 0}</div>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div className="h-3 rounded-full" style={{ width: `${taskCompletionPct}%`, background: "linear-gradient(90deg,#60a5fa,#a78bfa)", transition: "width .4s ease" }} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-6">
+                  <div className="rounded-xl p-6 bg-gradient-to-br from-[#e6f2ff] to-[#f3fbff] text-center">
+                    <p className="text-3xl font-bold text-blue-600">{totalClients}</p>
+                    <p className="text-sm mt-2 text-slate-500">Total Clients</p>
+                  </div>
+                  <div className="rounded-xl p-6 bg-gradient-to-br from-[#eefde7] to-[#f0fff7] text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{monthlyDeals}</p>
+                    <p className="text-sm mt-2 text-slate-500">This Month</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "clients" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {clients.map((c: any, idx: number) => (
+              <Card key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${idx}`} className="rounded-xl">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div style={{ paddingLeft: 6 }}>
+                      <p className="font-bold text-lg">{c.owner_name}</p>
+                      <p className="text-sm text-slate-500 mt-1">{c.owner_phone}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge className="capitalize">{c.count || 1} Properties</Badge>
+                      <Button size="sm" variant="ghost" onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}>View</Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+            ))}
+          </div>
+        )}
 
-              {/* Pipeline Status */}
-              <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-700/50 shadow-xl rounded-2xl">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg">
-                      <PieChart className="h-5 w-5 text-white" />
-                    </div>
-                    <CardTitle className="text-xl">Pipeline Status</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Deals</span>
-                        <span className="text-sm font-bold text-emerald-600">{activeDeals}/{dealsArray.length}</span>
-                      </div>
-                      <Progress 
-                        value={dealsArray.length > 0 ? (activeDeals / dealsArray.length) * 100 : 0} 
-                        className="h-3 bg-gray-200 dark:bg-gray-700"
-                      />
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Task Completion</span>
-                        <span className="text-sm font-bold text-blue-600">
-                          {tasksArray.length - pendingTasks}/{tasksArray.length}
-                        </span>
-                      </div>
-                      <Progress 
-                        value={tasksArray.length > 0 ? ((tasksArray.length - pendingTasks) / tasksArray.length) * 100 : 0}
-                        className="h-3 bg-gray-200 dark:bg-gray-700"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                      <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl">
-                        <p className="text-2xl font-bold text-blue-600">{totalClients}</p>
-                        <p className="text-sm text-blue-600/80">Total Clients</p>
-                      </div>
-                      <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-xl">
-                        <p className="text-2xl font-bold text-emerald-600">{monthlyClosures}</p>
-                        <p className="text-sm text-emerald-600/80">This Month</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Clients Tab */}
-          <TabsContent value="clients" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search clients..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-700/50 rounded-xl"
-                  />
-                </div>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-700/50 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="owner">Owners</SelectItem>
-                    <SelectItem value="buyer">Buyers</SelectItem>
-                    <SelectItem value="tenant">Tenants</SelectItem>
-                    <SelectItem value="lead">Leads</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {clientsArray
-                .filter((client: any) => {
-                  const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                      client.phone.includes(searchTerm);
-                  const matchesFilter = filterType === "all" || client.type === filterType;
-                  return matchesSearch && matchesFilter;
-                })
-                .map((client: any) => (
-                  <Card key={client.id} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-700/50 shadow-xl rounded-2xl hover:shadow-2xl transition-all duration-200 transform hover:scale-105">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-                            <User className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{client.name}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{client.phone}</p>
-                          </div>
-                        </div>
-                        <Badge 
-                          variant={client.type === 'owner' ? 'default' : 'secondary'}
-                          className="capitalize font-semibold"
-                        >
-                          {client.type}
-                        </Badge>
-                      </div>
-                      
-                      {client.email && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{client.email}</p>
-                      )}
-                      
-                      {client.budget && (
-                        <div className="flex items-center space-x-2 mb-3">
-                          <IndianRupee className="h-4 w-4 text-emerald-600" />
-                          <span className="text-sm font-medium text-emerald-600">₹{client.budget}</span>
-                        </div>
-                      )}
-                      
-                      {client.preferredLocation && (
-                        <div className="flex items-center space-x-2 mb-3">
-                          <Building className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{client.preferredLocation}</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <span className="text-xs text-gray-500">
-                          Added {new Date(client.createdAt).toLocaleDateString()}
-                        </span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/clients/${client.id}`)}>
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>Create Deal</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditClient(client)}>
-                              Edit Client
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-
-            {clientsArray.length === 0 && (
-              <div className="text-center py-16">
-                <div className="p-8 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-3xl inline-block mb-6">
-                  <Users className="h-16 w-16 text-blue-500 mx-auto" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No clients yet</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">Start building your client base by adding your first client</p>
-                <Button 
-                  onClick={() => setIsCreateClientOpen(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-xl"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add First Client
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Deals Tab */}
-          <TabsContent value="deals" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Active Deals</h2>
-              <Dialog open={isCreateDealOpen} onOpenChange={setIsCreateDealOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold px-6 py-3 rounded-xl">
-                    <Plus className="h-5 w-5 mr-2" />
-                    New Deal
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {dealsArray.map((deal: any) => (
-                <Card key={deal.id} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-700/50 shadow-xl rounded-2xl">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-bold text-lg">{deal.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {deal.client ? deal.client.name : 'Client not found'}
-                        </p>
-                      </div>
-                      <Badge variant={deal.status === 'active' ? 'default' : 'secondary'}>
-                        {deal.status}
-                      </Badge>
-                    </div>
-                    
-                    {deal.value && (
-                      <div className="flex items-center space-x-2 mb-3">
-                        <IndianRupee className="h-4 w-4 text-emerald-600" />
-                        <span className="font-medium text-emerald-600">₹{deal.value}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between pt-4 border-t">
-                      <span className="text-xs text-gray-500">{deal.dealType}</span>
-                      <span className="text-xs text-gray-500">{deal.stage}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {dealsArray.length === 0 && (
-              <div className="text-center py-16">
-                <TrendingUp className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
-                <h3 className="text-2xl font-bold mb-2">No deals yet</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">Create your first deal to start tracking progress</p>
-                <Button 
-                  onClick={() => setIsCreateDealOpen(true)}
-                  className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-semibold px-8 py-3 rounded-xl"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Create First Deal
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Tasks Tab */}
-          <TabsContent value="tasks" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Task Management</h2>
-              <Dialog open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-6 py-3 rounded-xl">
-                    <Plus className="h-5 w-5 mr-2" />
-                    New Task
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
-            </div>
-
-            <div className="space-y-4">
-              {tasksArray.map((task: any) => (
-                <Card key={task.id} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-700/50 shadow-lg rounded-xl">
+        {activeTab === "deals" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {properties.length === 0 && <p className="text-center text-slate-500 p-6">No deals (properties) yet</p>}
+            {properties.map((d: any) => {
+              const badgeText = d.transaction_type ?? d.transactionType ?? d.property_type ?? d.propertyType ?? "Unknown";
+              return (
+                <Card key={d.property_id ?? d.id ?? `${d.owner_phone ?? ""}-${Math.random()}`} className="rounded-xl">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-2">{task.title}</h3>
-                        {task.description && (
-                          <p className="text-gray-600 dark:text-gray-400 mb-3">{task.description}</p>
-                        )}
-                        <div className="flex items-center space-x-4">
-                          <Badge 
-                            variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'}
-                          >
-                            {task.priority} priority
-                          </Badge>
-                          <span className="text-sm text-gray-500">
-                            Deal: {task.deal ? task.deal.title : 'Not specified'}
-                          </span>
+                      <div style={{ paddingLeft: 6 }}>
+                        <p className="font-semibold">{d.property_title}</p>
+                        <p className="text-sm text-slate-500">{d.location}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge className="capitalize">{badgeText}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => openDealModal(d.property_id ?? d.id)}>View</Button>
+                          <ChevronRight className="w-5 h-5 text-slate-300" />
                         </div>
                       </div>
-                      <Badge variant={task.status === 'completed' ? 'default' : 'secondary'}>
-                        {task.status}
-                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {activeTab === "tasks" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-end">
+              <Button onClick={() => setShowAddTask(true)} className="flex items-center gap-2 bg-gradient-to-br from-[#6b5cff] to-[#a84dff] text-white shadow-md">
+                <Plus className="w-4 h-4" />
+                Add Task
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {tasks.length === 0 && <p className="text-center text-slate-500 p-6">No tasks yet</p>}
+              {tasks.map((t: any) => (
+                <Card key={t.task_id} className="rounded-xl">
+                  <CardContent className="flex items-center justify-between p-6">
+                    <div style={{ paddingRight: 12 }}>
+                      <p className={`font-medium ${t.status ? "line-through text-slate-400" : ""}`}>{t.task_text}</p>
+                      <p className="text-xs text-slate-400 mt-1">Created: {t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}</p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <label className="inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={Boolean(t.status)}
+                          onChange={() => toggleTaskMutation.mutate({ id: t.task_id, status: !t.status })}
+                        />
+                        <span className={`w-11 h-6 inline-block rounded-full transition-colors ${t.status ? "bg-green-500" : "bg-gray-300"}`} />
+                        <span className="ml-3 text-sm text-slate-600">{t.status ? "Complete" : "Mark Complete"}</span>
+                      </label>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-
-            {tasksArray.length === 0 && (
-              <div className="text-center py-16">
-                <CheckCircle className="h-16 w-16 text-amber-500 mx-auto mb-6" />
-                <h3 className="text-2xl font-bold mb-2">No tasks yet</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">Stay organized by creating tasks for your deals</p>
-                <Button 
-                  onClick={() => setIsCreateTaskOpen(true)}
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold px-8 py-3 rounded-xl"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Create First Task
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
 
-      {/* Mobile-Optimized Create Client Dialog */}
-      <Dialog open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen}>
-        <DialogContent className="w-[95vw] max-w-sm bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-white/20 dark:border-gray-800/50 rounded-xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Add New Client
-            </DialogTitle>
-          </DialogHeader>
-          <Form {...clientForm}>
-            <form onSubmit={clientForm.handleSubmit(onCreateClient)} className="space-y-4">
-              <FormField
-                control={clientForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Full Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter client name" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={clientForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Phone Number</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="+91 9876543210" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      <div className="h-24" />
+      <MobileNavigation />
 
-              <FormField
-                control={clientForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Email (Optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="email" placeholder="client@example.com" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={clientForm.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Client Type</FormLabel>
-                    <Select onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedClientType(value);
-                    }} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-lg border-gray-200 dark:border-gray-700 h-11">
-                          <SelectValue placeholder="Select client type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="lead">Lead - Prospective Client</SelectItem>
-                        <SelectItem value="buyer">Buyer - Looking to Purchase</SelectItem>
-                        <SelectItem value="owner">Owner - Property Owner</SelectItem>
-                        <SelectItem value="tenant">Tenant - Looking to Rent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Type-specific fields */}
-              {(selectedClientType === "buyer" || selectedClientType === "tenant") && (
-                <>
-                  <FormField
-                    control={clientForm.control}
-                    name="budget"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">
-                          {selectedClientType === "buyer" ? "Purchase Budget" : "Monthly Rent Budget"}
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder={selectedClientType === "buyer" ? "e.g., ₹50,00,000" : "e.g., ₹25,000/month"} 
-                            className="rounded-lg border-gray-200 dark:border-gray-700 h-11" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={clientForm.control}
-                    name="preferredLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Preferred Areas</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Bandra, Andheri, Juhu" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={clientForm.control}
-                    name="requirements"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">
-                          {selectedClientType === "buyer" ? "Property Requirements" : "Rental Requirements"}
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder={selectedClientType === "buyer" 
-                              ? "e.g., 2-3 BHK, parking, gym, near metro..." 
-                              : "e.g., 1-2 BHK, furnished, pet-friendly..."
-                            } 
-                            className="rounded-lg border-gray-200 dark:border-gray-700" 
-                            rows={2} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-
-              {selectedClientType === "owner" && (
-                <>
-                  <FormField
-                    control={clientForm.control}
-                    name="preferredLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Property Location</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Bandra West, Andheri East" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={clientForm.control}
-                    name="requirements"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Property Details</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="e.g., 3 BHK apartment, 1200 sq ft, ready to sell/rent..."
-                            className="rounded-lg border-gray-200 dark:border-gray-700" 
-                            rows={2} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={clientForm.control}
-                    name="budget"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Expected Price</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., ₹1.2 Cr (sale) or ₹30,000/month (rent)" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-
-              {selectedClientType === "lead" && (
-                <FormField
-                  control={clientForm.control}
-                  name="requirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold">Interest & Requirements</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="What are they looking for? Buying, selling, renting..."
-                          className="rounded-lg border-gray-200 dark:border-gray-700" 
-                          rows={2} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <div className="flex space-x-3 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsCreateClientOpen(false)}
-                  className="flex-1 rounded-lg border-gray-200 dark:border-gray-700 h-11"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={createClientMutation.isPending}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg h-11"
-                >
-                  {createClientMutation.isPending ? "Creating..." : "Create"}
-                </Button>
+      {/* Client modal */}
+      {clientModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-12">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setClientModalOpen(false)} />
+          <div className="relative z-10 w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl overflow-auto max-h-[80vh]">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-semibold">{clientModalData?.owner_name || "Owner details"}</h3>
+                <p className="text-sm text-slate-500">{clientModalData?.owner_phone || "—"}</p>
               </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Client Dialog */}
-      <Dialog open={isEditClientOpen} onOpenChange={setIsEditClientOpen}>
-        <DialogContent className="w-[95vw] max-w-sm bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-white/20 dark:border-gray-800/50 rounded-xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Edit Client
-            </DialogTitle>
-          </DialogHeader>
-          <Form {...editClientForm}>
-            <form onSubmit={editClientForm.handleSubmit(onEditClient)} className="space-y-4">
-              <FormField
-                control={editClientForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Full Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter client name" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={editClientForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Phone Number</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="+91 9876543210" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={editClientForm.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Email (Optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="email" placeholder="client@example.com" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={editClientForm.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Client Type</FormLabel>
-                    <Select onValueChange={(value) => {
-                      field.onChange(value);
-                      setSelectedClientType(value);
-                    }} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="rounded-lg border-gray-200 dark:border-gray-700 h-11">
-                          <SelectValue placeholder="Select client type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="lead">Lead - Prospective Client</SelectItem>
-                        <SelectItem value="buyer">Buyer - Looking to Purchase</SelectItem>
-                        <SelectItem value="owner">Owner - Property Owner</SelectItem>
-                        <SelectItem value="tenant">Tenant - Looking to Rent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Type-specific fields for edit form */}
-              {(selectedClientType === "buyer" || selectedClientType === "tenant") && (
-                <>
-                  <FormField
-                    control={editClientForm.control}
-                    name="budget"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">
-                          {selectedClientType === "buyer" ? "Purchase Budget" : "Monthly Rent Budget"}
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder={selectedClientType === "buyer" ? "e.g., ₹50,00,000" : "e.g., ₹25,000/month"} 
-                            className="rounded-lg border-gray-200 dark:border-gray-700 h-11" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editClientForm.control}
-                    name="preferredLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Preferred Areas</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Bandra, Andheri, Juhu" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editClientForm.control}
-                    name="requirements"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">
-                          {selectedClientType === "buyer" ? "Property Requirements" : "Rental Requirements"}
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder={selectedClientType === "buyer" 
-                              ? "e.g., 2-3 BHK, parking, gym, near metro..." 
-                              : "e.g., 1-2 BHK, furnished, pet-friendly..."
-                            } 
-                            className="rounded-lg border-gray-200 dark:border-gray-700" 
-                            rows={2} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-
-              {selectedClientType === "owner" && (
-                <>
-                  <FormField
-                    control={editClientForm.control}
-                    name="preferredLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Property Location</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Bandra West, Andheri East" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editClientForm.control}
-                    name="requirements"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Property Details</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="e.g., 3 BHK apartment, 1200 sq ft, ready to sell/rent..."
-                            className="rounded-lg border-gray-200 dark:border-gray-700" 
-                            rows={2} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={editClientForm.control}
-                    name="budget"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold">Expected Price</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., ₹1.2 Cr (sale) or ₹30,000/month (rent)" className="rounded-lg border-gray-200 dark:border-gray-700 h-11" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-
-              {selectedClientType === "lead" && (
-                <FormField
-                  control={editClientForm.control}
-                  name="requirements"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold">Interest & Requirements</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="What are they looking for? Buying, selling, renting..."
-                          className="rounded-lg border-gray-200 dark:border-gray-700" 
-                          rows={2} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <FormField
-                control={editClientForm.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        {...field} 
-                        placeholder="Additional notes about this client..."
-                        className="rounded-lg border-gray-200 dark:border-gray-700" 
-                        rows={2} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex space-x-3 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsEditClientOpen(false)}
-                  className="flex-1 rounded-lg border-gray-200 dark:border-gray-700 h-11"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={updateClientMutation.isPending}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg h-11"
-                >
-                  {updateClientMutation.isPending ? "Updating..." : "Update"}
-                </Button>
+              <div>
+                <Button variant="ghost" onClick={() => setClientModalOpen(false)}>Close</Button>
               </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            </div>
 
-      {/* Agent Notification Modal */}
-      {newClientData && user && (
-        <AgentNotificationModal
-          isOpen={isNotificationModalOpen}
-          onClose={() => {
-            setIsNotificationModalOpen(false);
-            setNewClientData(null);
-          }}
-          clientData={{
-            name: newClientData.name,
-            phone: newClientData.phone,
-            requirementType: newClientData.requirementType,
-            propertyType: newClientData.propertyType
-          }}
-          agentData={{
-            name: user.name || "Agent",
-            phone: user.phone || "",
-            agency: user.agencyName || undefined
-          }}
-          onSendNotification={handleSendNotification}
-        />
+            {clientModalLoading ? (
+              <div className="py-12 text-center">
+                <div className="inline-block w-8 h-8 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
+              </div>
+            ) : clientModalData ? (
+              <>
+                <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-lg bg-slate-50">
+                    <p className="text-xs text-slate-500">Name</p>
+                    <p className="font-medium">{clientModalData.owner_name}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-slate-50">
+                    <p className="text-xs text-slate-500">Phone</p>
+                    <p className="font-medium">{clientModalData.owner_phone}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-slate-50">
+                    <p className="text-xs text-slate-500">Properties</p>
+                    <p className="font-medium">{(clientModalData.properties || []).length}</p>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold mb-2">Properties</h4>
+                  <div className="space-y-4">
+                    {(clientModalData.properties || []).map((p: any, idx2: number) => {
+                      const photos = parsePhotos(p.property_photos ?? p.photos ?? p.images);
+                      return (
+                        <div key={p.property_id ?? p.id ?? `${clientModalData.owner_phone ?? ""}-${idx2}`} className="rounded-lg bg-white border border-slate-50 hover:shadow-sm transition p-6">
+                          <div className="flex items-start justify-between">
+                            <div style={{ paddingRight: 12 }}>
+                              <p className="font-semibold text-lg">{p.property_title}</p>
+                              <p className="text-sm text-slate-500 mt-1">{p.location || p.full_address}</p>
+
+                              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="p-3 bg-slate-50 rounded">
+                                  <p className="text-xs text-slate-400">Price</p>
+                                  <p className="font-medium">{p.sale_price ?? "—"}</p>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 rounded">
+                                  <p className="text-xs text-slate-400">Type</p>
+                                  <p className="font-medium">{p.property_type ?? p.transaction_type ?? "—"}</p>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 rounded">
+                                  <p className="text-xs text-slate-400">BHK / Area</p>
+                                  <p className="font-medium">{p.bhk ? `${p.bhk} BHK` : "—"} {p.area ? `• ${p.area}${p.area_unit ?? ""}` : ""}</p>
+                                </div>
+
+                                <div className="p-3 bg-slate-50 rounded">
+                                  <p className="text-xs text-slate-400">Owner</p>
+                                  <p className="font-medium">{p.owner_name || "—"} <span className="text-sm text-slate-400 block">{p.owner_phone}</span></p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-3">
+                              <Badge className="capitalize">{p.approval_status ?? "pending"}</Badge>
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" variant="ghost" onClick={() => openDealModal(p.property_id ?? p.id)}>Open</Button>
+                                <ChevronRight className="w-5 h-5 text-slate-300" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-1 gap-3">
+                            <div className="p-4 bg-slate-50 rounded">
+                              <p className="text-xs text-slate-400">Flat / Floor / Building</p>
+                              <p className="font-medium">{[p.flat_number ?? p.flatNumber ?? "—", p.floor ?? "—", p.building_society ?? p.buildingSociety ?? "—"].filter(Boolean).join(" • ")}</p>
+                            </div>
+
+                            <div className="p-4 bg-slate-50 rounded">
+                              <p className="text-xs text-slate-400">Agreement Document</p>
+                              <p className="font-medium">{p.agreement_document || "—"}</p>
+                            </div>
+
+                            <div className="p-4 bg-slate-50 rounded">
+                              <p className="text-xs text-slate-400">Property Photos</p>
+                              <div className="mt-2 flex gap-2">
+                                {photos.length > 0 ? photos.slice(0, 4).map((url: string, i: number) => (
+                                  <img key={i} src={url} alt={`photo-${i}`} className="w-20 h-14 object-cover rounded" />
+                                )) : <p className="text-sm text-slate-500">No photos</p>}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {(!clientModalData.properties || clientModalData.properties.length === 0) && (
+                      <p className="text-sm text-slate-500">No properties for this client</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="py-8 text-center text-slate-500">Could not load client details</div>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Bottom spacing for navigation */}
-      <div className="h-20"></div>
-      
-      <MobileNavigation />
+      {/* Deal modal */}
+      {dealModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-12">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setDealModalOpen(false)} />
+          <div className="relative z-10 w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl overflow-auto max-h-[80vh]">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-semibold">{dealDetail?.property_title || "Property details"}</h3>
+                <p className="text-sm text-slate-500">{dealDetail?.location}</p>
+              </div>
+              <div>
+                <Button variant="ghost" onClick={() => setDealModalOpen(false)}>Close</Button>
+              </div>
+            </div>
+
+            {dealLoading ? (
+              <div className="py-12 text-center">
+                <div className="inline-block w-8 h-8 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
+              </div>
+            ) : dealDetail ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="p-4 rounded-lg bg-slate-50">
+                    <p className="text-xs text-slate-500">Price</p>
+                    <p className="font-medium">{dealDetail.sale_price ?? "N/A"}</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-slate-50">
+                    <p className="text-xs text-slate-500">Type</p>
+                    <p className="font-medium">{dealDetail.property_type ?? dealDetail.transaction_type ?? "N/A"}</p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-slate-50">
+                    <p className="text-xs text-slate-500">BHK / Area</p>
+                    <p className="font-medium">{dealDetail.bhk ? `${dealDetail.bhk} BHK` : "—"} {dealDetail.area ? `• ${dealDetail.area}${dealDetail.area_unit ?? ""}` : ""}</p>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-slate-50">
+                    <p className="text-xs text-slate-500">Owner</p>
+                    <p className="font-medium">{dealDetail.owner_name || "N/A"} <span className="text-sm text-slate-400 block">{dealDetail.owner_phone}</span></p>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold mb-2">Description</h4>
+                  <p className="text-sm text-slate-600">{dealDetail.description || "No description provided."}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-xl p-4 bg-gradient-to-br from-[#fff7ff] to-[#f6fbff]">
+                    <p className="text-xs text-slate-500">Listing Status</p>
+                    <p className="font-semibold">{dealDetail.approval_status ?? "pending"}</p>
+                  </div>
+                  <div className="rounded-xl p-4 bg-gradient-to-br from-[#eefde7] to-[#f0fff7]">
+                    <p className="text-xs text-slate-500">Created</p>
+                    <p className="font-semibold">{dealDetail.created_at ? new Date(dealDetail.created_at).toLocaleString() : "N/A"}</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-3">
+                  <div className="p-4 bg-slate-50 rounded">
+                    <p className="text-xs text-slate-400">Flat / Floor / Building</p>
+                    <p className="font-medium">{[dealDetail.flat_number ?? dealDetail.flatNumber ?? "—", dealDetail.floor ?? "—", dealDetail.building_society ?? dealDetail.buildingSociety ?? "—"].filter(Boolean).join(" • ")}</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded">
+                    <p className="text-xs text-slate-400">Agreement Document</p>
+                    <p className="font-medium">{dealDetail.agreement_document || "—"}</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded">
+                    <p className="text-xs text-slate-400">Property Photos</p>
+                    <div className="mt-2 flex gap-2">
+                      {(() => {
+                        const photos = parsePhotos(dealDetail.property_photos || dealDetail.photos || dealDetail.images);
+                        return photos.length > 0 ? photos.slice(0, 6).map((url: string, i: number) => (
+                          <img key={i} src={url} alt={`photo-${i}`} className="w-28 h-20 object-cover rounded" />
+                        )) : <p className="text-sm text-slate-500">No photos</p>;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="py-8 text-center text-slate-500">Could not load property details</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showAddTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowAddTask(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold mb-3">Add Task</h3>
+            <form onSubmit={handleAddTask}>
+              <label className="block text-sm text-slate-600 mb-2">Task</label>
+              <textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="E.g., Call client to confirm documents" className="w-full h-28 p-3 border rounded-md mb-4" />
+              <div className="flex items-center justify-end gap-3">
+                <Button variant="ghost" onClick={() => setShowAddTask(false)}>Cancel</Button>
+                <Button type="submit" className="bg-gradient-to-br from-[#6b5cff] to-[#a84dff] text-white">Add Task</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

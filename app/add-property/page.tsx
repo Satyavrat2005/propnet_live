@@ -614,6 +614,15 @@ export default function AddPropertyPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [agreementFiles, setAgreementFiles] = useState<File[]>([]);
 
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/dashboard");
+    }
+  };
+
+
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertyFormSchema),
     defaultValues: {
@@ -682,7 +691,8 @@ export default function AddPropertyPage() {
       });
       return;
     }
-
+    
+    
     const formData = new FormData();
 
     Object.entries(values).forEach(([key, value]) => {
@@ -706,12 +716,7 @@ export default function AddPropertyPage() {
       <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center">
-            <button
-              type="button"
-              className="text-primary mr-4"
-              onClick={() => router.push("/feed")}
-              aria-label="Back to feed"
-            >
+            <button className="text-primary mr-4 hover:opacity-80" onClick={handleBack} type="button" aria-label="Go back">
               <ArrowLeft size={24} />
             </button>
             <h2 className="text-lg font-semibold text-neutral-900">

@@ -1,75 +1,136 @@
 // app/profile/page.tsx
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  ArrowLeft,
-  User as UserIcon,
-  Home as HomeIcon,
-  Handshake,
-  Settings as SettingsIcon,
-  LogOut as LogOutIcon,
-  ChevronRight,
-  Award,
-} from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { createClient } from "@supabase/supabase-js";
+import { ArrowLeft, User as UserIcon, Home as HomeIcon, Handshake, Settings as SettingsIcon, LogOut as LogOutIcon, ChevronRight, Award } from "lucide-react";
 import MobileNavigation from "@/components/layout/mobile-navigation";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+
+/**
+ * NOTE: requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in env.
+ */
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+type ProfileRow = {
+  id: string;
+  phone?: string;
+  name?: string;
+  email?: string;
+  bio?: string;
+  agency_name?: string;
+  rera_id?: string;
+  city?: string;
+  experience?: string;
+  website?: string;
+  area_of_expertise?: string[] | null;
+  working_regions?: string[] | null;
+  profile_photo_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
+};
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, logout } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: myProperties = [] } = useQuery({
-    queryKey: ["/api/my-properties"],
-    queryFn: async () => {
-      const response = await fetch("/api/my-properties");
-      if (!response.ok) throw new Error("Failed to fetch properties");
-      return response.json();
-    },
-  });
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [myProperties, setMyProperties] = useState<any[]>([]);
+  const [colistingRequests, setCoListingRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: colistingRequests = [] } = useQuery({
-    queryKey: ["/api/colisting-requests"],
-    queryFn: async () => {
-      const response = await fetch("/api/colisting-requests");
-      if (!response.ok) throw new Error("Failed to fetch colisting requests");
-      return response.json();
-    },
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/auth/logout");
-    },
-    onSuccess: () => {
-      // clear local auth and queries, then redirect to home
+  // load session and profile
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setLoading(true);
       try {
-        logout();
-      } catch {}
-      queryClient.clear();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          // not signed in
+          setUserId(null);
+          setProfile(null);
+          setSessionLoaded(true);
+          setLoading(false);
+          return;
+        }
+        const userId = session.user.id;
+        if (!mounted) return;
+        setUserId(userId);
+
+        // fetch profile row
+        const { data: profData, error: profErr } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .limit(1)
+          .single();
+
+        if (profErr && profErr.code !== "PGRST116") {
+          console.error("profile fetch error:", profErr);
+        }
+        if (mounted) setProfile(profData ?? null);
+
+        // fetch my-properties (properties table referencing profiles.id)
+        const { data: propsData, error: propsErr } = await supabase
+          .from("properties")
+          .select("*")
+          .eq("id", userId);
+
+        if (propsErr) console.error("my properties error", propsErr);
+        if (mounted) setMyProperties(propsData ?? []);
+
+        // fetch co-listing requests if you have a table; fallback to empty
+        // If you use a different table name, change it accordingly.
+        const { data: coData } = await supabase
+          .from("colisting_requests")
+          .select("*")
+          .eq("agent_id", userId);
+        if (mounted) setCoListingRequests(coData ?? []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (mounted) {
+          setSessionLoaded(true);
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const pendingRequests = colistingRequests.filter((r) => r.status === "pending").length;
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      // clear local app state
+      setUserId(null);
+      setProfile(null);
       router.replace("/");
-    },
-    onError: () => {
+    } catch (err) {
       toast({
-        title: "Error",
-        description: "Failed to logout. Please try again.",
+        title: "Logout failed",
+        description: "Unable to logout, try again.",
         variant: "destructive",
       });
-    },
-  });
-
-  // If user is not present, redirect to home (same behaviour as original)
- 
-
-  const pendingRequests = (colistingRequests as any[]).filter((req: any) => req.status === "pending").length;
+    }
+  };
 
   const menuItems = [
     {
@@ -97,13 +158,9 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      {/* Header */}
       <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
         <div className="flex items-center px-6 py-4">
-          <button
-            className="text-primary mr-4"
-            onClick={() => router.push("/feed")}
-          >
+          <button className="text-primary mr-4" onClick={() => router.push("/feed")}>
             <ArrowLeft size={24} />
           </button>
           <h2 className="text-lg font-semibold text-neutral-900">Profile</h2>
@@ -112,53 +169,43 @@ export default function ProfilePage() {
 
       <div className="flex-1 overflow-hidden">
         <div className="px-6 py-6">
-          {/* Profile Header */}
           <div className="text-center mb-8">
             <div className="w-24 h-24 bg-neutral-200 rounded-full mx-auto mb-4 flex items-center justify-center relative">
-              {user?.profilePhoto ? (
-                // keep identical markup/source paths
+              {profile?.profile_photo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={`/uploads/${user.profilePhoto}`}
+                  src={profile.profile_photo_url}
                   alt="Profile Photo"
                   className="w-full h-full rounded-full object-cover"
                 />
-              ) : user?.agencyLogo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`/uploads/${user.agencyLogo}`}
-                  alt="Agency Logo"
-                  className="w-full h-full rounded-full object-cover"
-                />
+              ) : profile?.agency_name ? (
+                <span className="text-2xl font-bold text-neutral-500">
+                  {profile?.agency_name?.charAt(0) ?? "A"}
+                </span>
               ) : (
                 <span className="text-2xl font-bold text-neutral-500">
-                  {user?.name?.charAt(0) || "A"}
+                  {profile?.name?.charAt(0) ?? "A"}
                 </span>
               )}
             </div>
 
-            <h3 className="text-xl font-bold text-neutral-900">{user?.name || "Agent"}</h3>
-            <p className="text-neutral-500">{user?.agencyName || "Real Estate Agent"}</p>
-            {user?.email && <p className="text-sm text-neutral-400">{user.email}</p>}
-            {user?.city && <p className="text-sm text-neutral-400">{user.city}</p>}
+            <h3 className="text-xl font-bold text-neutral-900">{profile?.name ?? "Agent"}</h3>
+            <p className="text-neutral-500">{profile?.agency_name ?? "Real Estate Agent"}</p>
+            {profile?.email && <p className="text-sm text-neutral-400">{profile.email}</p>}
+            {profile?.city && <p className="text-sm text-neutral-400">{profile.city}</p>}
 
             <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
               <Badge className="bg-accent text-white">
                 <Award size={12} className="mr-1" />
-                {user?.isVerified ? "Verified Agent" : "Pending Verification"}
+                {profile?.status === "approved" ? "Verified Agent" : "Pending Verification"}
               </Badge>
-              {user?.experience && (
-                <Badge variant="secondary">
-                  {user.experience}+ years
-                </Badge>
-              )}
+              {profile?.experience && <Badge variant="secondary">{profile.experience}+ years</Badge>}
             </div>
           </div>
 
-          {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="text-center p-4 bg-neutral-50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{Array.isArray(myProperties) ? myProperties.length : 0}</div>
+              <div className="text-2xl font-bold text-primary">{myProperties?.length ?? 0}</div>
               <div className="text-xs text-neutral-500">Active Listings</div>
             </div>
             <div className="text-center p-4 bg-neutral-50 rounded-lg">
@@ -171,7 +218,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Menu Items */}
           <div className="space-y-2">
             {menuItems.map((item, index) => (
               <button
@@ -184,30 +230,21 @@ export default function ProfilePage() {
                   <span>{item.label}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {item.badge && (
-                    <Badge variant="secondary" className="text-xs">
-                      {item.badge}
-                    </Badge>
-                  )}
+                  {item.badge && <Badge variant="secondary" className="text-xs">{item.badge}</Badge>}
                   <ChevronRight size={16} />
                 </div>
               </button>
             ))}
 
             <button
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
+              onClick={logout}
               className="w-full flex items-center justify-between p-4 border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
             >
               <div className="flex items-center space-x-3">
                 <LogOutIcon size={20} />
                 <span>Logout</span>
               </div>
-              {logoutMutation.isPending ? (
-                <div className="loading-spinner" />
-              ) : (
-                <ChevronRight className="text-red-300" size={16} />
-              )}
+              <ChevronRight className="text-red-300" size={16} />
             </button>
           </div>
         </div>

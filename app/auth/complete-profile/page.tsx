@@ -358,7 +358,7 @@ export default function CompleteProfile() {
       // success
       window.alert("Profile Completed! Welcome to PropNet.");
       // redirect to dashboard
-      router.push("/dashboard");
+      router.push("/auth/profile-complete");
     } catch (err: any) {
       console.error("complete-profile submit error", err);
       window.alert("Unexpected error. Please try again.");
@@ -794,10 +794,10 @@ export default function CompleteProfile() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-3xl mx-auto">
           <Card className="shadow-lg">
-            <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
+            <CardHeader className="text-center bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
               <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
               {!showSummary ? (
                 <div className="mt-4">
@@ -838,7 +838,7 @@ export default function CompleteProfile() {
                     type="button"
                     onClick={handleNext}
                     disabled={!canProceedToNext()}
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    className="flex items-center gap-2 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                   >
                     {currentStep === totalSteps ? "Review" : "Next"}
                     <ArrowRight className="h-4 w-4" />
@@ -848,7 +848,7 @@ export default function CompleteProfile() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8"
+                    className="flex items-center gap-2 bg-linear-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-8"
                   >
                     {isSubmitting ? "Completing..." : "Complete Profile"}
                     <CheckCircle2 className="h-4 w-4" />
