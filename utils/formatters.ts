@@ -35,6 +35,47 @@ export function formatArea(
   return `${numArea.toLocaleString("en-IN")} ${unit}`;
 }
 
+export function parsePriceToNumber(input: string | number | null | undefined): number {
+  if (input == null) return 0;
+  if (typeof input === "number") return input;
+  const raw = String(input).toLowerCase().trim();
+  if (!raw) return 0;
+
+  const digitsOnly = raw.replace(/[, ]+/g, "");
+  if (/^[\d.]+$/.test(digitsOnly)) {
+    return Number(digitsOnly) || 0;
+  }
+
+  const numMatch = raw.match(/[\d,.]*\.?\d+/);
+  const parsed = numMatch ? parseFloat(numMatch[0].replace(/,/g, "")) : NaN;
+  if (Number.isNaN(parsed)) return 0;
+
+  if (raw.includes("lakh") || raw.includes("lac")) {
+    return parsed * 100000;
+  }
+  if (raw.includes("crore") || raw.includes("cr")) {
+    return parsed * 10000000;
+  }
+  if (raw.endsWith("k")) return parsed * 1000;
+  if (raw.endsWith("m")) return parsed * 1000000;
+
+  return parsed;
+}
+
+export function getSafeFormattedPrice(
+  rawPrice: string | number | null | undefined,
+  transactionType?: string,
+  rentFrequency?: string
+): string {
+  const numericValue = parsePriceToNumber(rawPrice);
+  if (numericValue > 0) {
+    return formatPrice(numericValue, transactionType, rentFrequency);
+  }
+
+  const fallback = rawPrice != null ? String(rawPrice).trim() : "";
+  return fallback || "Price on request";
+}
+
 /**
  * Get badge color based on listing type
  */

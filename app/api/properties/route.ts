@@ -35,6 +35,12 @@ type PropertyRow = {
   owner_phone: string | null;
   created_at: string | null;
   updated_at: string | null;
+  profiles?: Array<{
+    name?: string | null;
+    agency_name?: string | null;
+    profile_photo_url?: string | null;
+    phone?: string | null;
+  }> | null;
 };
 
 function parseScopeOfWork(value: unknown): string[] {
@@ -56,8 +62,10 @@ function parseScopeOfWork(value: unknown): string[] {
 
 function toOwnerObject(row: PropertyRow) {
   return {
-    name: row.owner_name ?? null,
-    phone: row.owner_phone ?? null,
+    name: row.owner_name || null,
+    phone: row.owner_phone || null,
+    agencyName: null,
+    profilePhotoUrl: null,
     email: null,
   };
 }
@@ -84,6 +92,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const includePending = searchParams.get("includePending") === "true";
+    const mineOnly =
+      searchParams.get("mine") === "true" ||
+      searchParams.get("scope")?.toLowerCase() === "mine";
 
     let query = supabase
       .from("properties")
@@ -115,12 +126,16 @@ export async function GET(req: NextRequest) {
         owner_name,
         owner_phone,
         created_at,
-        updated_at
+        updated_at,
+        profiles(name, agency_name, profile_photo_url, phone)
       `
       )
-      .eq("id", userId)
       .order("created_at", { ascending: false })
       .range(0, 4999);
+
+    if (mineOnly) {
+      query = query.eq("id", userId);
+    }
 
     if (!includePending) {
       query = query.eq("approval_status", "approved");

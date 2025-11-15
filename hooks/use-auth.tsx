@@ -23,6 +23,36 @@ export interface User {
   isVerified?: boolean;
 }
 
+const profilePhotoKeys = [
+  "profilePhoto",
+  "profile_photo_url",
+  "profilePhotoUrl",
+  "photo_url",
+  "photoUrl",
+  "avatar_url",
+  "avatarUrl",
+  "avatar",
+];
+
+function extractProfilePhoto(source: Record<string, unknown>): string | undefined {
+  for (const key of profilePhotoKeys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function normalizeUser(user: User | null): User | null {
+  if (!user) return null;
+  const photo = extractProfilePhoto(user as unknown as Record<string, unknown>);
+  if (photo === user.profilePhoto) {
+    return user;
+  }
+  return { ...user, profilePhoto: photo };
+}
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -73,11 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // When query finished loading, initialize auth state (either from response or iOS backup)
     if (!isLoading) {
       if (data) {
-        setUser(data);
+        const normalizedUser = normalizeUser(data) ?? data;
+        setUser(normalizedUser);
         setIsInitialized(true);
         // Keep iOS backup in sync
         try {
-          iosAuthUtils.backupUserState(data);
+          iosAuthUtils.backupUserState(normalizedUser);
         } catch (e) {
           // ignore backup errors
           // eslint-disable-next-line no-console
@@ -86,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // No authenticated user from server — attempt to restore iOS PWA backup
         try {
-          const backupUser = iosAuthUtils.restoreUserState();
+          const backupUser = normalizeUser(iosAuthUtils.restoreUserState() as User | null);
           if (backupUser && iosAuthUtils.isIOS()) {
             setUser(backupUser);
           } else {
@@ -107,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       if (iosAuthUtils.isIOS() && iosAuthUtils.isStandalone() && !user && isInitialized) {
-        const backupUser = iosAuthUtils.restoreUserState();
+        const backupUser = normalizeUser(iosAuthUtils.restoreUserState() as User | null);
         if (backupUser) {
           setUser(backupUser);
         }
@@ -121,9 +152,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isInitialized]);
 
   const login = (userData: User) => {
-    setUser(userData);
+    const normalizedUser = normalizeUser(userData) ?? userData;
+    setUser(normalizedUser);
     try {
-      iosAuthUtils.backupUserState(userData);
+      iosAuthUtils.backupUserState(normalizedUser);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn("iosAuthUtils.backupUserState failed on login", e);
@@ -141,9 +173,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUser = (userData: User) => {
-    setUser(userData);
+    const normalizedUser = normalizeUser(userData) ?? userData;
+    setUser(normalizedUser);
     try {
-      iosAuthUtils.backupUserState(userData);
+      iosAuthUtils.backupUserState(normalizedUser);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn("iosAuthUtils.backupUserState failed on update", e);

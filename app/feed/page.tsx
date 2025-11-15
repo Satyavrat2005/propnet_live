@@ -14,30 +14,20 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { UserCircle, Plus, Search, Filter, X, Sparkles } from "lucide-react";
-import CompactPropertyCard from "@/components/ui/compact-property-card";
+import { Plus, Search, Filter, X, Sparkles, Home } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import CompactPropertyCard, { FeedProperty } from "@/components/ui/compact-property-card";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { safeFetch } from "@/lib/safeFetch";
-
-// ✅ Parse price values like “50 Lakh”, “1.2 Cr”, “75 Lakhs”, etc.
-function parsePrice(priceText: string): number {
-  if (!priceText) return 0;
-  const text = priceText.toLowerCase().trim();
-  let value = 0;
-
-  if (text.includes("lakh") || text.includes("lac")) {
-    const num = parseFloat(text.replace(/[^\d.]/g, ""));
-    value = num * 100000;
-  } else if (text.includes("crore") || text.includes("cr")) {
-    const num = parseFloat(text.replace(/[^\d.]/g, ""));
-    value = num * 10000000;
-  } else {
-    value = parseFloat(text.replace(/[^\d.]/g, "")) || 0;
-  }
-
-  return value;
-}
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import PropertyDetailsPanel from "@/components/ui/property-details-panel";
+import { parsePriceToNumber } from "@/utils/formatters";
 
 export default function PropertyFeedPage() {
   const router = useRouter();
@@ -52,17 +42,19 @@ export default function PropertyFeedPage() {
     listingType: "",
   });
   const [priceRange, setPriceRange] = useState<number[]>([0, 100000000]); // 1 Cr max
+  const [selectedProperty, setSelectedProperty] = useState<FeedProperty | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const { user } = useAuth();
 
-  const { data: properties = [], isLoading } = useQuery({
+  const { data: properties = [], isLoading } = useQuery<FeedProperty[]>({
     queryKey: ["/api/properties"],
-    queryFn: () => safeFetch("/api/properties", []),
+    queryFn: () => safeFetch<FeedProperty[]>("/api/properties", []),
   });
 
   // ✅ Filter logic with price parsing
   const filteredProperties = Array.isArray(properties)
-    ? properties.filter((property: any) => {
+    ? properties.filter((property) => {
         const matchesSearch =
           !searchQuery ||
           property.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -75,19 +67,19 @@ export default function PropertyFeedPage() {
         const matchesLocation = !filters.location || property.location?.toLowerCase().includes(filters.location.toLowerCase());
         const matchesListingType = !filters.listingType || property.listingType === filters.listingType;
 
-        const propertyPrice = parsePrice(property.price);
+        const propertyPrice = parsePriceToNumber(property.price);
         const matchesPriceRange = propertyPrice >= priceRange[0] && propertyPrice <= priceRange[1];
 
-        return (
-          matchesSearch &&
-          matchesTab &&
-          matchesPropertyType &&
-          matchesBHK &&
-          matchesLocation &&
-          matchesListingType &&
-          matchesPriceRange
-        );
-      })
+      return (
+        matchesSearch &&
+        matchesTab &&
+        matchesPropertyType &&
+        matchesBHK &&
+        matchesLocation &&
+        matchesListingType &&
+        matchesPriceRange
+      );
+    })
     : [];
 
   const clearFilters = () => {
@@ -106,6 +98,16 @@ export default function PropertyFeedPage() {
     Object.values(filters).filter(Boolean).length +
     (priceRange[0] > 0 || priceRange[1] < 100000000 ? 1 : 0) +
     (searchQuery ? 1 : 0);
+
+  const handleOpenDetails = (property: FeedProperty) => {
+    setSelectedProperty(property);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setIsDetailModalOpen(false);
+    setSelectedProperty(null);
+  };
 
   if (isLoading) {
     return (
@@ -141,7 +143,15 @@ export default function PropertyFeedPage() {
                 type="button"
                 aria-label="Profile"
               >
-                <UserCircle size={28} />
+                <Avatar className="h-10 w-10">
+                  {user?.profilePhoto ? (
+                    <AvatarImage src={user.profilePhoto} alt={user.name ?? "Profile"} />
+                  ) : (
+                    <AvatarFallback className="text-xs font-semibold">
+                      {user?.name?.charAt(0) ?? user?.phone?.charAt(0) ?? "U"}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
               </button>
             </div>
           </div>
@@ -339,11 +349,11 @@ export default function PropertyFeedPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredProperties.map((property: any) => (
+            {filteredProperties.map((property: FeedProperty) => (
               <CompactPropertyCard
                 key={property.id}
                 property={property}
-                currentUserId={user?.id}
+                onViewDetails={handleOpenDetails}
               />
             ))}
           </div>
@@ -359,6 +369,43 @@ export default function PropertyFeedPage() {
       >
         <Plus size={24} />
       </button>
+
+      <Dialog open={isDetailModalOpen} onOpenChange={(open) => (open ? setIsDetailModalOpen(true) : handleCloseDetails())}>
+        <DialogContent className="max-w-xl lg:max-w-2xl rounded-[28px] border border-neutral-200 bg-white p-6 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Home size={20} />
+              Property Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedProperty && (
+            <PropertyDetailsPanel
+              property={selectedProperty}
+              onCall={() => {
+                if (selectedProperty.owner?.phone) {
+                  window.open(`tel:${selectedProperty.owner.phone}`, "_self");
+                }
+              }}
+              actions={
+                <div className="pt-4 space-y-2">
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      router.push(`/property/${selectedProperty.id}`);
+                      handleCloseDetails();
+                    }}
+                  >
+                    View Full Listing
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={handleCloseDetails}>
+                    Close
+                  </Button>
+                </div>
+              }
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <MobileNavigation />
     </div>

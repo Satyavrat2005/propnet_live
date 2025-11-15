@@ -178,7 +178,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, profile: upserted });
+      const responseProfile = upserted
+        ? { ...upserted, profilePhoto: upserted.profile_photo_url }
+        : upserted;
+      return NextResponse.json({ success: true, profile: responseProfile });
     } else {
       // insert new
       const { data: inserted, error: insertErr } = await supabase
@@ -192,7 +195,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, profile: inserted });
+      const responseProfile = inserted
+        ? { ...inserted, profilePhoto: inserted.profile_photo_url }
+        : inserted;
+      return NextResponse.json({ success: true, profile: responseProfile });
     }
   } catch (err: any) {
     console.error("Unexpected error in /api/auth/complete-profile:", err);

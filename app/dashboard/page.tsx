@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -142,6 +143,16 @@ function MobileNavigation() {
 export default function Dashboard() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
+  const dashboardAvatarSrc =
+    user?.profilePhoto ??
+    user?.profile_photo_url ??
+    user?.profilePhotoUrl ??
+    user?.photo_url ??
+    user?.photoUrl ??
+    user?.photo ??
+    user?.avatarUrl ??
+    user?.avatar ??
+    null;
 
   // Data state (replaces react-query)
   const [myProperties, setMyProperties] = useState<any[]>([]);
@@ -313,12 +324,21 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-neutral-900">Welcome back!</h1>
             <p className="text-sm text-neutral-600">{user?.name || user?.phone}</p>
           </div>
-          <div
+          <button
+            type="button"
             className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/20 transition-colors"
             onClick={() => router.push("/profile")}
           >
-            <span className="text-primary font-semibold">{user?.name?.charAt(0) || user?.phone?.charAt(0) || "U"}</span>
-          </div>
+            <Avatar className="h-10 w-10">
+              {dashboardAvatarSrc ? (
+                <AvatarImage src={dashboardAvatarSrc} alt={user?.name ?? "Profile"} />
+              ) : (
+                <AvatarFallback className="text-xs font-semibold text-primary">
+                  {user?.name?.charAt(0) || user?.phone?.charAt(0) || "U"}
+                </AvatarFallback>
+              )}
+            </Avatar>
+          </button>
         </div>
       </div>
 
