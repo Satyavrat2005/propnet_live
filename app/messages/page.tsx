@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,39 +19,63 @@ import {
   Plus
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabaseClient";
 
-// Optional: remove or replace with your auth context
-// import { useAuth } from "@/hooks/use-auth";
-
-interface Conversation {
-  id: number;
-  propertyId: number;
-  propertyTitle: string;
-  otherUser: {
-    id: number;
+interface ConversationSummary {
+  id: string;
+  type: string;
+  property?: {
+    id: string;
+    title: string;
+    location?: string | null;
+  } | null;
+  otherParticipant: {
+    id: string;
     name: string;
-    phone: string;
-  };
-  lastMessage: string;
-  lastMessageTime: string;
+    phone: string | null;
+    agencyName: string | null;
+  } | null;
+  lastMessage: {
+    id: string;
+    content: string;
+    senderId: string;
+    createdAt: string;
+  } | null;
+  lastMessageAt?: string | null;
   unreadCount: number;
-  type: "inquiry" | "colisting" | "general";
+}
+
+interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+}
+
+interface NetworkUser {
+  id: string;
+  name: string;
+  phone: string | null;
+  agencyName: string | null;
 }
 
 export default function MessagesPage() {
-  // Optional if you don’t have an auth hook
-  const user = { id: 1, name: "Demo User" };
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
   // --- Queries ---
-  const { data: conversations = [], refetch: refetchConversations } = useQuery({
+  const conversationsQuery = useQuery<ConversationSummary[]>({
     queryKey: ["/api/conversations"],
+    enabled: !!user,
+    refetchInterval: 15000,
     queryFn: async () => {
       const response = await fetch("/api/conversations");
       if (!response.ok) throw new Error("Failed to fetch conversations");
@@ -59,8 +83,9 @@ export default function MessagesPage() {
     },
   });
 
-  const { data: networkUsers = [] } = useQuery({
+  const networkUsersQuery = useQuery<NetworkUser[]>({
     queryKey: ["/api/network-users"],
+    enabled: !!user,
     queryFn: async () => {
       const response = await fetch("/api/network-users");
       if (!response.ok) throw new Error("Failed to fetch network users");
@@ -68,69 +93,169 @@ export default function MessagesPage() {
     },
   });
 
-  const { data: messages = [] } = useQuery({
-    queryKey: ["/api/conversations", selectedConversation?.id, "messages"],
-    enabled: !!selectedConversation,
+  const messagesQuery = useQuery<ChatMessage[]>({
+    queryKey: ["/api/conversations", selectedConversationId, "messages"],
+    enabled: !!selectedConversationId && !!user,
     queryFn: async () => {
-      const response = await fetch(`/api/conversations/${selectedConversation?.id}/messages`);
+      if (!selectedConversationId) return [];
+      const response = await fetch(`/api/conversations/${selectedConversationId}/messages`);
       if (!response.ok) throw new Error("Failed to fetch messages");
       return response.json();
     },
   });
 
+  const conversations = useMemo(
+    () => conversationsQuery.data ?? [],
+    [conversationsQuery.data]
+  );
+  const networkUsers = useMemo(
+    () => networkUsersQuery.data ?? [],
+    [networkUsersQuery.data]
+  );
+  const messages = useMemo(
+    () => messagesQuery.data ?? [],
+    [messagesQuery.data]
+  );
+
+  const activeConversation = useMemo(() => {
+    if (!selectedConversationId) return null;
+    return conversations.find((conversation) => conversation.id === selectedConversationId) || null;
+  }, [conversations, selectedConversationId]);
+
   // --- Mutations ---
   const createConversation = useMutation({
-    mutationFn: async ({ participantId, propertyId, type }: { participantId: number; propertyId?: number; type?: string }) => {
+    mutationFn: async ({ participantId, propertyId, type }: { participantId: string; propertyId?: string; type?: string }) => {
       const res = await apiRequest("POST", "/api/conversations", { participantId, propertyId, type });
+      if (!res.ok) {
+        throw new Error("Failed to create conversation");
+      }
       return res.json();
     },
-    onSuccess: (conversation) => {
-      setSelectedConversation(conversation);
+    onSuccess: (conversation: ConversationSummary) => {
+      setSelectedConversationId(conversation.id);
       setShowNewChatDialog(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      refetchConversations();
+      queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) => {
+        if (existing.some((c) => c.id === conversation.id)) {
+          return existing;
+        }
+        return [conversation, ...existing];
+      });
+      void conversationsQuery.refetch();
     },
   });
 
   const sendMessage = useMutation({
-    mutationFn: async ({ conversationId, content }: { conversationId: number; content: string }) => {
+    mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
       const res = await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { content });
+      if (!res.ok) {
+        throw new Error("Failed to send message");
+      }
       return res.json();
     },
     onSuccess: () => {
       setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConversation?.id, "messages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConversationId, "messages"] });
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
     },
   });
 
   // --- Derived data ---
-  const filteredConversations = Array.isArray(conversations)
-    ? conversations.filter((c: any) =>
-        (c.property?.title || "General Chat").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.otherParticipant?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
+  const filteredConversations = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return conversations.filter((conversation) => {
+      const title = (conversation.property?.title || "General Chat").toLowerCase();
+      const participantName = conversation.otherParticipant?.name?.toLowerCase() || "";
+      return title.includes(query) || participantName.includes(query);
+    });
+  }, [conversations, searchQuery]);
 
-  const filteredNetworkUsers = Array.isArray(networkUsers)
-    ? networkUsers.filter((u: any) =>
-        u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-        u.agencyName?.toLowerCase().includes(userSearchQuery.toLowerCase())
-      )
-    : [];
+  const filteredNetworkUsers = useMemo(() => {
+    const query = userSearchQuery.toLowerCase();
+    return networkUsers.filter((networkUser) => {
+      const name = networkUser.name?.toLowerCase() || "";
+      const agencyName = networkUser.agencyName?.toLowerCase() || "";
+      return name.includes(query) || agencyName.includes(query);
+    });
+  }, [networkUsers, userSearchQuery]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`messages-stream-${user.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const record = payload.new as {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          content: string;
+          created_at: string;
+        };
+
+        if (!record) return;
+
+        if (activeConversation?.id === record.conversation_id) {
+          queryClient.setQueryData<ChatMessage[]>(
+            ["/api/conversations", activeConversation.id, "messages"],
+            (existing = []) => {
+              if (existing.some((message) => message.id === record.id)) {
+                return existing;
+              }
+              return [
+                ...existing,
+                {
+                  id: record.id,
+                  conversationId: record.conversation_id,
+                  senderId: record.sender_id,
+                  content: record.content,
+                  createdAt: record.created_at,
+                },
+              ];
+            }
+          );
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, activeConversation?.id, queryClient]);
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <Card className="p-8 text-center space-y-3">
+          <MessageCircle className="mx-auto text-neutral-400" size={48} />
+          <p className="text-sm text-neutral-600">Please sign in to view your messages.</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const currentUserId = String(user.id);
 
   // --- Handlers ---
-  const startConversation = (participantId: number) => {
+  const startConversation = (participantId: string) => {
     createConversation.mutate({ participantId, type: "general" });
   };
 
   const handleSend = () => {
-    if (newMessage.trim() && selectedConversation) {
-      sendMessage.mutate({
-        conversationId: selectedConversation.id,
-        content: newMessage.trim(),
-      });
-    }
+    if (!newMessage.trim() || !activeConversation) return;
+    sendMessage.mutate({
+      conversationId: activeConversation.id,
+      content: newMessage.trim(),
+    });
   };
 
   const getTypeColor = (type: string) => {
@@ -145,22 +270,22 @@ export default function MessagesPage() {
   };
 
   // --- Chat view ---
-  if (selectedConversation) {
+  if (activeConversation) {
     return (
       <div className="min-h-screen bg-neutral-50 flex flex-col">
         {/* Header */}
         <div className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" onClick={() => setSelectedConversation(null)}>←</Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedConversationId(null)}>←</Button>
             <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
               <User size={20} className="text-primary" />
             </div>
             <div>
               <h2 className="font-semibold text-neutral-900">
-                {selectedConversation.otherParticipant?.name}
+                {activeConversation.otherParticipant?.name || "Unknown user"}
               </h2>
               <p className="text-sm text-neutral-600">
-                {selectedConversation.property?.title || "General Chat"}
+                {activeConversation.property?.title || "General Chat"}
               </p>
             </div>
           </div>
@@ -172,14 +297,13 @@ export default function MessagesPage() {
 
         {/* Messages */}
         <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
-          {Array.isArray(messages) &&
-            messages.map((msg: any) => (
-              <div key={msg.id} className={`flex ${msg.senderId === user.id ? "justify-end" : "justify-start"}`}>
+          {messages.map((msg: ChatMessage) => (
+              <div key={msg.id} className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  msg.senderId === user.id ? "bg-primary text-white" : "bg-white border border-neutral-200"
+                  msg.senderId === currentUserId ? "bg-primary text-white" : "bg-white border border-neutral-200"
                 }`}>
                   <p className="text-sm">{msg.content}</p>
-                  <p className={`text-xs mt-1 ${msg.senderId === user.id ? "text-primary-200" : "text-neutral-500"}`}>
+                  <p className={`text-xs mt-1 ${msg.senderId === currentUserId ? "text-primary-200" : "text-neutral-500"}`}>
                     {new Date(msg.createdAt).toLocaleTimeString()}
                   </p>
                 </div>
@@ -193,7 +317,7 @@ export default function MessagesPage() {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            onKeyPress={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
           />
           <Button onClick={handleSend} disabled={!newMessage.trim()}>
             <Send size={16} />
@@ -231,7 +355,7 @@ export default function MessagesPage() {
                 />
               </div>
               <div className="max-h-64 overflow-y-auto space-y-2">
-                {filteredNetworkUsers.map((u: any) => (
+                {filteredNetworkUsers.map((u: NetworkUser) => (
                   <Card key={u.id} className="p-3 cursor-pointer hover:bg-neutral-50" onClick={() => startConversation(u.id)}>
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -276,8 +400,8 @@ export default function MessagesPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filteredConversations.map((c: any) => (
-              <Card key={c.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedConversation(c)}>
+            {filteredConversations.map((c) => (
+              <Card key={c.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedConversationId(c.id)}>
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-3">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">

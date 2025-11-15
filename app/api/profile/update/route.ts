@@ -1,6 +1,7 @@
 // app/api/profile/update/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifySession } from "@/lib/auth/session";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -14,23 +15,19 @@ const supabaseServer = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    // read auth header
-    const auth = req.headers.get("authorization") || "";
-    const token = auth.startsWith("Bearer ") ? auth.split(" ")[1] : null;
-    if (!token) {
-      return NextResponse.json({ error: "Missing Authorization token" }, { status: 401 });
+    const sessionCookie = req.cookies.get("session")?.value;
+    if (!sessionCookie) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // verify token and get user
-    const {
-      data: { user },
-      error: userErr,
-    } = await supabaseServer.auth.getUser(token);
-    if (userErr || !user) {
-      console.error("auth.getUser error", userErr);
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    let userId: string;
+    try {
+      const payload = await verifySession(sessionCookie);
+      userId = String(payload.sub);
+    } catch {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -47,11 +44,10 @@ export async function POST(req: Request) {
       areaOfExpertise,
       workingRegions,
       profilePhotoUrl,
-      agencyLogoUrl,
     } = body;
 
     // Build update object
-    const updateObj: any = {
+    const updateObj: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
     if (name !== undefined) updateObj.name = name;
@@ -65,13 +61,12 @@ export async function POST(req: Request) {
     if (Array.isArray(areaOfExpertise)) updateObj.area_of_expertise = areaOfExpertise;
     if (Array.isArray(workingRegions)) updateObj.working_regions = workingRegions;
     if (profilePhotoUrl !== undefined) updateObj.profile_photo_url = profilePhotoUrl;
-    if (agencyLogoUrl !== undefined) updateObj.agency_logo_url = agencyLogoUrl;
 
     // update row where id == user.id
     const { data, error } = await supabaseServer
       .from("profiles")
       .update(updateObj)
-      .eq("id", user.id)
+      .eq("id", userId)
       .select()
       .single();
 
@@ -82,8 +77,9 @@ export async function POST(req: Request) {
 
     // return cleaned row
     return NextResponse.json({ user: data }, { status: 200 });
-  } catch (err: any) {
+  } catch (err) {
     console.error("profile update route error", err);
-    return NextResponse.json({ error: err?.message || "Server error" }, { status: 500 });
+    const message = err instanceof Error ? err.message : "Server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

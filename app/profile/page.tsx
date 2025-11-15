@@ -1,22 +1,29 @@
 // app/profile/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { ReactNode, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-import { ArrowLeft, User as UserIcon, Home as HomeIcon, Handshake, Settings as SettingsIcon, LogOut as LogOutIcon, ChevronRight, Award } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  User as UserIcon,
+  Home as HomeIcon,
+  Handshake,
+  Settings as SettingsIcon,
+  LogOut as LogOutIcon,
+  ChevronRight,
+  Award,
+  Phone,
+  Mail,
+  MapPin,
+  Building2,
+  Calendar,
+} from "lucide-react";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-
-/**
- * NOTE: requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in env.
- */
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { useAuth } from "@/hooks/use-auth";
 
 type ProfileRow = {
   id: string;
@@ -24,106 +31,138 @@ type ProfileRow = {
   name?: string;
   email?: string;
   bio?: string;
+  agencyName?: string;
   agency_name?: string;
+  reraId?: string;
   rera_id?: string;
   city?: string;
   experience?: string;
   website?: string;
+  areaOfExpertise?: string[] | null;
   area_of_expertise?: string[] | null;
+  workingRegions?: string[] | null;
   working_regions?: string[] | null;
+  profilePhoto?: string | null;
   profile_photo_url?: string | null;
-  created_at?: string;
-  updated_at?: string;
   status?: string;
+};
+
+type PropertySummary = {
+  id: string;
+  title?: string;
+  location?: string;
+  transactionType?: string;
+  propertyType?: string;
+  approvalStatus?: string;
+  createdAt?: string;
+  price?: number | string | null;
+};
+
+type CoListingRequest = {
+  id: string;
+  status?: string;
+  createdAt?: string;
+  property?: { title?: string; location?: string };
+  requester?: { name?: string; agencyName?: string };
+};
+
+type NormalizedProfile = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  agencyName: string;
+  city: string;
+  bio: string;
+  experience: string;
+  reraId: string;
+  website: string;
+  status: string;
+  profilePhotoUrl: string | null;
+  areaOfExpertise: string[];
+  workingRegions: string[];
+};
+
+const fetchJson = async <T,>(url: string): Promise<T> => {
+  const response = await fetch(url, { credentials: "include" });
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  return response.json();
 };
 
 export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isLoading: authLoading, logout: authLogout } = useAuth();
 
-  const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
-  const [myProperties, setMyProperties] = useState<any[]>([]);
-  const [colistingRequests, setCoListingRequests] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // load session and profile
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          // not signed in
-          setUserId(null);
-          setProfile(null);
-          setSessionLoaded(true);
-          setLoading(false);
-          return;
-        }
-        const userId = session.user.id;
-        if (!mounted) return;
-        setUserId(userId);
-
-        // fetch profile row
-        const { data: profData, error: profErr } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .limit(1)
-          .single();
-
-        if (profErr && profErr.code !== "PGRST116") {
-          console.error("profile fetch error:", profErr);
-        }
-        if (mounted) setProfile(profData ?? null);
-
-        // fetch my-properties (properties table referencing profiles.id)
-        const { data: propsData, error: propsErr } = await supabase
-          .from("properties")
-          .select("*")
-          .eq("id", userId);
-
-        if (propsErr) console.error("my properties error", propsErr);
-        if (mounted) setMyProperties(propsData ?? []);
-
-        // fetch co-listing requests if you have a table; fallback to empty
-        // If you use a different table name, change it accordingly.
-        const { data: coData } = await supabase
-          .from("colisting_requests")
-          .select("*")
-          .eq("agent_id", userId);
-        if (mounted) setCoListingRequests(coData ?? []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (mounted) {
-          setSessionLoaded(true);
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      mounted = false;
+  const normalizedProfile = useMemo<NormalizedProfile | null>(() => {
+    if (!user) return null;
+    const data = user as unknown as ProfileRow & { status?: string };
+    const expertiseRaw = data.areaOfExpertise ?? data.area_of_expertise ?? [];
+    const regionsRaw = data.workingRegions ?? data.working_regions ?? [];
+    return {
+      id: String(data.id ?? ""),
+      name: data.name ?? "Agent",
+      email: data.email ?? "",
+      phone: data.phone ?? "",
+      agencyName: data.agencyName ?? data.agency_name ?? "",
+      city: data.city ?? "",
+      bio: data.bio ?? "",
+      experience: data.experience ?? "",
+      reraId: data.reraId ?? data.rera_id ?? "",
+      website: data.website ?? "",
+      status: data.status ?? "pending",
+      profilePhotoUrl: data.profilePhoto ?? data.profile_photo_url ?? null,
+      areaOfExpertise: Array.isArray(expertiseRaw)
+        ? expertiseRaw.filter(Boolean)
+        : String(expertiseRaw || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+      workingRegions: Array.isArray(regionsRaw)
+        ? regionsRaw.filter(Boolean)
+        : String(regionsRaw || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
     };
-  }, []);
+  }, [user]);
 
-  const pendingRequests = colistingRequests.filter((r) => r.status === "pending").length;
+  const {
+    data: properties = [],
+    isFetching: isPropertiesLoading,
+  } = useQuery<PropertySummary[]>({
+    queryKey: ["profile", "properties"],
+    enabled: !!normalizedProfile,
+    queryFn: () => fetchJson<PropertySummary[]>("/api/my-properties"),
+  });
+
+  const {
+    data: colistingRequests = [],
+    isFetching: isRequestsLoading,
+  } = useQuery<CoListingRequest[]>({
+    queryKey: ["profile", "colisting-requests"],
+    enabled: !!normalizedProfile,
+    queryFn: () => fetchJson<CoListingRequest[]>("/api/colisting-requests"),
+  });
+
+  const pendingRequests = useMemo(
+    () => colistingRequests.filter((r) => (r.status || "").toLowerCase() === "pending").length,
+    [colistingRequests]
+  );
+
+  const ownerClosed = useMemo(
+    () => properties.filter((p) => (p.approvalStatus || "").toLowerCase() === "closed").length,
+    [properties]
+  );
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
-      // clear local app state
-      setUserId(null);
-      setProfile(null);
-      router.replace("/");
-    } catch (err) {
+      await fetch("/api/auth/logout", { method: "POST" });
+      authLogout();
+      router.push("/login");
+    } catch {
       toast({
         title: "Logout failed",
         description: "Unable to logout, try again.",
@@ -156,6 +195,27 @@ export default function ProfilePage() {
     },
   ];
 
+  if (authLoading || (normalizedProfile && (isPropertiesLoading || isRequestsLoading))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!normalizedProfile) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center px-6 text-center">
+        <h2 className="text-2xl font-semibold text-neutral-900 mb-2">Sign in to view your profile</h2>
+        <p className="text-neutral-500 mb-6">Your conversations, listings, and co-listing requests will appear here once you log in.</p>
+        <Button onClick={() => router.push("/login")}>Go to login</Button>
+      </div>
+    );
+  }
+
+  const topProperties = properties.slice(0, 3);
+  const topRequests = colistingRequests.slice(0, 3);
+
   return (
     <div className="flex flex-col min-h-screen pb-20">
       <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
@@ -168,55 +228,34 @@ export default function ProfilePage() {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <div className="px-6 py-6">
-          <div className="text-center mb-8">
-            <div className="w-24 h-24 bg-neutral-200 rounded-full mx-auto mb-4 flex items-center justify-center relative">
-              {profile?.profile_photo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.profile_photo_url}
-                  alt="Profile Photo"
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : profile?.agency_name ? (
-                <span className="text-2xl font-bold text-neutral-500">
-                  {profile?.agency_name?.charAt(0) ?? "A"}
-                </span>
-              ) : (
-                <span className="text-2xl font-bold text-neutral-500">
-                  {profile?.name?.charAt(0) ?? "A"}
-                </span>
-              )}
-            </div>
+        <div className="px-6 py-6 space-y-6">
+          <ProfileHeaderCard profile={normalizedProfile} pendingRequests={pendingRequests} ownerClosed={ownerClosed} listings={properties.length} />
 
-            <h3 className="text-xl font-bold text-neutral-900">{profile?.name ?? "Agent"}</h3>
-            <p className="text-neutral-500">{profile?.agency_name ?? "Real Estate Agent"}</p>
-            {profile?.email && <p className="text-sm text-neutral-400">{profile.email}</p>}
-            {profile?.city && <p className="text-sm text-neutral-400">{profile.city}</p>}
+          <SectionCard
+            title="Your Listings"
+            description="Recently added properties"
+            actionLabel="View all"
+            onAction={() => router.push("/my-listings")}
+          >
+            <PropertiesPreview properties={topProperties} isLoading={isPropertiesLoading} />
+          </SectionCard>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-              <Badge className="bg-accent text-white">
-                <Award size={12} className="mr-1" />
-                {profile?.status === "approved" ? "Verified Agent" : "Pending Verification"}
-              </Badge>
-              {profile?.experience && <Badge variant="secondary">{profile.experience}+ years</Badge>}
-            </div>
-          </div>
+          <SectionCard
+            title="Co-listing Requests"
+            description="Latest activity from your network"
+            actionLabel="View requests"
+            onAction={() => router.push("/colisting-requests")}
+          >
+            <RequestsPreview requests={topRequests} isLoading={isRequestsLoading} />
+          </SectionCard>
 
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{myProperties?.length ?? 0}</div>
-              <div className="text-xs text-neutral-500">Active Listings</div>
-            </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
-              <div className="text-2xl font-bold text-accent">{pendingRequests}</div>
-              <div className="text-xs text-neutral-500">Pending Requests</div>
-            </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
-              <div className="text-2xl font-bold text-neutral-600">0</div>
-              <div className="text-xs text-neutral-500">Deals Closed</div>
-            </div>
-          </div>
+          <SectionCard title="Professional Highlights" description="Expertise shared with potential partners">
+            <ProfessionalDetails profile={normalizedProfile} />
+          </SectionCard>
+
+          <SectionCard title="Contact" description="Keep your contact details up to date">
+            <ContactDetails profile={normalizedProfile} />
+          </SectionCard>
 
           <div className="space-y-2">
             {menuItems.map((item, index) => (
@@ -251,6 +290,217 @@ export default function ProfilePage() {
       </div>
 
       <MobileNavigation />
+    </div>
+  );
+}
+
+type SectionCardProps = {
+  title: string;
+  description?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  children: ReactNode;
+};
+
+function SectionCard({ title, description, actionLabel, onAction, children }: SectionCardProps) {
+  return (
+    <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-base font-semibold text-neutral-900">{title}</h3>
+          {description && <p className="text-sm text-neutral-500">{description}</p>}
+        </div>
+        {actionLabel && onAction && (
+          <Button variant="outline" size="sm" onClick={onAction}>
+            {actionLabel}
+          </Button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ProfileHeaderCard({
+  profile,
+  pendingRequests,
+  ownerClosed,
+  listings,
+}: {
+  profile: NormalizedProfile;
+  pendingRequests: number;
+  ownerClosed: number;
+  listings: number;
+}) {
+  return (
+    <div className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+      <div className="text-center mb-6">
+        <div className="w-24 h-24 bg-neutral-200 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
+          {profile.profilePhotoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-2xl font-bold text-neutral-600">{profile.agencyName?.charAt(0) || profile.name?.charAt(0) || "A"}</span>
+          )}
+        </div>
+        <h3 className="text-xl font-bold text-neutral-900">{profile.name}</h3>
+        <p className="text-neutral-500">{profile.agencyName || "Real Estate Agent"}</p>
+        {profile.email && <p className="text-sm text-neutral-400">{profile.email}</p>}
+        {profile.city && <p className="text-sm text-neutral-400">{profile.city}</p>}
+        {/* <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+          <Badge className="bg-accent text-white">
+            <Award size={12} className="mr-1" />
+            {profile.status === "approved" ? "Verified Agent" : "Pending Verification"}
+          </Badge>
+          {profile.experience && (
+            <Badge variant="secondary">
+              {profile.experience}
+            </Badge>
+          )}
+        </div> */}
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <StatPill label="Listings" value={listings} accent="text-primary" />
+        <StatPill label="Pending" value={pendingRequests} accent="text-accent" />
+        <StatPill label="Owner" value={ownerClosed} accent="text-neutral-700" />
+      </div>
+    </div>
+  );
+}
+
+function StatPill({ label, value, accent }: { label: string; value: number; accent: string }) {
+  return (
+    <div className="text-center p-3 bg-neutral-50 rounded-xl">
+      <div className={`text-2xl font-bold ${accent}`}>{value}</div>
+      <p className="text-xs text-neutral-500">{label}</p>
+    </div>
+  );
+}
+
+function PropertiesPreview({ properties, isLoading }: { properties: PropertySummary[]; isLoading: boolean }) {
+  if (isLoading) {
+    return <p className="text-sm text-neutral-500">Loading properties…</p>;
+  }
+  if (!properties.length) {
+    return <p className="text-sm text-neutral-500">No properties yet. Add a listing to showcase your work.</p>;
+  }
+  return (
+    <div className="space-y-3">
+      {properties.map((property) => (
+        <div key={property.id} className="border border-neutral-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-sm font-semibold text-neutral-900">{property.title || "Untitled property"}</p>
+              <p className="text-xs text-neutral-500 flex items-center gap-1">
+                <MapPin size={12} />
+                {property.location || "Location TBD"}
+              </p>
+            </div>
+            <Badge variant="secondary" className="text-xs capitalize">
+              {property.transactionType || "NA"}
+            </Badge>
+          </div>
+          <p className="text-xs text-neutral-500 flex items-center gap-1">
+            <Calendar size={12} />
+            Listed {property.createdAt ? new Date(property.createdAt).toLocaleDateString() : "recently"}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RequestsPreview({ requests, isLoading }: { requests: CoListingRequest[]; isLoading: boolean }) {
+  if (isLoading) {
+    return <p className="text-sm text-neutral-500">Loading requests…</p>;
+  }
+  if (!requests.length) {
+    return <p className="text-sm text-neutral-500">No co-listing requests yet.</p>;
+  }
+  return (
+    <div className="space-y-3">
+      {requests.map((request) => (
+        <div key={request.id} className="border border-neutral-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-sm font-semibold text-neutral-900">{request.requester?.name || "Network partner"}</p>
+            <Badge variant="secondary" className="text-xs capitalize">
+              {request.status || "pending"}
+            </Badge>
+          </div>
+          <p className="text-xs text-neutral-500">{request.requester?.agencyName || "Agency"}</p>
+          <p className="text-xs text-neutral-500 mt-1">
+            {request.property?.title || "Property"} · {request.property?.location || "TBD"}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProfessionalDetails({ profile }: { profile: NormalizedProfile }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h4 className="text-sm font-semibold text-neutral-800 mb-2">Areas of Expertise</h4>
+        {profile.areaOfExpertise?.length ? (
+          <div className="flex flex-wrap gap-2">
+            {profile.areaOfExpertise.map((item: string) => (
+              <Badge key={item} variant="secondary" className="text-xs capitalize">
+                {item}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500">Add areas of expertise from the edit profile screen.</p>
+        )}
+      </div>
+      <div>
+        <h4 className="text-sm font-semibold text-neutral-800 mb-2">Working Regions</h4>
+        {profile.workingRegions?.length ? (
+          <div className="flex flex-wrap gap-2">
+            {profile.workingRegions.map((region: string) => (
+              <Badge key={region} variant="outline" className="text-xs">
+                {region}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500">Add the cities or neighborhoods you cover.</p>
+        )}
+      </div>
+      {profile.bio && (
+        <div>
+          <h4 className="text-sm font-semibold text-neutral-800 mb-2">About</h4>
+          <p className="text-sm text-neutral-600 leading-relaxed">{profile.bio}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContactDetails({ profile }: { profile: NormalizedProfile }) {
+  const rows = [
+    { icon: Phone, label: "Phone", value: profile.phone },
+    { icon: Mail, label: "Email", value: profile.email },
+    { icon: Building2, label: "Agency", value: profile.agencyName },
+    { icon: MapPin, label: "City", value: profile.city },
+  ].filter((row) => !!row.value);
+
+  if (!rows.length) {
+    return <p className="text-sm text-neutral-500">Add your contact information to make it easier for brokers to reach you.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-center gap-3 text-sm">
+          <row.icon size={16} className="text-neutral-500" />
+          <div>
+            <p className="text-neutral-500 text-xs">{row.label}</p>
+            <p className="text-neutral-900 font-medium">{row.value}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
