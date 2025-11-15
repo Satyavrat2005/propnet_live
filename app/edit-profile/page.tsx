@@ -1,7 +1,7 @@
 // app/edit-profile/page.tsx
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { ArrowLeft, Save } from "lucide-react";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FileUpload from "@/components/ui/file-upload";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 /**
  * Uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on client side.
@@ -41,8 +42,13 @@ type ProfileRow = {
 export default function EditProfile() {
   const router = useRouter();
   const { toast } = useToast();
+  const { updateUser } = useAuth();
+  const updateUserRef = useRef(updateUser);
 
-  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    updateUserRef.current = updateUser;
+  }, [updateUser]);
+
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
@@ -61,63 +67,55 @@ export default function EditProfile() {
   });
 
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
-  const [agencyLogoFile, setAgencyLogoFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const initialFormRef = useRef(form);
 
   useEffect(() => {
-    let mounted = true;
+    let active = true;
     (async () => {
-      setLoading(true);
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          toast({ title: "Not signed in", description: "Please login to edit profile", variant: "destructive" });
-          router.push("/login");
+        const response = await fetch("/api/auth/me", { credentials: "include" });
+        if (!response.ok) {
+          if (active) {
+            setProfile(null);
+            setUserId(null);
+          }
           return;
         }
-        const uid = session.user.id;
-        if (!mounted) return;
-        setUserId(uid);
-
-        const { data: profData, error: profErr } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", uid)
-          .limit(1)
-          .single();
-
-        if (profErr && profErr.code !== "PGRST116") {
-          console.error("profile fetch error:", profErr);
-        }
-        if (mounted && profData) {
-          setProfile(profData as ProfileRow);
-          setForm({
-            name: profData.name ?? "",
-            email: profData.email ?? "",
-            agencyName: profData.agency_name ?? "",
-            reraId: profData.rera_id ?? "",
-            website: profData.website ?? "",
-            city: profData.city ?? "",
-            experience: profData.experience ?? "",
-            bio: profData.bio ?? "",
-            areaOfExpertise: Array.isArray(profData.area_of_expertise) ? profData.area_of_expertise.join(", ") : (profData.area_of_expertise ?? "").toString(),
-            workingRegions: Array.isArray(profData.working_regions) ? profData.working_regions.join(", ") : (profData.working_regions ?? "").toString(),
-          });
-        }
+        const payload = await response.json();
+        if (!active) return;
+        const profData = payload.user as ProfileRow;
+        setProfile(profData);
+        setUserId(profData.id);
+        const nextForm = {
+          name: profData.name ?? "",
+          email: profData.email ?? "",
+          agencyName: profData.agency_name ?? "",
+          reraId: profData.rera_id ?? "",
+          website: profData.website ?? "",
+          city: profData.city ?? "",
+          experience: profData.experience ?? "",
+          bio: profData.bio ?? "",
+          areaOfExpertise: Array.isArray(profData.area_of_expertise)
+            ? profData.area_of_expertise.join(", ")
+            : (profData.area_of_expertise ?? "").toString(),
+          workingRegions: Array.isArray(profData.working_regions)
+            ? profData.working_regions.join(", ")
+            : (profData.working_regions ?? "").toString(),
+        };
+        setForm(nextForm);
+        initialFormRef.current = nextForm;
+        updateUserRef.current(payload.user);
       } catch (err) {
         console.error(err);
       } finally {
-        if (mounted) {
-          setLoading(false);
+        if (active) {
           setInitialLoaded(true);
         }
       }
     })();
     return () => {
-      mounted = false;
+      active = false;
     };
   }, []);
 
@@ -149,56 +147,62 @@ export default function EditProfile() {
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (!userId) {
-      toast({ title: "Not signed in", description: "Please login", variant: "destructive" });
-      router.push("/login");
-      return;
-    }
     setSaving(true);
 
     try {
-      let profilePhotoUrl = profile?.profile_photo_url ?? null;
-      let agencyLogoUrl = (profile as any)?.agency_logo_url ?? null;
+      const diffPayload: Record<string, unknown> = {};
 
-      // upload files if present
-      if (profilePhotoFile) {
-        const uploaded = await uploadFileToStorage(profilePhotoFile, `profile-photos/${userId}/profile-photo`);
-        if (uploaded) profilePhotoUrl = uploaded;
-      }
-      if (agencyLogoFile) {
-        const uploaded = await uploadFileToStorage(agencyLogoFile, `agency-logos/${userId}/agency-logo`);
-        if (uploaded) agencyLogoUrl = uploaded;
-      }
-
-      // Prepare payload
-      const payload = {
-        name: form.name,
-        email: form.email,
-        agencyName: form.agencyName,
-        reraId: form.reraId,
-        website: form.website,
-        city: form.city,
-        experience: form.experience,
-        bio: form.bio,
-        areaOfExpertise: form.areaOfExpertise.split(",").map((s) => s.trim()).filter(Boolean),
-        workingRegions: form.workingRegions.split(",").map((s) => s.trim()).filter(Boolean),
-        profilePhotoUrl,
-        agencyLogoUrl,
+      const pushIfChanged = (field: keyof typeof form, value: string) => {
+        if ((initialFormRef.current?.[field] ?? "") !== value) {
+          diffPayload[field === "agencyName" ? "agencyName" : field] = value;
+        }
       };
 
+      pushIfChanged("name", form.name);
+      pushIfChanged("email", form.email);
+      pushIfChanged("agencyName", form.agencyName);
+      pushIfChanged("reraId", form.reraId);
+      pushIfChanged("website", form.website);
+      pushIfChanged("city", form.city);
+      pushIfChanged("experience", form.experience);
+      pushIfChanged("bio", form.bio);
+
+      if ((initialFormRef.current?.areaOfExpertise ?? "") !== form.areaOfExpertise) {
+        diffPayload.areaOfExpertise = form.areaOfExpertise
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+
+      if ((initialFormRef.current?.workingRegions ?? "") !== form.workingRegions) {
+        diffPayload.workingRegions = form.workingRegions
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+
+      if (profilePhotoFile) {
+        const uploaded = await uploadFileToStorage(profilePhotoFile, `profile-photos/${userId}/profile-photo`);
+        if (uploaded) diffPayload.profilePhotoUrl = uploaded;
+      }
+
+      if (Object.keys(diffPayload).length === 0) {
+        toast({ title: "No changes", description: "Update a field before saving." });
+        setSaving(false);
+        return;
+      }
+
       // get current session to retrieve access token for server verification
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("No session token found");
+      if (!userId) {
+        throw new Error("Not authenticated");
+      }
 
       const res = await fetch("/api/profile/update", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(diffPayload),
       });
 
       if (!res.ok) {
@@ -206,11 +210,22 @@ export default function EditProfile() {
         throw new Error(text || "Failed to update profile");
       }
 
+      const data = await res.json();
+      if (data?.user) {
+        setProfile(data.user);
+        updateUser(data.user);
+        initialFormRef.current = form;
+      }
+
       toast({ title: "Profile updated", description: "Your profile has been saved." });
       router.push("/profile");
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: "Update failed", description: err?.message || "Failed to update", variant: "destructive" });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "Failed to update",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -234,6 +249,21 @@ export default function EditProfile() {
       </div>
 
       <div className="flex-1 px-6 py-6 space-y-6">
+        {!initialLoaded && (
+          <div className="text-center py-8 text-sm text-neutral-500">Loading profile…</div>
+        )}
+
+        {initialLoaded && !profile && (
+          <Card>
+            <CardContent className="py-6 text-center space-y-3">
+              <p className="text-sm text-neutral-600">Sign in to populate your profile details.</p>
+              <Button variant="outline" onClick={() => router.push("/login")}>
+                Go to login
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
@@ -282,11 +312,6 @@ export default function EditProfile() {
               <div>
                 <Label htmlFor="website">Website</Label>
                 <Input id="website" value={form.website} onChange={(e) => handleInput("website", e.target.value)} placeholder="https://yourwebsite.com" />
-              </div>
-              <div>
-                <Label htmlFor="agencyLogo">Agency Logo</Label>
-                <FileUpload onFilesChange={(files) => setAgencyLogoFile(files[0] ?? null)} maxFiles={1} />
-                <p className="text-xs text-neutral-500 mt-1">Upload your agency logo for property reports and listings</p>
               </div>
             </CardContent>
           </Card>
