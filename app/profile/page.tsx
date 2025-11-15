@@ -192,7 +192,7 @@ export default function ProfilePage() {
   const menuItems = [
     {
       icon: HomeIcon,
-      label: "My Properties",
+      label: "Properties",
       action: () => router.push("/feed"),
     },
     {
