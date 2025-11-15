@@ -39,6 +39,7 @@ export default function AdminLogin() {
       const res = await fetch("/api/secure-portal/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(credentials),
       });
       const json = await res.json().catch(() => ({ success: false, message: "Invalid response" }));

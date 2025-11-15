@@ -127,6 +127,21 @@ export async function POST(req: Request) {
       profilePhotoUrl = imgbbJson.data.url;
     }
 
+    // Check existing profile status to avoid overwriting approved status
+    let existingStatus = "pending";
+    if (phone) {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("phone", String(phone).replace(/\D/g, ""))
+        .maybeSingle();
+      
+      // Keep existing status if approved, otherwise set to pending
+      if (existingProfile?.status === "approved") {
+        existingStatus = "approved";
+      }
+    }
+
     // Prepare payload to upsert into profiles
     const row: any = {
       phone: phone ? String(phone).replace(/\D/g, "") : null,
@@ -142,6 +157,7 @@ export async function POST(req: Request) {
       working_regions: workingRegions.length ? workingRegions : null,
       profile_photo_url: profilePhotoUrl,
       profile_complete: true,
+      status: existingStatus, // Set status to pending for new profiles, keep approved if already approved
       updated_at: new Date().toISOString(),
     };
 

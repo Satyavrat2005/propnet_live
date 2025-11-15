@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, Users, MapPin, IndianRupee } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Users, MapPin, IndianRupee, ArrowLeft } from "lucide-react";
 
 type Property = {
   property_id: string;
@@ -51,7 +51,7 @@ export default function AdminProperties() {
     (async () => {
       setAuthLoading(true);
       try {
-        const res = await fetch("/api/secure-portal/me");
+        const res = await fetch("/api/secure-portal/me", { credentials: "include" });
         if (!mounted) return;
         setAdminData(res.ok ? await res.json() : null);
       } catch {
@@ -75,7 +75,7 @@ export default function AdminProperties() {
   const { data: properties, isLoading } = useQuery<Property[]>({
     queryKey: ["/api/admin/properties"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/properties", { credentials: "same-origin" });
+      const res = await fetch("/api/admin/properties", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch properties");
       return res.json();
     },
@@ -88,7 +88,7 @@ export default function AdminProperties() {
       const res = await fetch(`/api/admin/properties/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ status }),
       });
       const json = await res.json();
@@ -144,6 +144,16 @@ export default function AdminProperties() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <Button
+          onClick={() => router.push("/admin/dashboard")}
+          variant="outline"
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+      </div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Property Approval</h1>
         <p className="text-gray-600">Approve or reject property listings submitted by brokers</p>

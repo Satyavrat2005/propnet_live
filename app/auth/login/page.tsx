@@ -134,7 +134,14 @@ export default function Page() {
         return;
       }
 
-      // Prefer server-provided flag
+      // Use server-provided redirectTo path
+      if (json?.redirectTo) {
+        setMessage("Verification successful. Redirecting...");
+        router.push(json.redirectTo);
+        return;
+      }
+
+      // Fallback 1: Use requiresProfileComplete flag (backward compatibility)
       if (typeof json?.requiresProfileComplete === "boolean") {
         const requiresProfile = json.requiresProfileComplete;
         setMessage("Verification successful. Redirecting...");
@@ -146,7 +153,7 @@ export default function Page() {
         return;
       }
 
-      // Fallback: call /api/auth/me to determine profile completeness
+      // Fallback 2: call /api/auth/me to determine profile completeness
       setMessage("Verification successful. Checking profile...");
       await checkProfileAndRedirect();
     } catch (err: any) {

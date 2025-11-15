@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid OTP" }, { status: 401 });
     }
 
-    // 2) Upsert or fetch user profile in Supabase by phone
+    // 2) Check if user exists in profiles table by phone
     const { data: existing, error: selErr } = await supabase
       .from("profiles")
       .select("*")
@@ -121,11 +121,13 @@ export async function POST(req: NextRequest) {
     }
 
     let profile = existing;
+    let redirectTo = "/dashboard"; // default
 
     if (!profile) {
+      // User doesn't exist - create new profile
       const { data: created, error: insErr } = await supabase
         .from("profiles")
-        .insert([{ phone: e164Phone, profile_complete: false }])
+        .insert([{ phone: e164Phone, profile_complete: false, status: "pending" }])
         .select("*")
         .single();
 
@@ -133,6 +135,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: insErr.message }, { status: 500 });
       }
       profile = created;
+      redirectTo = "/auth/complete-profile"; // New user needs to complete profile
+    } else {
+      // User exists - determine redirect based on profile status
+      const isProfileComplete = profile.profile_complete === true;
+      const status = profile.status || "pending";
+
+      if (!isProfileComplete) {
+        // Profile not complete
+        redirectTo = "/auth/complete-profile";
+      } else if (isProfileComplete && status === "approved") {
+        // Profile complete and approved
+        redirectTo = "/dashboard";
+      } else if (isProfileComplete && status === "pending") {
+        // Profile complete but pending approval
+        redirectTo = "/auth/approval-pending";
+      } else {
+        // Fallback for other statuses (rejected, etc.)
+        redirectTo = "/auth/approval-pending";
+      }
     }
 
     // 3) Create signed session token & set secure, httpOnly cookie
@@ -140,7 +161,8 @@ export async function POST(req: NextRequest) {
 
     const res = NextResponse.json({
       user: profile,
-      requiresProfileComplete: profile.profile_complete !== true,
+      redirectTo: redirectTo,
+      requiresProfileComplete: profile.profile_complete !== true, // backward compatibility
     });
 
     res.headers.set("Set-Cookie", getSessionCookieHeader(token));

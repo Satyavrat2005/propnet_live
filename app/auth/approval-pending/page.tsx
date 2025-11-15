@@ -129,7 +129,7 @@ export default function NotApprovedPage() {
               {/* Actions */}
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
-                  href="/auth/complete-profile"
+                  href="/auth/login"
                   className="group relative inline-flex items-center justify-center rounded-xl border border-amber-600/20 bg-amber-600 px-6 py-3 text-base font-medium text-white shadow-lg shadow-amber-600/20 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-300 active:translate-y-0"
                 >
                   <span className="absolute inset-0 -z-10 rounded-xl bg-linear-to-r from-amber-500 via-blue-500 to-cyan-500 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-60" />

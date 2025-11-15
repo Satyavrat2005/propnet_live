@@ -355,10 +355,23 @@ export default function CompleteProfile() {
         return;
       }
 
-      // success
-      window.alert("Profile Completed! Welcome to PropNet.");
-      // redirect to dashboard
-      router.push("/auth/profile-complete");
+      // success - check user status and redirect accordingly
+      const profile = json?.profile;
+      if (profile) {
+        const status = profile.status || "pending";
+        
+        if (status === "approved") {
+          window.alert("Profile Completed! Welcome to PropNet.");
+          router.push("/dashboard");
+        } else {
+          window.alert("Profile Completed! Your profile is pending approval.");
+          router.push("/auth/approval-pending");
+        }
+      } else {
+        // Fallback: redirect to approval pending (default for new profiles)
+        window.alert("Profile Completed! Your profile is pending approval.");
+        router.push("/auth/approval-pending");
+      }
     } catch (err: any) {
       console.error("complete-profile submit error", err);
       window.alert("Unexpected error. Please try again.");

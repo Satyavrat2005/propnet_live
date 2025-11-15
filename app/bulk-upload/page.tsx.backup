@@ -6,10 +6,109 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  ArrowLeft,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+  CheckCircle,
+  Edit3,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import FileUpload from "@/components/ui/file-upload";
+import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
+
+type PropertyEntry = {
+  id: string;
+  property_title: string;
+  property_type?: string;
+  transaction_type?: string;
+  bhk?: number;
+  area?: number;
+  area_unit?: string;
+  sale_price?: string;
+  location?: string;
+  full_address?: string;
+  flat_number?: string;
+  floor?: string;
+  building_society?: string;
+  description?: string;
+  listing_type?: string;
+  public_property?: boolean;
+  owner_name?: string;
+  owner_phone?: string;
+  commission_terms?: string;
+  scope_of_work?: string[];
+  agreement_document?: string;
+  latitude?: number;
+  longitude?: number;
+  status?: "pending" | "success" | "error";
+  error?: string;
+};
+
+const propertyFormSchema = z.object({
+  property_title: z.string().min(1, "Title is required"),
+  property_type: z.string().optional(),
+  transaction_type: z.string().optional(),
+  bhk: z.number().optional(),
+  area: z.number().optional(),
+  area_unit: z.string().optional(),
+  sale_price: z.string().optional(),
+  location: z.string().optional(),
+  full_address: z.string().optional(),
+  flat_number: z.string().optional(),
+  floor: z.string().optional(),
+  building_society: z.string().optional(),
+  description: z.string().optional(),
+  listing_type: z.string().optional(),
+  public_property: z.boolean().optional(),
+  owner_name: z.string().optional(),
+  owner_phone: z.string().optional(),
+  commission_terms: z.string().optional(),
+  scope_of_work: z.array(z.string()).optional(),
+});
+
+const SCOPE_OF_WORK_OPTIONS = [
+  "Property Viewing Coordination",
+  "Marketing & Promotion",
+  "Documentation Support",
+  "Negotiation Assistance",
+  "Legal Compliance Check",
+  "Market Analysis",
+];
 
 export default function BulkUploadPage() {
   const router = useRouter();

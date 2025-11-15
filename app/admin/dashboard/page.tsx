@@ -61,7 +61,7 @@ export default function AdminPortal() {
     (async () => {
       setAuthLoading(true);
       try {
-        const res = await fetch("/api/secure-portal/me");
+        const res = await fetch("/api/secure-portal/me", { credentials: "include" });
         if (!mounted) return;
         setAdminData(res.ok ? await res.json() : null);
       } catch {
@@ -83,7 +83,7 @@ export default function AdminPortal() {
   const { data: users, isLoading } = useQuery<Profile[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/users", { credentials: "same-origin" });
+      const res = await fetch("/api/admin/users", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch users");
       return res.json();
     },
@@ -95,7 +95,7 @@ export default function AdminPortal() {
       const res = await fetch(`/api/admin/users/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ status }),
       });
       const json = await res.json();
@@ -117,7 +117,7 @@ export default function AdminPortal() {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/secure-portal/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
+      const res = await fetch("/api/secure-portal/logout", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include" });
       if (!res.ok) throw new Error(await res.text());
       try { localStorage.removeItem("adminSessionToken"); } catch {}
       router.push("/admin/login");

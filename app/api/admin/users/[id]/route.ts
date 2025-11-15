@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifySession } from "@/lib/auth/session";
+import { validateAdminSession } from "@/lib/server-data";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,12 +20,7 @@ export async function PATCH(
 ) {
   try {
     // Auth
-    const cookie = (req.headers.get("cookie") || "")
-      .split(";")
-      .find((c) => c.trim().startsWith("session="));
-    if (!cookie) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
-    const token = cookie.split("=").slice(1).join("=");
-    await verifySession(token);
+    validateAdminSession(req);
 
     // Params
     const { id } = await ctx.params;

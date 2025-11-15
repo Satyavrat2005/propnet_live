@@ -76,3 +76,23 @@ export function getSession(sessionId: string | undefined) {
   if (!sessionId) return null;
   return SESSIONS.get(sessionId) ?? null;
 }
+
+// Helper to validate admin session from request
+export function validateAdminSession(req: Request): { username: string } {
+  const cookie = (req.headers.get("cookie") || "")
+    .split(";")
+    .find((c) => c.trim().startsWith("adminSession="));
+  
+  if (!cookie) {
+    throw new Error("Not authenticated");
+  }
+  
+  const sessionId = cookie.split("=")[1];
+  const session = getSession(sessionId);
+  
+  if (!session) {
+    throw new Error("Invalid or expired session");
+  }
+  
+  return { username: session.username };
+}

@@ -99,8 +99,15 @@ export default function Page() {
         return;
       }
 
-      const requiresProfile = json?.requiresProfileComplete === true;
+      // Use server-provided redirectTo path
+      if (json?.redirectTo) {
+        setMessage("Verification successful. Redirecting...");
+        router.push(json.redirectTo);
+        return;
+      }
 
+      // Fallback: Use requiresProfileComplete flag (backward compatibility)
+      const requiresProfile = json?.requiresProfileComplete === true;
       if (requiresProfile) {
         router.push("/auth/complete-profile");
       } else {

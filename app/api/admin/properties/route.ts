@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifySession } from "@/lib/auth/session";
+import { validateAdminSession } from "@/lib/server-data";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,15 +12,8 @@ const supabase = createClient(
 
 export async function GET(req: Request) {
   try {
-    // Basic auth: ensure user has a valid session token
-    const cookie = (req.headers.get("cookie") || "")
-      .split(";")
-      .find((c) => c.trim().startsWith("session="));
-
-    if (!cookie) return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
-
-    const token = cookie.split("=")[1];
-    await verifySession(token); // throws if invalid
+    // Validate admin session
+    validateAdminSession(req);
 
     const { data, error } = await supabase
       .from("properties")
