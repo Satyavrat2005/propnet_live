@@ -62,8 +62,26 @@ function toOwnerObject(row: PropertyRow) {
   };
 }
 
+function readSessionCookie(req: NextRequest) {
+  const cookie = req.headers.get("cookie") || "";
+  const part = cookie.split(";").find((c) => c.trim().startsWith("session="));
+  if (!part) return null;
+  const token = part.split("=")[1];
+  return token || null;
+}
+
 export async function GET(req: NextRequest) {
   try {
+    // Get logged-in user ID
+    const token = readSessionCookie(req);
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { verifySession } = await import("@/lib/auth/session");
+    const payload = await verifySession(token);
+    const userId = payload.sub;
+
     const { searchParams } = new URL(req.url);
     const includePending = searchParams.get("includePending") === "true";
 
@@ -100,6 +118,7 @@ export async function GET(req: NextRequest) {
         updated_at
       `
       )
+      .eq("id", userId)
       .order("created_at", { ascending: false })
       .range(0, 4999);
 

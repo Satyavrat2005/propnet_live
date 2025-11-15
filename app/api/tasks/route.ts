@@ -1,24 +1,39 @@
 // app/api/tasks/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifySession } from "@/lib/auth/session";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-export async function GET(req: Request) {
-  try {
-    const url = new URL(req.url);
-    const owner_phone = url.searchParams.get("owner_phone");
+function readSessionCookie(req: NextRequest) {
+  const cookie = req.headers.get("cookie") || "";
+  const part = cookie.split(";").find((c) => c.trim().startsWith("session="));
+  if (!part) return null;
+  const token = part.split("=")[1];
+  return token || null;
+}
 
-    let q = supabase.from("tasks").select("*").order("created_at", { ascending: false }).limit(500);
-    if (owner_phone) {
-      // we stored user_id for tasks in schema; but user asked to add profile id when creating tasks.
-      // fallback: return tasks for which tasks.owner_phone matches (if you have that column)
-      q = q.ilike("user_id", `%${owner_phone}%`); // harmless if no rows
+export async function GET(req: NextRequest) {
+  try {
+    // Get logged-in user ID
+    const token = readSessionCookie(req);
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { data, error } = await q;
+    const payload = await verifySession(token);
+    const userId = payload.sub;
+
+    // Only return tasks for the logged-in user
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
     if (error) throw error;
     return NextResponse.json(data || []);
   } catch (err: any) {
@@ -27,16 +42,24 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Get logged-in user ID
+    const token = readSessionCookie(req);
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const payload = await verifySession(token);
+    const userId = payload.sub;
+
     const body = await req.json();
-    // expected fields: task_text, user_id (profiles.id), deal_id (optional), priority
-    const { task_text, user_id, priority } = body;
-    if (!task_text || !user_id) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const { task_text } = body;
+    if (!task_text) return NextResponse.json({ error: "Missing task_text" }, { status: 400 });
 
     const { data, error } = await supabase.from("tasks").insert({
       task_text,
-      user_id,
+      user_id: userId, // Use the authenticated user's ID
       status: false,
     }).select().single();
 

@@ -10,9 +10,7 @@ import MobileNavigation from "@/components/layout/mobile-navigation";
 import { Users, TrendingUp, Clock, Target, Plus, ChevronRight } from "lucide-react";
 
 /**
- * app/clients/page.tsx
- * Fixed: normalization for flat/floor/building, owner object handling,
- * unique keys for lists, deals tab uses /api/properties.
+ * Clients page — images-only photo rendering (no URL text).
  */
 
 export default function ClientsPage() {
@@ -35,18 +33,17 @@ export default function ClientsPage() {
   const { data: rawClients = [] } = useQuery({
     queryKey: ["/api/clients"],
     queryFn: async () => {
-      const r = await fetch("/api/clients");
+      const r = await fetch("/api/clients", { credentials: "include" });
       if (!r.ok) return [];
       return r.json();
     },
     staleTime: 30_000,
   });
 
-  // Use properties for deals tab (you said you don't have a deals table)
   const { data: rawProperties = [] } = useQuery({
     queryKey: ["/api/properties"],
     queryFn: async () => {
-      const r = await fetch("/api/properties");
+      const r = await fetch("/api/properties", { credentials: "include" });
       if (!r.ok) return [];
       return r.json();
     },
@@ -56,7 +53,7 @@ export default function ClientsPage() {
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
     queryFn: async () => {
-      const r = await fetch("/api/tasks");
+      const r = await fetch("/api/tasks", { credentials: "include" });
       if (!r.ok) return [];
       return r.json();
     },
@@ -85,30 +82,94 @@ export default function ClientsPage() {
   const activeDealPct = totalDeals ? Math.round((activeDealsCount / totalDeals) * 100) : 0;
   const taskCompletionPct = tasks && tasks.length ? Math.round(((tasks.length - pendingTasks) / tasks.length) * 100) : 0;
 
-  // ==== utilities ====
-  const parsePhotos = (raw: any) => {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === "string") {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      } catch {
-        return [raw];
-      }
-    }
-    return [];
+  // ==== utilities (robust parsePhotos) ====
+  const isLikelyUrl = (s: any) => {
+    if (!s || typeof s !== "string") return false;
+    const trimmed = s.trim();
+    if (!trimmed) return false;
+    if (/^https?:\/\//i.test(trimmed)) return true;
+    if (/^\/\//.test(trimmed)) return true;
+    if (/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(trimmed)) return true;
+    return false;
   };
+
+  const normalizeUrl = (s: string) => {
+    if (!s) return s;
+    const t = s.trim();
+    if (t.startsWith("//")) return `https:${t}`;
+    return t;
+  };
+
+  const tryParseJson = (v: string) => {
+    try {
+      return JSON.parse(v);
+    } catch {
+      return null;
+    }
+  };
+
+  function parsePhotos(raw: any): string[] {
+    if (raw == null) return [];
+
+    if (Array.isArray(raw)) {
+      return Array.from(new Set(raw.map(String).map((r) => normalizeUrl(r)).filter(isLikelyUrl)));
+    }
+
+    if (typeof raw === "object") {
+      if (Array.isArray((raw as any).data)) return parsePhotos((raw as any).data);
+      if ((raw as any).data && typeof (raw as any).data === "object") {
+        const d = (raw as any).data;
+        if (typeof d.url === "string" && isLikelyUrl(d.url)) return [normalizeUrl(d.url)];
+        const keys = ["display_url", "displayUrl", "image", "url", "full_url", "fullUrl", "src"];
+        for (const k of keys) {
+          if (typeof (d as any)[k] === "string" && isLikelyUrl((d as any)[k])) return [normalizeUrl((d as any)[k])];
+        }
+      }
+
+      if (Array.isArray((raw as any).property_photos)) return parsePhotos((raw as any).property_photos);
+      if (Array.isArray((raw as any).photos)) return parsePhotos((raw as any).photos);
+      if (Array.isArray((raw as any).images)) return parsePhotos((raw as any).images);
+
+      const singleCandidates = ["url", "href", "image", "src", "photo"];
+      for (const k of singleCandidates) {
+        if (typeof (raw as any)[k] === "string" && isLikelyUrl((raw as any)[k])) return [normalizeUrl((raw as any)[k])];
+      }
+
+      return [];
+    }
+
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      if (!trimmed) return [];
+
+      const parsed = tryParseJson(trimmed);
+      if (parsed) return parsePhotos(parsed);
+
+      if (trimmed.includes(",")) {
+        const arr = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+        const urls = arr.map(normalizeUrl).filter(isLikelyUrl);
+        if (urls.length) return Array.from(new Set(urls));
+      }
+
+      if (isLikelyUrl(trimmed)) return [normalizeUrl(trimmed)];
+
+      const swapped = trimmed.replace(/'/g, '"');
+      const p2 = tryParseJson(swapped);
+      if (p2) return parsePhotos(p2);
+
+      return [trimmed];
+    }
+
+    return [];
+  }
 
   // Normalizes property record fields (handles camelCase, snake_case, nested owner)
   function normalizePropertyFields(obj: any) {
     if (!obj) return obj;
     const normalized: any = { ...obj };
 
-    // canonical id
     normalized.property_id = obj.property_id ?? obj.id ?? obj.propertyId ?? obj._id ?? null;
 
-    // flat mapping - accept many variants
     normalized.flat_number =
       obj.flat_number ??
       obj.flatNo ??
@@ -116,7 +177,6 @@ export default function ClientsPage() {
       obj.flat ??
       obj.flatNumber ??
       obj.flatnumber ??
-      obj.flatNo ??
       null;
 
     normalized.floor =
@@ -143,9 +203,9 @@ export default function ClientsPage() {
       obj.created_at_iso ??
       null;
 
-    normalized.property_photos = parsePhotos(obj.property_photos ?? obj.photos ?? obj.images ?? obj.propertyPhotos ?? obj.photos_list);
+    const photosRaw = obj.photos ?? obj.property_photos ?? obj.propertyPhotos ?? obj.images ?? obj.photos_list ?? null;
+    normalized.photos = parsePhotos(photosRaw);
 
-    // Owner normalization: either nested owner object or separate fields
     if (obj.owner && typeof obj.owner === "object") {
       normalized.owner_name = obj.owner.name ?? obj.owner.fullname ?? obj.owner.displayName ?? obj.owner_name ?? null;
       normalized.owner_phone = obj.owner.phone ?? obj.owner.mobile ?? obj.owner_phone ?? null;
@@ -171,7 +231,6 @@ export default function ClientsPage() {
     if (!c) return c;
     const norm: any = { ...(c ?? {}) };
 
-    // owner normalization (client responses can have owner object)
     if (c.owner && typeof c.owner === "object") {
       norm.owner_name = c.owner.name ?? c.owner.fullname ?? c.owner_name ?? c.name ?? null;
       norm.owner_phone = c.owner.phone ?? c.owner.mobile ?? c.owner_phone ?? null;
@@ -180,7 +239,6 @@ export default function ClientsPage() {
       norm.owner_phone = c.owner_phone ?? c.phone ?? c.mobile ?? null;
     }
 
-    // properties nested on client
     if (Array.isArray(c.properties)) {
       norm.properties = c.properties.map((p: any) => normalizePropertyFields(p));
     } else if (Array.isArray(c.property)) {
@@ -202,7 +260,7 @@ export default function ClientsPage() {
   // fetch single property endpoint (canonical detail)
   async function fetchPropertyById(propertyId: string | number) {
     try {
-      const r = await fetch(`/api/properties/${encodeURIComponent(String(propertyId))}`);
+      const r = await fetch(`/api/properties/${encodeURIComponent(String(propertyId))}`, { credentials: "include" });
       if (!r.ok) return null;
       const json = await r.json();
       return normalizePropertyFields(json);
@@ -218,7 +276,7 @@ export default function ClientsPage() {
     setClientModalLoading(true);
 
     try {
-      const r = await fetch(`/api/clients/${encodeURIComponent(compositeId)}`);
+      const r = await fetch(`/api/clients/${encodeURIComponent(compositeId)}`, { credentials: "include" });
       if (!r.ok) {
         setClientModalLoading(false);
         setClientModalData(null);
@@ -242,10 +300,12 @@ export default function ClientsPage() {
 
     try {
       const canonical = await fetchPropertyById(String(propertyId));
-      const fallback = !canonical ? properties.find((p: any) => {
-        const ids = [p.property_id, p.id, p.propertyId].filter(Boolean);
-        return ids.some((x: any) => String(x) === String(propertyId));
-      }) : null;
+      const fallback = !canonical
+        ? properties.find((p: any) => {
+            const ids = [p.property_id, p.id, p.propertyId].filter(Boolean);
+            return ids.some((x: any) => String(x) === String(propertyId));
+          })
+        : null;
 
       setDealDetail(canonical ?? fallback ?? null);
     } catch {
@@ -257,10 +317,11 @@ export default function ClientsPage() {
 
   // tasks mutations (unchanged)
   const createTaskMutation = useMutation({
-    mutationFn: async (payload: { task_text: string; user_id?: string }) => {
+    mutationFn: async (payload: { task_text: string }) => {
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => null);
@@ -279,6 +340,7 @@ export default function ClientsPage() {
       const res = await fetch(`/api/tasks/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status }),
       });
       const body = await res.json().catch(() => null);
@@ -291,15 +353,14 @@ export default function ClientsPage() {
   const handleAddTask = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!taskText || taskText.trim().length === 0) return alert("Enter a task");
-    let user_id: string | undefined;
-    try {
-      const me = await fetch("/api/auth/me");
-      if (me.ok) {
-        const j = await me.json();
-        user_id = j?.id || j?.user?.id || undefined;
-      }
-    } catch {}
-    await createTaskMutation.mutateAsync({ task_text: taskText.trim(), user_id });
+    await createTaskMutation.mutateAsync({ task_text: taskText.trim() });
+  };
+
+  // image onError helper: hide broken image
+  const handleImgError = (ev: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = ev.currentTarget;
+    img.style.display = "none";
+    img.setAttribute("data-load-failed", "true");
   };
 
   // === UI ===
@@ -392,7 +453,7 @@ export default function ClientsPage() {
                   <div className="space-y-3 py-2">
                     {clients.slice(0, 6).map((c: any, idx: number) => (
                       <div
-                        key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${idx}`}
+                        key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${c.id ?? idx}`}
                         onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
                         className="flex items-center justify-between rounded-xl p-6 bg-gradient-to-r from-[#fff7ff] to-[#f6fbff] hover:shadow-md transition cursor-pointer"
                         style={{ paddingLeft: 18 }}
@@ -452,7 +513,7 @@ export default function ClientsPage() {
         {activeTab === "clients" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {clients.map((c: any, idx: number) => (
-              <Card key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${idx}`} className="rounded-xl">
+              <Card key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${c.id ?? idx}`} className="rounded-xl">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div style={{ paddingLeft: 6 }}>
@@ -473,10 +534,10 @@ export default function ClientsPage() {
         {activeTab === "deals" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {properties.length === 0 && <p className="text-center text-slate-500 p-6">No deals (properties) yet</p>}
-            {properties.map((d: any) => {
+            {properties.map((d: any, idx: number) => {
               const badgeText = d.transaction_type ?? d.transactionType ?? d.property_type ?? d.propertyType ?? "Unknown";
               return (
-                <Card key={d.property_id ?? d.id ?? `${d.owner_phone ?? ""}-${Math.random()}`} className="rounded-xl">
+                <Card key={d.property_id ?? d.id ?? idx} className="rounded-xl">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div style={{ paddingLeft: 6 }}>
@@ -580,7 +641,8 @@ export default function ClientsPage() {
                   <h4 className="text-lg font-semibold mb-2">Properties</h4>
                   <div className="space-y-4">
                     {(clientModalData.properties || []).map((p: any, idx2: number) => {
-                      const photos = parsePhotos(p.property_photos ?? p.photos ?? p.images);
+                      // prefer normalized `.photos` (we normalized earlier)
+                      const photos = p.photos && p.photos.length ? p.photos : parsePhotos(p.property_photos ?? p.photos ?? p.images ?? p.photos_list);
                       return (
                         <div key={p.property_id ?? p.id ?? `${clientModalData.owner_phone ?? ""}-${idx2}`} className="rounded-lg bg-white border border-slate-50 hover:shadow-sm transition p-6">
                           <div className="flex items-start justify-between">
@@ -591,7 +653,7 @@ export default function ClientsPage() {
                               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div className="p-3 bg-slate-50 rounded">
                                   <p className="text-xs text-slate-400">Price</p>
-                                  <p className="font-medium">{p.sale_price ?? "—"}</p>
+                                  <p className="font-medium">{p.sale_price ?? p.price ?? "—"}</p>
                                 </div>
 
                                 <div className="p-3 bg-slate-50 rounded">
@@ -633,10 +695,20 @@ export default function ClientsPage() {
 
                             <div className="p-4 bg-slate-50 rounded">
                               <p className="text-xs text-slate-400">Property Photos</p>
-                              <div className="mt-2 flex gap-2">
-                                {photos.length > 0 ? photos.slice(0, 4).map((url: string, i: number) => (
-                                  <img key={i} src={url} alt={`photo-${i}`} className="w-20 h-14 object-cover rounded" />
-                                )) : <p className="text-sm text-slate-500">No photos</p>}
+                              <div className="mt-2 flex gap-2 flex-wrap">
+                                {photos && photos.length > 0 ? photos.slice(0, 6).map((url: string, i: number) => {
+                                  const safe = normalizeUrl(String(url));
+                                  return (
+                                    <div key={`${safe}-${i}`} className="mr-3 mb-3">
+                                      <img
+                                        src={safe}
+                                        alt={`photo-${i}`}
+                                        className="w-20 h-14 object-cover rounded"
+                                        onError={handleImgError}
+                                      />
+                                    </div>
+                                  );
+                                }) : <p className="text-sm text-slate-500">No photos</p>}
                               </div>
                             </div>
                           </div>
@@ -657,7 +729,7 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {/* Deal modal */}
+      {/* Deal modal (images-only) */}
       {dealModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-12">
           <div className="absolute inset-0 bg-black/30" onClick={() => setDealModalOpen(false)} />
@@ -681,7 +753,7 @@ export default function ClientsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="p-4 rounded-lg bg-slate-50">
                     <p className="text-xs text-slate-500">Price</p>
-                    <p className="font-medium">{dealDetail.sale_price ?? "N/A"}</p>
+                    <p className="font-medium">{dealDetail.sale_price ?? dealDetail.price ?? "N/A"}</p>
                   </div>
                   <div className="p-4 rounded-lg bg-slate-50">
                     <p className="text-xs text-slate-500">Type</p>
@@ -695,7 +767,7 @@ export default function ClientsPage() {
 
                   <div className="p-4 rounded-lg bg-slate-50">
                     <p className="text-xs text-slate-500">Owner</p>
-                    <p className="font-medium">{dealDetail.owner_name || "N/A"} <span className="text-sm text-slate-400 block">{dealDetail.owner_phone}</span></p>
+                    <p className="font-medium">{dealDetail.owner?.name ?? dealDetail.owner_name ?? "N/A"} <span className="text-sm text-slate-400 block">{dealDetail.owner?.phone ?? dealDetail.owner_phone}</span></p>
                   </div>
                 </div>
 
@@ -707,11 +779,11 @@ export default function ClientsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="rounded-xl p-4 bg-gradient-to-br from-[#fff7ff] to-[#f6fbff]">
                     <p className="text-xs text-slate-500">Listing Status</p>
-                    <p className="font-semibold">{dealDetail.approval_status ?? "pending"}</p>
+                    <p className="font-semibold">{dealDetail.approval_status ?? dealDetail.ownerApprovalStatus ?? "pending"}</p>
                   </div>
                   <div className="rounded-xl p-4 bg-gradient-to-br from-[#eefde7] to-[#f0fff7]">
                     <p className="text-xs text-slate-500">Created</p>
-                    <p className="font-semibold">{dealDetail.created_at ? new Date(dealDetail.created_at).toLocaleString() : "N/A"}</p>
+                    <p className="font-semibold">{dealDetail.created_at ? new Date(dealDetail.created_at).toLocaleString() : (dealDetail.createdAt ? new Date(dealDetail.createdAt).toLocaleString() : "N/A")}</p>
                   </div>
                 </div>
 
@@ -728,12 +800,20 @@ export default function ClientsPage() {
 
                   <div className="p-4 bg-slate-50 rounded">
                     <p className="text-xs text-slate-400">Property Photos</p>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex gap-2 flex-wrap">
                       {(() => {
-                        const photos = parsePhotos(dealDetail.property_photos || dealDetail.photos || dealDetail.images);
-                        return photos.length > 0 ? photos.slice(0, 6).map((url: string, i: number) => (
-                          <img key={i} src={url} alt={`photo-${i}`} className="w-28 h-20 object-cover rounded" />
-                        )) : <p className="text-sm text-slate-500">No photos</p>;
+                        const photos = dealDetail.photos && dealDetail.photos.length ? dealDetail.photos : parsePhotos(dealDetail.property_photos ?? dealDetail.photos ?? dealDetail.images ?? dealDetail.photos_list);
+                        if (photos && photos.length > 0) {
+                          return photos.slice(0, 8).map((url: string, i: number) => {
+                            const safe = normalizeUrl(String(url));
+                            return (
+                              <div key={`${safe}-${i}`} className="mr-3 mb-3">
+                                <img src={safe} alt={`photo-${i}`} className="w-28 h-20 object-cover rounded" onError={handleImgError} />
+                              </div>
+                            );
+                          });
+                        }
+                        return <p className="text-sm text-slate-500">No photos</p>;
                       })()}
                     </div>
                   </div>
