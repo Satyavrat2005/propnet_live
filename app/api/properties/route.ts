@@ -93,6 +93,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const includePending = searchParams.get("includePending") === "true";
+    const mineOnly =
+      searchParams.get("mine") === "true" ||
+      searchParams.get("scope")?.toLowerCase() === "mine";
 
     let query = supabase
       .from("properties")
@@ -128,9 +131,12 @@ export async function GET(req: NextRequest) {
         profiles(name, agency_name, profile_photo_url, phone)
       `
       )
-      .eq("id", userId)
       .order("created_at", { ascending: false })
       .range(0, 4999);
+
+    if (mineOnly) {
+      query = query.eq("id", userId);
+    }
 
     if (!includePending) {
       query = query.eq("approval_status", "approved");
