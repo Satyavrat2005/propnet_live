@@ -206,11 +206,6 @@ export default function ProfilePage() {
       label: "Edit Profile",
       action: () => router.push("/edit-profile"),
     },
-    {
-      icon: SettingsIcon,
-      label: "Settings",
-      action: () => toast({ title: "Coming Soon", description: "Settings will be available soon" }),
-    },
   ];
 
   if (authLoading || (normalizedProfile && (isPropertiesLoading || isRequestsLoading))) {
