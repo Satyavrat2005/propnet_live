@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { asMediaUrl } from "@/lib/utils";
 import { formatPrice, formatArea } from "@/utils/formatters";
+import PropertyDetailsPanel from "@/components/ui/property-details-panel";
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -154,82 +155,31 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        {/* Property Info */}
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-900 mb-2">{property.title}</h1>
-              <p className="text-neutral-600">{property.location}</p>
-            </div>
-            <span
-              className={`text-sm px-3 py-1 rounded-full ${
-                property.listingType === "exclusive" ? "bg-accent text-white" : "bg-blue-100 text-blue-800"
-              }`}
-            >
-              {property.listingType === "exclusive" ? "Exclusive" : "Co-listing"}
-            </span>
-          </div>
+        <div className="p-6 space-y-6">
+          <PropertyDetailsPanel property={property} onCall={() => {
+            if (property.owner?.phone) {
+              window.open(`tel:${property.owner.phone}`, "_self");
+            }
+          }} />
 
-          <div className="bg-neutral-50 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary">{priceLabel}</div>
-                <div className="text-sm text-neutral-500">Price</div>
+          {property.coAgents?.length > 0 && (
+            <div className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4">
+              <div className="text-sm text-neutral-500 mb-2">Co-listed with:</div>
+              <div className="flex items-center space-x-2">
+                {property.coAgents.map((agent: any) => (
+                  <div key={agent.id} className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-neutral-200 rounded-full flex items-center justify-center">
+                      <span className="text-xs text-neutral-500">{agent.name?.charAt(0) || "A"}</span>
+                    </div>
+                    <span className="text-sm text-neutral-600">{agent.name}</span>
+                  </div>
+                ))}
               </div>
-              <div>
-                <div className="text-2xl font-bold text-neutral-900">{sizeLabel}</div>
-                <div className="text-sm text-neutral-500">Size</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-neutral-900">{property.bhk || "N/A"}</div>
-                <div className="text-sm text-neutral-500">BHK</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          {property.description && (
-            <div className="mb-6">
-              <h3 className="font-semibold text-neutral-900 mb-3">Description</h3>
-              <p className="text-neutral-600 leading-relaxed">{property.description}</p>
             </div>
           )}
 
-          {/* Agent Info */}
-          <div className="border border-neutral-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-neutral-200 rounded-full flex items-center justify-center">
-                  <span className="text-neutral-500 font-medium">{property.owner.name?.charAt(0) || "A"}</span>
-                </div>
-                <div>
-                  <div className="font-medium text-neutral-900">{property.owner.name}</div>
-                  <div className="text-sm text-neutral-500">{property.owner.agencyName}</div>
-                </div>
-              </div>
-              <Button size="sm">Contact</Button>
-            </div>
-
-            {property.coAgents?.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-neutral-100">
-                <div className="text-sm text-neutral-500 mb-2">Co-listed with:</div>
-                <div className="flex items-center space-x-2">
-                  {property.coAgents.map((agent: any) => (
-                    <div key={agent.id} className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-neutral-200 rounded-full flex items-center justify-center">
-                        <span className="text-xs text-neutral-500">{agent.name?.charAt(0) || "A"}</span>
-                      </div>
-                      <span className="text-sm text-neutral-600">{agent.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Co-listing Request (for non-owned properties) */}
           {!isOwner && !isCoAgent && property.listingType === "colisting" && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-blue-900">Interested in co-listing?</div>
@@ -247,7 +197,6 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             </div>
           )}
 
-          {/* Share Options (for owned/co-listed properties) */}
           {canShare && (
             <div className="space-y-3">
               <Button

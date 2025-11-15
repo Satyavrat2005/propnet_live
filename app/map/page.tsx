@@ -20,8 +20,8 @@ import {
   Eye,
   Filter,
   Home,
-  User,
 } from "lucide-react";
+import PropertyDetailsPanel from "@/components/ui/property-details-panel";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import { formatPrice, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
 import { safeFetch } from "@/lib/safeFetch";
@@ -851,136 +851,31 @@ export default function MapPage() {
 
       {/* Property Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl lg:max-w-2xl rounded-[28px] border border-neutral-200 bg-white p-6 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
               <Home size={20} />
               Property Details
             </DialogTitle>
           </DialogHeader>
 
-          {detailsProperty && (() => {
-            const isPrimaryListing = (detailsProperty.transactionType || "").toLowerCase() === "primary";
-            const priceDisplay = resolvePriceLabel(detailsProperty);
-
-            return (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-lg">{detailsProperty.title}</h3>
-                  <p className="text-sm text-muted-foreground">{detailsProperty.propertyType}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Price</p>
-                    <p className="font-semibold text-primary">{priceDisplay}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Size</p>
-                    <p className="font-semibold">
-                      {detailsProperty.size
-                        ? `${detailsProperty.size}${detailsProperty.sizeUnit ? ` ${detailsProperty.sizeUnit}` : ""}`
-                        : "Not specified"}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Location</p>
-                  <div className="flex items-start gap-2">
-                    <MapPin size={16} className="mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">{detailsProperty.location}</p>
-                      {detailsProperty.buildingSociety && (
-                        <p className="text-xs text-muted-foreground">{detailsProperty.buildingSociety}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {detailsProperty.bhk && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Configuration</p>
-                    <p className="text-sm">{detailsProperty.bhk} BHK</p>
-                  </div>
-                )}
-
-                {detailsProperty.description && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
-                    <p className="text-sm text-neutral-700">{detailsProperty.description}</p>
-                  </div>
-                )}
-
-                {isPrimaryListing && (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Promoter</p>
-                      <p className="text-sm">{detailsProperty.promoter || "Not provided"}</p>
-                    </div>
-                    {detailsProperty.details && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Project Details</p>
-                        <p className="text-sm text-neutral-700">{detailsProperty.details}</p>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                      {detailsProperty.landArea && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Land Area</p>
-                          <p className="text-sm">{detailsProperty.landArea}</p>
-                        </div>
-                      )}
-                      {detailsProperty.totalAreaOfLand && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Total Area of Land</p>
-                          <p className="text-sm">{detailsProperty.totalAreaOfLand}</p>
-                        </div>
-                      )}
-                      {detailsProperty.totalCarpetArea && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Total Carpet Area</p>
-                          <p className="text-sm">{detailsProperty.totalCarpetArea}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Owner Details</p>
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <User size={16} className="text-muted-foreground" />
-                      <span className="text-sm font-medium">{detailsProperty.owner.name || "Not provided"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone size={16} className="text-muted-foreground" />
-                      <span className="text-sm">{detailsProperty.owner.phone || "Not provided"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    className="flex-1"
-                    onClick={() => {
-                      if (detailsProperty.owner.phone) {
-                        window.open(`tel:${detailsProperty.owner.phone}`, "_self");
-                      }
-                    }}
-                    disabled={!detailsProperty.owner.phone}
-                  >
-                    <Phone size={16} className="mr-2" />
-                    Call Owner
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
+          {detailsProperty ? (
+            <PropertyDetailsPanel
+              property={detailsProperty}
+              onCall={() => {
+                if (detailsProperty.owner?.phone) {
+                  window.open(`tel:${detailsProperty.owner.phone}`, "_self");
+                }
+              }}
+              actions={
+                <div className="pt-4">
+                  <Button variant="outline" className="w-full" onClick={() => setShowDetailsModal(false)}>
                     Close
                   </Button>
                 </div>
-              </div>
-            );
-          })()}
+              }
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

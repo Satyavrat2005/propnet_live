@@ -1,25 +1,44 @@
+"use client";
+
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Heart, Share2, MapPin, Phone, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ContactModal from "@/components/ui/contact-modal";
-import { formatPrice as globalFormatPrice, formatArea, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
+import { formatArea, getSafeFormattedPrice } from "@/utils/formatters";
 import { asMediaUrl } from "@/lib/utils";
+import type { PropertyDetailsData } from "@/components/ui/property-details-panel";
+
+export type FeedProperty = PropertyDetailsData & {
+  id: string;
+  photos?: string[];
+  rentFrequency?: string;
+  sizeUnit?: string;
+  listingType?: string;
+  bathrooms?: number;
+  ownerId?: number;
+  coAgents?: Array<{ id: string; name?: string; phone?: string }>;
+};
 
 interface CompactPropertyCardProps {
-  property: any;
-  currentUserId?: number;
+  property: FeedProperty;
+  onViewDetails?: (property: FeedProperty) => void;
 }
 
-export default function CompactPropertyCard({ property, currentUserId }: CompactPropertyCardProps) {
-  const [, setLocation] = useLocation();
+export default function CompactPropertyCard({ property, onViewDetails }: CompactPropertyCardProps) {
+  const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const { toast } = useToast();
+  const handleDetailsClick = () => {
+    if (onViewDetails) {
+      onViewDetails(property);
+      return;
+    }
+    router.push(`/property/${property.id}`);
+  };
 
-  const isOwner = currentUserId === property.ownerId;
   const hasPhotos = Array.isArray(property.photos) && property.photos.length > 0;
   const primaryPhoto = hasPhotos ? asMediaUrl(property.photos[0]) : null;
 
@@ -119,10 +138,7 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
                   Contact
                 </Button>
                 
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setLocation(`/property/${property.id}`)}
+                <Button size="sm" variant="ghost" onClick={handleDetailsClick}
                   className="text-xs px-2 py-1 h-6"
                 >
                   <Eye size={10} className="mr-1" />
@@ -185,77 +201,3 @@ export default function CompactPropertyCard({ property, currentUserId }: Compact
   );
 }
 
-/* -------------------------
-   Helpers (local, robust)
-   ------------------------- */
-
-/**
- * Parse a textual price into a numeric rupee amount.
- * Understands inputs like:
- *  - "50 Lakh", "50 lakh", "50lakh", "50 lac", "50lac"
- *  - "1.2 Cr", "1.2 cr", "1.2 crore", "2 Crore"
- *  - "5,000,000" or "50,00,000" or plain "5000000"
- */
-function parsePriceToNumber(input: any): number {
-  if (input == null) return 0;
-  const raw = String(input).toLowerCase().trim();
-
-  // If it's already a plain number (or contains commas)
-  const digitsOnly = raw.replace(/[, ]+/g, "");
-  if (/^[\d.]+$/.test(digitsOnly)) {
-    return parseFloat(digitsOnly) || 0;
-  }
-
-  // Match number part
-  const numMatch = raw.match(/[\d,.]*\.?\d+/);
-  const num = numMatch ? parseFloat(numMatch[0].replace(/,/g, "")) : NaN;
-
-  if (isNaN(num)) {
-    return 0;
-  }
-
-  // Determine multiplier
-  if (raw.includes("lakh") || raw.includes("lac")) {
-    return num * 100000;
-  }
-  if (raw.includes("crore") || raw.includes("cr")) {
-    return num * 10000000;
-  }
-
-  // Also support shorthand like "50k" (thousand) or "50m" (million) just in case
-  if (raw.endsWith("k")) return num * 1000;
-  if (raw.endsWith("m")) return num * 1000000;
-
-  // Fallback: return parsed number (assume rupees)
-  return num;
-}
-
-/**
- * Format a rupee number for display using en-IN grouping (gives 50,00,000)
- */
-function formatRupeeValue(num: number): string {
-  if (!isFinite(num) || num === 0) return "—";
-  const formatted = new Intl.NumberFormat("en-IN").format(Math.round(num));
-  return `₹${formatted}`;
-}
-
-/**
- * Safely return a formatted price string.
- * - Try your global formatter first (keeps existing site formatting).
- * - If it returns falsy or contains 'NaN', fall back to parsing and local formatting.
- */
-function getSafeFormattedPrice(rawPrice: any, transactionType?: string, rentFrequency?: string) {
-  try {
-    // try global formatter (may expect numbers)
-    const maybe = globalFormatPrice(rawPrice, transactionType, rentFrequency);
-    if (maybe && typeof maybe === "string" && !maybe.toLowerCase().includes("nan")) {
-      return maybe;
-    }
-  } catch (e) {
-    // ignore and fall back
-  }
-
-  // fallback: parse textual price to number and format
-  const numeric = parsePriceToNumber(rawPrice);
-  return formatRupeeValue(numeric);
-}

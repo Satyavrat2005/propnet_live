@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Phone, MessageCircle, Mail, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { PropertyOwnerDetails } from "@/components/ui/property-details-panel";
 
 interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
-  propertyOwner: any;
+  propertyOwner: PropertyOwnerDetails;
   propertyTitle: string;
 }
 
@@ -41,26 +40,15 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-neutral-900">
-            Contact Agent
+            Contact Owner
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Agent Info */}
+          {/* Owner Info */}
           <div className="flex items-center space-x-3 p-3 bg-neutral-50 rounded-lg">
-            <div className="w-12 h-12">
-              <Avatar className="h-12 w-12">
-                {propertyOwner?.profilePhotoUrl ? (
-                  <AvatarImage
-                    src={propertyOwner.profilePhotoUrl}
-                    alt={propertyOwner.name ?? "Agent"}
-                  />
-                ) : (
-                  <AvatarFallback className="text-lg font-semibold text-neutral-600">
-                    {propertyOwner.name?.charAt(0) || "A"}
-                  </AvatarFallback>
-                )}
-              </Avatar>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+              {propertyOwner.name?.charAt(0) || "O"}
             </div>
             <div>
               <div className="font-medium text-neutral-900">{propertyOwner.name}</div>

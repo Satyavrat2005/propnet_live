@@ -61,12 +61,11 @@ function parseScopeOfWork(value: unknown): string[] {
 }
 
 function toOwnerObject(row: PropertyRow) {
-  const profileMeta = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
   return {
-    name: (profileMeta?.name ?? row.owner_name) || null,
-    phone: profileMeta?.phone ?? row.owner_phone ?? null,
-    agencyName: profileMeta?.agency_name ?? null,
-    profilePhotoUrl: profileMeta?.profile_photo_url ?? null,
+    name: row.owner_name || null,
+    phone: row.owner_phone || null,
+    agencyName: null,
+    profilePhotoUrl: null,
     email: null,
   };
 }
