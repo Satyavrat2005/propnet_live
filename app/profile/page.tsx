@@ -56,6 +56,11 @@ type PropertySummary = {
   approvalStatus?: string;
   createdAt?: string;
   price?: number | string | null;
+  owner_name?: string | null;
+  owner_phone?: string | null;
+  ownerName?: string | null;
+  ownerPhone?: string | null;
+  ownerApprovalStatus?: string | null;
 };
 
 type CoListingRequest = {
@@ -152,8 +157,21 @@ export default function ProfilePage() {
     [colistingRequests]
   );
 
-  const ownerClosed = useMemo(
-    () => properties.filter((p) => (p.approvalStatus || "").toLowerCase() === "closed").length,
+  const owners = useMemo(() => {
+    const seen = new Map<string, string>();
+    properties.forEach((p) => {
+      const phone = (p.ownerPhone || p.owner_phone || "").toString().trim();
+      const name = (p.ownerName || p.owner_name || "").toString().trim();
+      if (!phone && !name) return;
+      const key = `${phone}-${name}`;
+      if (seen.has(key)) return;
+      seen.set(key, name || phone || "Unknown");
+    });
+    return { count: seen.size, names: Array.from(seen.values()) };
+  }, [properties]);
+
+  const pendingListings = useMemo(
+    () => properties.filter((p) => (p.ownerApprovalStatus || "").toLowerCase() === "pending").length,
     [properties]
   );
 
@@ -229,7 +247,7 @@ export default function ProfilePage() {
 
       <div className="flex-1 overflow-hidden">
         <div className="px-6 py-6 space-y-6">
-          <ProfileHeaderCard profile={normalizedProfile} pendingRequests={pendingRequests} ownerClosed={ownerClosed} listings={properties.length} />
+          <ProfileHeaderCard profile={normalizedProfile} pendingListings={pendingListings} ownersCount={owners.count} ownerNames={owners.names} listings={properties.length} />
 
           <SectionCard
             title="Your Listings"
@@ -323,13 +341,15 @@ function SectionCard({ title, description, actionLabel, onAction, children }: Se
 
 function ProfileHeaderCard({
   profile,
-  pendingRequests,
-  ownerClosed,
+  pendingListings,
+  ownersCount,
+  ownerNames,
   listings,
 }: {
   profile: NormalizedProfile;
-  pendingRequests: number;
-  ownerClosed: number;
+  pendingListings: number;
+  ownersCount: number;
+  ownerNames: string[];
   listings: number;
 }) {
   return (
@@ -361,8 +381,8 @@ function ProfileHeaderCard({
       </div>
       <div className="grid grid-cols-3 gap-3">
         <StatPill label="Listings" value={listings} accent="text-primary" />
-        <StatPill label="Pending" value={pendingRequests} accent="text-accent" />
-        <StatPill label="Owner" value={ownerClosed} accent="text-neutral-700" />
+        <StatPill label="Pending" value={pendingListings} accent="text-accent" />
+        <StatPill label="Owners" value={ownersCount} accent="text-neutral-700" />
       </div>
     </div>
   );

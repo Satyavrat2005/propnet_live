@@ -3,7 +3,6 @@
 
 import { useEffect, useState, FormEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +16,6 @@ import { useAuth } from "@/hooks/use-auth";
 /**
  * Uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on client side.
  */
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 type ProfileRow = {
   id: string;
   name?: string;
@@ -66,9 +60,10 @@ export default function EditProfile() {
     workingRegions: "",
   });
 
-  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [profilePhotoData, setProfilePhotoData] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const initialFormRef = useRef(form);
+  const initialPhotoRef = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -106,6 +101,9 @@ export default function EditProfile() {
         setForm(nextForm);
         initialFormRef.current = nextForm;
         updateUserRef.current(payload.user);
+        const initialPhoto = profData.profile_photo_url ?? "";
+        setProfilePhotoData(initialPhoto);
+        initialPhotoRef.current = initialPhoto;
       } catch (err) {
         console.error(err);
       } finally {
@@ -121,27 +119,27 @@ export default function EditProfile() {
 
   const handleInput = (field: string, value: string) => setForm((p) => ({ ...p, [field]: value }));
 
-  // upload file to Supabase Storage `profiles` bucket and return public URL
-  const uploadFileToStorage = async (file: File | null, path: string) => {
-    if (!file) return null;
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handlePhotoChange = async (files: File[]) => {
+    const file = files[0];
+    if (!file) {
+      const fallback = initialPhotoRef.current;
+      setProfilePhotoData(fallback);
+      return;
+    }
     try {
-      // ensure bucket exists and is public (you should create it manually in Supabase or use Settings)
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${path}.${fileExt}`;
-      const { data, error } = await supabase.storage.from("profiles").upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
-      if (error) {
-        console.error("upload error", error);
-        throw error;
-      }
-      // get public URL
-      const { data: urlData } = supabase.storage.from("profiles").getPublicUrl(data.path);
-      return urlData.publicUrl;
+      const dataUrl = await fileToDataUrl(file);
+      setProfilePhotoData(dataUrl);
     } catch (err) {
-      console.error("upload exception", err);
-      return null;
+      console.error("Failed to encode profile photo", err);
+      toast({ title: "Upload failed", description: "Unable to process the selected photo." });
     }
   };
 
@@ -181,9 +179,8 @@ export default function EditProfile() {
           .filter(Boolean);
       }
 
-      if (profilePhotoFile) {
-        const uploaded = await uploadFileToStorage(profilePhotoFile, `profile-photos/${userId}/profile-photo`);
-        if (uploaded) diffPayload.profilePhotoUrl = uploaded;
+      if (profilePhotoData !== undefined && profilePhotoData !== initialPhotoRef.current) {
+        diffPayload.profilePhotoUrl = profilePhotoData;
       }
 
       if (Object.keys(diffPayload).length === 0) {
@@ -273,7 +270,7 @@ export default function EditProfile() {
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label>Profile Photo</Label>
-                  <FileUpload onFilesChange={(files) => setProfilePhotoFile(files[0] ?? null)} maxFiles={1} />
+                  <FileUpload onFilesChange={handlePhotoChange} maxFiles={1} />
                   <p className="text-xs text-neutral-500 mt-1">Upload your profile photo (optional)</p>
                 </div>
                 <div>

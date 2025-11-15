@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,7 +37,7 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-md mx-auto bg-white shadow-lg border border-neutral-200 rounded-2xl p-6 !backdrop-blur-none !bg-white"
+        className="max-w-md mx-auto bg-white shadow-lg border border-neutral-200 rounded-2xl p-6 backdrop-blur-none!"
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-neutral-900">
@@ -47,10 +48,19 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
         <div className="space-y-4">
           {/* Agent Info */}
           <div className="flex items-center space-x-3 p-3 bg-neutral-50 rounded-lg">
-            <div className="w-12 h-12 bg-neutral-200 rounded-full flex items-center justify-center">
-              <span className="text-lg font-medium text-neutral-600">
-                {propertyOwner.name?.charAt(0) || "A"}
-              </span>
+            <div className="w-12 h-12">
+              <Avatar className="h-12 w-12">
+                {propertyOwner?.profilePhotoUrl ? (
+                  <AvatarImage
+                    src={propertyOwner.profilePhotoUrl}
+                    alt={propertyOwner.name ?? "Agent"}
+                  />
+                ) : (
+                  <AvatarFallback className="text-lg font-semibold text-neutral-600">
+                    {propertyOwner.name?.charAt(0) || "A"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
             </div>
             <div>
               <div className="font-medium text-neutral-900">{propertyOwner.name}</div>

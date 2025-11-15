@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { UserCircle, Plus, Search, Filter, X, Sparkles } from "lucide-react";
+import { Plus, Search, Filter, X, Sparkles } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CompactPropertyCard from "@/components/ui/compact-property-card";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -141,7 +142,15 @@ export default function PropertyFeedPage() {
                 type="button"
                 aria-label="Profile"
               >
-                <UserCircle size={28} />
+                <Avatar className="h-10 w-10">
+                  {user?.profilePhoto ? (
+                    <AvatarImage src={user.profilePhoto} alt={user.name ?? "Profile"} />
+                  ) : (
+                    <AvatarFallback className="text-xs font-semibold">
+                      {user?.name?.charAt(0) ?? user?.phone?.charAt(0) ?? "U"}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
               </button>
             </div>
           </div>

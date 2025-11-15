@@ -35,6 +35,12 @@ type PropertyRow = {
   owner_phone: string | null;
   created_at: string | null;
   updated_at: string | null;
+  profiles?: Array<{
+    name?: string | null;
+    agency_name?: string | null;
+    profile_photo_url?: string | null;
+    phone?: string | null;
+  }> | null;
 };
 
 function parseScopeOfWork(value: unknown): string[] {
@@ -55,9 +61,12 @@ function parseScopeOfWork(value: unknown): string[] {
 }
 
 function toOwnerObject(row: PropertyRow) {
+  const profileMeta = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
   return {
-    name: row.owner_name ?? null,
-    phone: row.owner_phone ?? null,
+    name: (profileMeta?.name ?? row.owner_name) || null,
+    phone: profileMeta?.phone ?? row.owner_phone ?? null,
+    agencyName: profileMeta?.agency_name ?? null,
+    profilePhotoUrl: profileMeta?.profile_photo_url ?? null,
     email: null,
   };
 }
@@ -87,7 +96,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("properties")
-      .select<PropertyRow>(
+      .select(
         `
         property_id,
         id,
@@ -115,7 +124,8 @@ export async function GET(req: NextRequest) {
         owner_name,
         owner_phone,
         created_at,
-        updated_at
+        updated_at,
+        profiles(name, agency_name, profile_photo_url, phone)
       `
       )
       .eq("id", userId)
