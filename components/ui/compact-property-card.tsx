@@ -40,7 +40,7 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
   };
 
   const hasPhotos = Array.isArray(property.photos) && property.photos.length > 0;
-  const primaryPhoto = hasPhotos ? asMediaUrl(property.photos[0]) : null;
+  const primaryPhoto = hasPhotos ? asMediaUrl(property.photos![0]) : null;
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -51,13 +51,13 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
   };
 
   const handleShare = () => {
-    const formattedPrice = getSafeFormattedPrice(property.price, property.transactionType, property.rentFrequency);
-    const formattedArea = formatArea(property.size, property.sizeUnit);
+    const formattedPrice = getSafeFormattedPrice(property.price ?? undefined, property.transactionType ?? undefined, property.rentFrequency);
+    const formattedArea = formatArea(property.size ?? 0, property.sizeUnit);
     const shareText = `${property.title}\n📍 ${property.location}\n💰 ${formattedPrice}\n📐 ${formattedArea}`;
     
     if (navigator.share) {
       navigator.share({
-        title: property.title,
+        title: property.title ?? undefined,
         text: shareText,
         url: window.location.href,
       });
@@ -104,7 +104,7 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
                     <span>•</span>
                   </>
                 )}
-                <span>{formatArea(property.size, property.sizeUnit || 'sq ft')}</span>
+                <span>{formatArea(property.size ?? 0, property.sizeUnit || 'sq ft')}</span>
               </div>
             </div>
 
@@ -154,7 +154,7 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
               <div className="relative h-full w-full">
                 <img 
                   src={primaryPhoto} 
-                  alt={property.title}
+                  alt={property.title ?? 'Property image'}
                   className="w-full h-full object-cover rounded-tr-2xl rounded-br-2xl"
                 />
                 {property.photos && property.photos.length > 1 && (
@@ -186,7 +186,7 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
           </div>
           
           <div className="text-lg font-bold text-gray-900">
-            {getSafeFormattedPrice(property.price, property.transactionType, property.rentFrequency)}
+            {getSafeFormattedPrice(property.price ?? undefined, property.transactionType ?? undefined, property.rentFrequency)}
           </div>
         </div>
       </div>
@@ -194,8 +194,8 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
       <ContactModal
         isOpen={showContactModal}
         onClose={() => setShowContactModal(false)}
-        propertyOwner={property.owner}
-        propertyTitle={property.title}
+        propertyOwner={property.owner ?? { name: '', phone: '' }}
+        propertyTitle={property.title ?? 'Property'}
       />
     </>
   );
