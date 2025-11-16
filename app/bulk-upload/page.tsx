@@ -1,7 +1,7 @@
 // app/bulk-upload/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import FileUpload from "@/components/ui/file-upload";
+
+type BulkUploadResult = {
+  total: number;
+  successful: number;
+  failed: number;
+  errors: string[];
+  duplicates?: Array<{ row: number; message: string }>;
+  smsWarnings?: Array<{ row: number; status: string; error?: string | null }>;
+};
 
 export default function BulkUploadPage() {
   const router = useRouter();
@@ -17,7 +25,8 @@ export default function BulkUploadPage() {
   const queryClient = useQueryClient();
 
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const [uploadResults, setUploadResults] = useState<any | null>(null);
+  const [uploadResults, setUploadResults] = useState<BulkUploadResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -32,7 +41,7 @@ export default function BulkUploadPage() {
       }
       return resp;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: BulkUploadResult) => {
       setUploadResults(data);
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
@@ -41,10 +50,11 @@ export default function BulkUploadPage() {
         description: `Successfully uploaded ${data?.successful ?? 0} properties. ${data?.failed ?? 0} failed.`,
       });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Failed to upload properties.";
       toast({
         title: "Upload Failed",
-        description: err?.message || "Failed to upload properties.",
+        description: message,
         variant: "destructive",
       });
     },
@@ -64,10 +74,9 @@ export default function BulkUploadPage() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `title,propertyType,price,size,location,description,bhk,listingType
-"3BHK Luxury Apartment","Apartment","₹85L","1200 sq ft","Bandra West, Mumbai","Spacious apartment with modern amenities",3,"exclusive"
-"Commercial Office Space","Commercial","₹2.5Cr","5000 sq ft","BKC, Mumbai","Prime location office space",0,"colisting"
-"Independent Villa","Villa","₹1.2Cr","2500 sq ft","Pune","Beautiful villa with garden",4,"exclusive"`;
+    const csvContent = `title,propertyType,transactionType,price,rentFrequency,size,sizeUnit,location,fullAddress,flatNumber,floorNumber,buildingSociety,description,bhk,listingType,isPubliclyVisible,ownerName,ownerPhone,commissionTerms,scopeOfWork
+"3BHK Luxury Apartment","Apartment","sale","₹85,00,000",,"1200","sq.ft","Bandra West, Mumbai","Bandra West, Mumbai, Maharashtra","A-1201","12","Skyline Heights","Spacious apartment with modern amenities",3,"exclusive",false,"Arjun Shah","+919999888777","2% on closing","Property Viewing Coordination|Documentation Support"
+"Premium Rental Loft","Apartment","rent","₹75,000","monthly","950","sq.ft","Khar West, Mumbai","Khar West, Mumbai, Maharashtra","501","5","Palm Residency","Fully furnished loft with balconies",2,"colisting",true,"Neha Patel","9999988877","1 month's rent","Marketing & Promotion|Negotiation Assistance"`;
 
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -83,6 +92,15 @@ export default function BulkUploadPage() {
       title: "Template Downloaded",
       description: "CSV template has been downloaded to your device.",
     });
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setUploadFiles(file ? [file] : []);
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -154,13 +172,29 @@ export default function BulkUploadPage() {
             <CardTitle>Upload CSV File</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <FileUpload onFilesChange={setUploadFiles} maxFiles={1} />
-
-            {uploadFiles.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">File selected: {uploadFiles[0].name}</p>
-              </div>
-            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={openFilePicker}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  openFilePicker();
+                }
+              }}
+              className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+            >
+              <FileSpreadsheet className="mx-auto text-3xl text-neutral-400 mb-2" size={48} />
+              <p className="text-neutral-700 font-medium">{uploadFiles[0]?.name || "Click to choose your CSV"}</p>
+              <p className="text-xs text-neutral-500 mt-1">Accepted format: .csv • Max 5 MB</p>
+            </div>
 
             <Button
               onClick={handleUpload}
@@ -202,13 +236,46 @@ export default function BulkUploadPage() {
                   <span className="font-medium text-red-600">{uploadResults.failed ?? 0}</span>
                 </div>
 
+                {uploadResults.duplicates && uploadResults.duplicates.length > 0 && (
+                  <div className="mt-4">
+                    <p className="font-medium text-neutral-700 mb-2">Non-unique rows</p>
+                    <div className="space-y-1 text-sm text-amber-700">
+                      {uploadResults.duplicates.map((item, index) => (
+                        <div key={`${item.row}-${index}`} className="flex items-start space-x-2">
+                          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                          <span>
+                            Row {item.row}: {item.message}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {uploadResults.smsWarnings && uploadResults.smsWarnings.length > 0 && (
+                  <div className="mt-4">
+                    <p className="font-medium text-neutral-700 mb-2">SMS warnings</p>
+                    <div className="space-y-1 text-sm text-amber-700">
+                      {uploadResults.smsWarnings.map((item, index) => (
+                        <div key={`${item.row}-${item.status}-${index}`} className="flex items-start space-x-2">
+                          <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                          <span>
+                            Row {item.row}: status {item.status}
+                            {item.error ? ` - ${item.error}` : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {uploadResults.errors && uploadResults.errors.length > 0 && (
                   <div className="mt-4">
                     <p className="font-medium text-neutral-700 mb-2">Errors:</p>
                     <div className="space-y-1">
                       {uploadResults.errors.map((error: string, index: number) => (
                         <div key={index} className="flex items-start space-x-2 text-sm">
-                          <AlertCircle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                          <AlertCircle size={14} className="text-red-500 mt-0.5 shrink-0" />
                           <span className="text-red-600">{error}</span>
                         </div>
                       ))}
@@ -231,19 +298,35 @@ export default function BulkUploadPage() {
                 <p className="font-medium">Required Columns:</p>
                 <ul className="list-disc list-inside space-y-1 text-neutral-600 ml-4">
                   <li>title - Property title</li>
-                  <li>propertyType - Apartment, Villa, or Commercial</li>
-                  <li>price - Property price (e.g., ₹85L, ₹2.5Cr)</li>
-                  <li>size - Property size (e.g., 1200 sq ft)</li>
-                  <li>location - Property location</li>
-                  <li>listingType - exclusive or colisting</li>
+                  <li>propertyType - Apartment, Villa, Commercial, etc.</li>
+                  <li>transactionType - sale or rent</li>
+                  <li>price - Property price (e.g., ₹85,00,000 or 75000)</li>
+                  <li>location & fullAddress - Area + detailed postal address</li>
+                  <li>listingType - exclusive, colisting, or shared</li>
+                  <li>ownerName & ownerPhone - Owner contact for consent</li>
                 </ul>
               </div>
               <div>
                 <p className="font-medium">Optional Columns:</p>
                 <ul className="list-disc list-inside space-y-1 text-neutral-600 ml-4">
-                  <li>description - Property description</li>
-                  <li>bhk - Number of bedrooms (for residential)</li>
+                  <li>rentFrequency - monthly or yearly (only for rentals)</li>
+                  <li>size & sizeUnit - Numeric area and unit (sq.ft, sq.m, sq.yd, acre)</li>
+                  <li>flatNumber, floorNumber, buildingSociety - Helps detect duplicates</li>
+                  <li>description, bhk, commissionTerms</li>
+                  <li>isPubliclyVisible - TRUE/FALSE (defaults to true unless exclusive)</li>
+                  <li>scopeOfWork - Use | to separate items (e.g., Marketing & Promotion|Documentation)</li>
                 </ul>
+              </div>
+              <div className="text-sm text-neutral-600">
+                <p className="font-medium">Duplicate Handling:</p>
+                <p>
+                  If a row matches an existing property (same owner, flat, floor, and society), it will be skipped and
+                  listed under &ldquo;Non-unique rows&rdquo; while the rest continue uploading.
+                </p>
+                <p className="mt-2">
+                  SMS warnings highlight owners who did not receive verification texts (for example, invalid phone
+                  formats). Fix the phone number and resend consent from the property detail page if needed.
+                </p>
               </div>
             </div>
           </CardContent>
