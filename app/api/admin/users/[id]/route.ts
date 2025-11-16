@@ -20,7 +20,7 @@ export async function PATCH(
 ) {
   try {
     // Auth
-    validateAdminSession(req);
+    await validateAdminSession(req);
 
     // Params
     const { id } = await ctx.params;

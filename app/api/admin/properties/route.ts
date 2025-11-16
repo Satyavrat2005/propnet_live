@@ -13,7 +13,7 @@ const supabase = createClient(
 export async function GET(req: Request) {
   try {
     // Validate admin session
-    validateAdminSession(req);
+    await validateAdminSession(req);
 
     const { data, error } = await supabase
       .from("properties")

@@ -195,12 +195,12 @@ export default function ProfilePage() {
       label: "Properties",
       action: () => router.push("/feed"),
     },
-    {
-      icon: Handshake,
-      label: "Co-listing Requests",
-      badge: pendingRequests > 0 ? pendingRequests : null,
-      action: () => router.push("/colisting-requests"),
-    },
+    // {
+    //   icon: Handshake,
+    //   label: "Co-listing Requests",
+    //   badge: pendingRequests > 0 ? pendingRequests : null,
+    //   action: () => router.push("/colisting-requests"),
+    // },
     {
       icon: UserIcon,
       label: "Edit Profile",
@@ -233,7 +233,7 @@ export default function ProfilePage() {
     <div className="flex flex-col min-h-screen pb-20">
       <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
         <div className="flex items-center px-6 py-4">
-          <button className="text-primary mr-4" onClick={() => router.push("/feed")}>
+          <button className="text-primary mr-4" onClick={() => router.push("/dashboard")}>
             <ArrowLeft size={24} />
           </button>
           <h2 className="text-lg font-semibold text-neutral-900">Profile</h2>
@@ -253,14 +253,14 @@ export default function ProfilePage() {
             <PropertiesPreview properties={topProperties} isLoading={isPropertiesLoading} />
           </SectionCard>
 
-          <SectionCard
+          {/* <SectionCard
             title="Co-listing Requests"
             description="Latest activity from your network"
             actionLabel="View requests"
             onAction={() => router.push("/colisting-requests")}
           >
             <RequestsPreview requests={topRequests} isLoading={isRequestsLoading} />
-          </SectionCard>
+          </SectionCard> */}
 
           <SectionCard title="Professional Highlights" description="Expertise shared with potential partners">
             <ProfessionalDetails profile={normalizedProfile} />
@@ -281,10 +281,10 @@ export default function ProfilePage() {
                   <item.icon size={20} />
                   <span>{item.label}</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                {/* <div className="flex items-center space-x-2">
                   {item.badge && <Badge variant="secondary" className="text-xs">{item.badge}</Badge>}
                   <ChevronRight size={16} />
-                </div>
+                </div> */}
               </button>
             ))}
 

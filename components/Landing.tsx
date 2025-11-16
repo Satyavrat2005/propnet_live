@@ -154,9 +154,9 @@ export default function Page() {
               <Button
                 size="sm"
                 className="bg-yellow-400 text-blue-900 hover:bg-yellow-300 font-semibold shadow-md hover:shadow-lg transition-all duration-200 border border-yellow-500"
-                onClick={scrollToBetaForm}
+                onClick={() => router.push("/auth/login")}
               >
-                Get Early Access
+                Get Started
               </Button>
             </div>
           </div>
@@ -185,9 +185,9 @@ export default function Page() {
               <Button
                 size="lg"
                 className="bg-yellow-400 text-blue-900 hover:bg-yellow-300 px-6 md:px-10 py-3 md:py-4 w-full sm:w-auto font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                onClick={scrollToBetaForm}
+                onClick={() => router.push("/auth/login")}
               >
-                Get Early Access
+                Get Started
               </Button>
 
               <Button
@@ -426,7 +426,7 @@ export default function Page() {
       </section>
 
       {/* Beta Application Form */}
-      <section id="beta-form" className="py-16 bg-gray-50 dark:bg-gray-800">
+      {/* <section id="beta-form" className="py-16 bg-gray-50 dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-lg mx-auto">
             <div className="text-center mb-8">
@@ -486,7 +486,7 @@ export default function Page() {
             </Card>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Bottom CTA */}
       <section className="py-16 bg-blue-600 text-white">

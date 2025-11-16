@@ -15,16 +15,28 @@ function getCookieFromReq(req: NextRequest, name: string) {
 export async function GET(req: NextRequest) {
   try {
     const sid = getCookieFromReq(req, "adminSession");
-    const session = getSession(sid);
+    console.log(`[ME] Received session cookie: ${sid ? sid.substring(0, 20) + '...' : 'NONE'}`);
+    
+    if (!sid) {
+      console.log(`[ME] No session cookie, returning 401`);
+      return NextResponse.json({ authenticated: false }, { status: 401 });
+    }
+    
+    const { verifySession } = await import("@/lib/server-data");
+    const session = await verifySession(sid);
+    
     if (!session) {
+      console.log(`[ME] Invalid session, returning 401`);
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
+    console.log(`[ME] Session valid for user: ${session.username}`);
     return NextResponse.json({
       authenticated: true,
       admin: { username: session.username },
     });
   } catch (err: any) {
+    console.error(`[ME] Error:`, err);
     return NextResponse.json({ authenticated: false }, { status: 500 });
   }
 }

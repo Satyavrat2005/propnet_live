@@ -21,7 +21,7 @@ export async function PATCH(
 ) {
   try {
     // ---- Auth (admin session cookie) ----
-    validateAdminSession(req);
+    await validateAdminSession(req);
 
     // ---- Params (await the Promise) ----
     const { id } = await ctx.params;

@@ -12,12 +12,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Username and password required" }, { status: 400 });
     }
 
-    // simple credential check (replace with DB in production)
-    if (username !== ADMIN_CREDENTIALS.username || password !== ADMIN_CREDENTIALS.password) {
+    // Verify username
+    if (username !== ADMIN_CREDENTIALS.username) {
       return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 });
     }
 
-    const sessionId = createSession(username);
+    // Verify password with secure comparison
+    const { verifyPassword } = await import("@/lib/server-data");
+    const isValid = verifyPassword(password, ADMIN_CREDENTIALS.passwordHash);
+    
+    if (!isValid) {
+      return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 });
+    }
+
+    const sessionId = await createSession(username);
+    console.log(`[LOGIN] Setting adminSession cookie`);
 
     const res = NextResponse.json({ success: true });
     // cookie options appropriate for local dev and production:

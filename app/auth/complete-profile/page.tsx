@@ -620,9 +620,9 @@ export default function CompleteProfile() {
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-full p-0" align="start">
-            <Command className="w-full">
-              <CommandList className="max-h-64 overflow-y-auto">
+          <PopoverContent className="w-full p-0 bg-white border-gray-200" align="start">
+            <Command className="w-full bg-white">
+              <CommandList className="max-h-64 overflow-y-auto bg-white">
                 {Object.entries(getAvailableExpertiseOptions()).map(([category, options]) => (
                   <CommandGroup key={category} heading={category}>
                     {options.map((option) => (
@@ -632,7 +632,7 @@ export default function CompleteProfile() {
                         onSelect={() => {
                           addExpertise(option);
                         }}
-                        className="cursor-pointer"
+                        className="cursor-pointer bg-white text-gray-900 hover:bg-green-100 hover:text-gray-900 data-[selected=true]:bg-green-100 data-[selected=true]:text-gray-900"
                       >
                         <Check
                           className={`mr-2 h-4 w-4 ${
