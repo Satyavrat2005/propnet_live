@@ -6,18 +6,25 @@ import { QueryClient } from "@tanstack/react-query";
 export async function apiRequest(
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
   endpoint: string,
-  data?: any
+  data?: unknown
 ): Promise<Response> {
+  const isWritableMethod = method === "POST" || method === "PUT" || method === "PATCH";
+  const headers: HeadersInit = {};
   const options: RequestInit = {
     method,
-    headers: {
-      "Content-Type": "application/json",
-    },
     credentials: "include", // Important: include credentials for cookies
   };
 
-  if (data && (method === "POST" || method === "PUT" || method === "PATCH")) {
-    options.body = JSON.stringify(data);
+  if (!(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  if (Object.keys(headers).length > 0) {
+    options.headers = headers;
+  }
+
+  if (isWritableMethod && data) {
+    options.body = data instanceof FormData ? data : JSON.stringify(data);
   }
 
   const response = await fetch(endpoint, options);

@@ -50,7 +50,9 @@ interface PropertyDetailsPanelProps {
 
 export default function PropertyDetailsPanel({ property, className = "", onCall, actions }: PropertyDetailsPanelProps) {
   const safePriceInput = property.price ?? undefined;
-  const priceLabel = getSafeFormattedPrice(safePriceInput, property.transactionType, property.rentFrequency);
+  const transactionType = property.transactionType ?? undefined;
+  const rentFrequency = property.rentFrequency ?? undefined;
+  const priceLabel = getSafeFormattedPrice(safePriceInput, transactionType, rentFrequency);
   const sizeLabel = property.size ? formatArea(property.size, property.sizeUnit || "sq.ft") : "Not specified";
   const listingBadge = property.listingType ? getListingTypeLabel(property.listingType) : property.transactionType ? property.transactionType : null;
   const listingColor = property.listingType ? getListingTypeBadgeColor(property.listingType) : "bg-gray-100 text-gray-700";

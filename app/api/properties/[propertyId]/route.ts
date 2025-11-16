@@ -84,10 +84,14 @@ function normalizePhone(raw: string | null): string | null {
   if (!raw) return null;
   const input = String(raw).trim();
   if (!input) return null;
-  if (input.startsWith("+")) return input;
 
+  const hasPlusPrefix = input.startsWith("+");
   const digits = input.replace(/[^\d]/g, "");
   if (!digits) return null;
+
+  if (hasPlusPrefix) {
+    return `+${digits}`;
+  }
 
   if (digits.length === 12 && digits.startsWith("91")) {
     return `+${digits}`;
