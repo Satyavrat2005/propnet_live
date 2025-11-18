@@ -369,7 +369,7 @@ export default function ClientsPage() {
       <div className="px-8 pt-8 pb-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="rounded-2xl p-3 bg-gradient-to-br from-[#6b5cff] to-[#a84dff] shadow-md">
+            <div className="rounded-2xl p-3 bg-linear-to-br from-[#6b5cff] to-[#a84dff] shadow-md">
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -380,7 +380,7 @@ export default function ClientsPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="rounded-xl p-6 bg-gradient-to-br from-[#2b74ff] to-[#2a5bff] shadow-md text-white">
+          <div className="rounded-xl p-6 bg-linear-to-br from-[#2b74ff] to-[#2a5bff] shadow-md text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Clients</p>
@@ -390,7 +390,7 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl p-6 bg-gradient-to-br from-[#02b875] to-[#00a56a] shadow-md text-white">
+          <div className="rounded-xl p-6 bg-linear-to-br from-[#02b875] to-[#00a56a] shadow-md text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Deals</p>
@@ -400,7 +400,7 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl p-6 bg-gradient-to-br from-[#ff9100] to-[#ff6d00] shadow-md text-white">
+          <div className="rounded-xl p-6 bg-linear-to-br from-[#ff9100] to-[#ff6d00] shadow-md text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Tasks</p>
@@ -410,7 +410,7 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl p-6 bg-gradient-to-br from-[#9b5cff] to-[#7b38ff] shadow-md text-white">
+          <div className="rounded-xl p-6 bg-linear-to-br from-[#9b5cff] to-[#7b38ff] shadow-md text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Month</p>
@@ -426,10 +426,10 @@ export default function ClientsPage() {
       <div className="px-8 pt-6">
         <div className="bg-white rounded-2xl p-2 shadow-sm">
           <div className="flex items-center gap-4 px-4">
-            <button onClick={() => setActiveTab("overview")} className={`rounded-lg px-5 py-3 ${activeTab === "overview" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Overview</button>
-            <button onClick={() => setActiveTab("clients")} className={`rounded-lg px-5 py-3 ${activeTab === "clients" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Clients</button>
-            <button onClick={() => setActiveTab("deals")} className={`rounded-lg px-5 py-3 ${activeTab === "deals" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Deals</button>
-            <button onClick={() => setActiveTab("tasks")} className={`rounded-lg px-5 py-3 ${activeTab === "tasks" ? "bg-gradient-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Tasks</button>
+            <button onClick={() => setActiveTab("overview")} className={`rounded-lg px-5 py-3 ${activeTab === "overview" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Overview</button>
+            <button onClick={() => setActiveTab("clients")} className={`rounded-lg px-5 py-3 ${activeTab === "clients" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Clients</button>
+            <button onClick={() => setActiveTab("deals")} className={`rounded-lg px-5 py-3 ${activeTab === "deals" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Deals</button>
+            <button onClick={() => setActiveTab("tasks")} className={`rounded-lg px-5 py-3 ${activeTab === "tasks" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Tasks</button>
           </div>
         </div>
       </div>
@@ -455,7 +455,7 @@ export default function ClientsPage() {
                       <div
                         key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${c.id ?? idx}`}
                         onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
-                        className="flex items-center justify-between rounded-xl p-6 bg-gradient-to-r from-[#fff7ff] to-[#f6fbff] hover:shadow-md transition cursor-pointer"
+                        className="flex items-center justify-between rounded-xl p-6 bg-linear-to-r from-[#fff7ff] to-[#f6fbff] hover:shadow-md transition cursor-pointer"
                         style={{ paddingLeft: 18 }}
                       >
                         <div>
@@ -496,11 +496,11 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mt-6">
-                  <div className="rounded-xl p-6 bg-gradient-to-br from-[#e6f2ff] to-[#f3fbff] text-center">
+                  <div className="rounded-xl p-6 bg-linear-to-br from-[#e6f2ff] to-[#f3fbff] text-center">
                     <p className="text-3xl font-bold text-blue-600">{totalClients}</p>
                     <p className="text-sm mt-2 text-slate-500">Total Clients</p>
                   </div>
-                  <div className="rounded-xl p-6 bg-gradient-to-br from-[#eefde7] to-[#f0fff7] text-center">
+                  <div className="rounded-xl p-6 bg-linear-to-br from-[#eefde7] to-[#f0fff7] text-center">
                     <p className="text-3xl font-bold text-emerald-600">{monthlyDeals}</p>
                     <p className="text-sm mt-2 text-slate-500">This Month</p>
                   </div>
@@ -562,7 +562,7 @@ export default function ClientsPage() {
         {activeTab === "tasks" && (
           <div className="space-y-6">
             <div className="flex items-center justify-end">
-              <Button onClick={() => setShowAddTask(true)} className="flex items-center gap-2 bg-gradient-to-br from-[#6b5cff] to-[#a84dff] text-white shadow-md">
+              <Button onClick={() => setShowAddTask(true)} className="flex items-center gap-2 bg-linear-to-br from-[#6b5cff] to-[#a84dff] text-white shadow-md">
                 <Plus className="w-4 h-4" />
                 Add Task
               </Button>
@@ -777,11 +777,11 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-xl p-4 bg-gradient-to-br from-[#fff7ff] to-[#f6fbff]">
+                  <div className="rounded-xl p-4 bg-linear-to-br from-[#fff7ff] to-[#f6fbff]">
                     <p className="text-xs text-slate-500">Listing Status</p>
                     <p className="font-semibold">{dealDetail.approval_status ?? dealDetail.ownerApprovalStatus ?? "pending"}</p>
                   </div>
-                  <div className="rounded-xl p-4 bg-gradient-to-br from-[#eefde7] to-[#f0fff7]">
+                  <div className="rounded-xl p-4 bg-linear-to-br from-[#eefde7] to-[#f0fff7]">
                     <p className="text-xs text-slate-500">Created</p>
                     <p className="font-semibold">{dealDetail.created_at ? new Date(dealDetail.created_at).toLocaleString() : (dealDetail.createdAt ? new Date(dealDetail.createdAt).toLocaleString() : "N/A")}</p>
                   </div>
@@ -837,7 +837,7 @@ export default function ClientsPage() {
               <textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="E.g., Call client to confirm documents" className="w-full h-28 p-3 border rounded-md mb-4" />
               <div className="flex items-center justify-end gap-3">
                 <Button variant="ghost" onClick={() => setShowAddTask(false)}>Cancel</Button>
-                <Button type="submit" className="bg-gradient-to-br from-[#6b5cff] to-[#a84dff] text-white">Add Task</Button>
+                <Button type="submit" className="bg-linear-to-br from-[#6b5cff] to-[#a84dff] text-white">Add Task</Button>
               </div>
             </form>
           </div>

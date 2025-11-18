@@ -179,7 +179,7 @@ export default function ProfilePage() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       authLogout();
-      router.push("/login");
+      router.push("/");
     } catch {
       toast({
         title: "Logout failed",

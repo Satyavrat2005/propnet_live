@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifySession } from "@/lib/auth/session";
+import { verifySession, readSessionCookie } from "@/lib/auth/session";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-function readSessionCookie(req: NextRequest) {
-  const cookie = req.headers.get("cookie") || "";
-  const part = cookie.split(";").find((c) => c.trim().startsWith("session="));
-  if (!part) return null;
-  const token = part.split("=")[1];
-  return token || null;
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const token = readSessionCookie(req);
+    const token = await readSessionCookie();
+    
     if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }

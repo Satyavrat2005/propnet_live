@@ -126,9 +126,9 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
+        <CardHeader className="text-center bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
           <div className="flex items-center justify-center mb-2">
             {showOtp ? <MessageSquare className="h-8 w-8" /> : <Smartphone className="h-8 w-8" />}
           </div>
@@ -153,7 +153,7 @@ export default function Page() {
                 <p className="text-xs text-gray-500 mt-1">You'll receive a verification code via SMS</p>
               </div>
 
-              <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" disabled={phone.length !== 10 || loading}>
+              <Button type="submit" className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" disabled={phone.length !== 10 || loading}>
                 {loading ? "Sending Code..." : "Send Verification Code"}
               </Button>
             </form>
@@ -170,7 +170,7 @@ export default function Page() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" disabled={code.length !== 6 || loading}>
+                <Button type="submit" className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" disabled={code.length !== 6 || loading}>
                   {loading ? "Verifying..." : "Verify Code"}
                 </Button>
 

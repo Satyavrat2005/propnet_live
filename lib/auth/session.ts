@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.AUTH_SECRET || "replace_with_strong_secret");
 
@@ -26,4 +27,14 @@ export function getSessionCookieHeader(token: string) {
   return `session=${token}; HttpOnly; Path=/; Max-Age=${60 * 60 * 24 * 30}; SameSite=Lax; ${
     isProd ? "Secure;" : ""
   }`;
+}
+
+/**
+ * Read the session cookie token using Next.js cookies API
+ * This is the recommended way to read cookies in Next.js API routes
+ */
+export async function readSessionCookie(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("session");
+  return sessionCookie?.value || null;
 }

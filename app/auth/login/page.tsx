@@ -169,9 +169,9 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
+        <CardHeader className="text-center bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
           <div className="flex items-center justify-center mb-2">
             {showOtp ? <MessageSquare className="h-8 w-8" /> : <Smartphone className="h-8 w-8" />}
           </div>
@@ -207,7 +207,7 @@ export default function Page() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                 disabled={phone.replace(/\D/g, "").length !== 10 || loading}
               >
                 {loading ? "Sending..." : "Send Verification Code"}
@@ -237,7 +237,7 @@ export default function Page() {
               <div className="space-y-3">
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                   disabled={code.length !== 6 || loading}
                 >
                   {loading ? "Verifying..." : "Verify Code"}
@@ -256,12 +256,12 @@ export default function Page() {
             </form>
           )}
 
-          <div className="mt-6 text-center">
+          {/* <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               New to PropNet?{" "}
               <Link href="/auth/signup"><span className="text-blue-600 hover:text-blue-800 font-medium">Sign up here</span></Link>
             </p>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>
