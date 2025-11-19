@@ -40,6 +40,16 @@ const trimText = (value?: string | null, maxLength = 160) => {
   return value.length <= maxLength ? value : `${value.slice(0, maxLength)}…`;
 };
 
+const TEXT_LIMITS = {
+  title: 100,
+  location: 120,
+  fullAddress: 130,
+  buildingSociety: 60,
+  description: 120,
+  ownerName: 60,
+  primaryDetails: 100,
+};
+
 const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> => {
   const PAGE_SIZE = 250;
   let offset = 0;
@@ -89,15 +99,15 @@ const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> 
 
   return rows.map((row: PropertyRow): MapProperty => ({
     id: row.property_id,
-    title: trimText(row.property_title || "Untitled Property", 140) || "Untitled Property",
+    title: trimText(row.property_title || "Untitled Property", TEXT_LIMITS.title) || "Untitled Property",
     propertyType: row.property_type,
     transactionType: row.transaction_type || row.listing_type,
     price: row.sale_price,
-    location: trimText(row.location || row.full_address) || "Location not specified",
-    fullAddress: trimText(row.full_address, 180),
-    buildingSociety: trimText(row.building_society, 70) || null,
+    location: trimText(row.location || row.full_address, TEXT_LIMITS.location) || "Location not specified",
+    fullAddress: trimText(row.full_address, TEXT_LIMITS.fullAddress),
+    buildingSociety: trimText(row.building_society, TEXT_LIMITS.buildingSociety) || null,
     owner: {
-      name: trimText(row.owner_name, 80) || null,
+      name: trimText(row.owner_name, TEXT_LIMITS.ownerName) || null,
       phone: row.owner_phone,
       agencyName: null,
       profilePhotoUrl: null,
@@ -105,7 +115,7 @@ const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> 
     lat: row.latitude,
     lng: row.longitude,
     createdAt: row.created_at,
-    description: trimText(row.description, 160),
+    description: trimText(row.description, TEXT_LIMITS.description),
     details: null,
     listingSource: "property",
   }));
@@ -133,16 +143,16 @@ const fetchPrimaryListings = unstable_cache(async (): Promise<MapProperty[]> => 
 
   return (data || []).map((row: PrimaryListingRow): MapProperty => ({
     id: `primary-${row.id}`,
-    title: trimText(row.project_name || "Primary Listing", 120) || "Primary Listing",
+    title: trimText(row.project_name || "Primary Listing", TEXT_LIMITS.title) || "Primary Listing",
     propertyType: "primary",
     transactionType: "primary",
-    price: trimText(row.details || row.project_description || "Contact for details", 120),
-    location: trimText(row.site_address, 180) || "Location not specified",
-    fullAddress: trimText(row.site_address, 180),
-    description: trimText(row.project_description, 160),
-    details: trimText(row.details, 140),
+    price: trimText(row.details || row.project_description || "Contact for details", TEXT_LIMITS.primaryDetails),
+    location: trimText(row.site_address, TEXT_LIMITS.location) || "Location not specified",
+    fullAddress: trimText(row.site_address, TEXT_LIMITS.fullAddress),
+    description: trimText(row.project_description, TEXT_LIMITS.description),
+    details: trimText(row.details, TEXT_LIMITS.primaryDetails),
     owner: {
-      name: trimText(row.promoter, 80) || "Promoter",
+      name: trimText(row.promoter, TEXT_LIMITS.ownerName) || "Promoter",
       phone: null,
       agencyName: null,
       profilePhotoUrl: null,

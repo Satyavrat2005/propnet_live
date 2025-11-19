@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,40 @@ interface NetworkUser {
   agencyName: string | null;
 }
 
+const extractErrorMessage = (payload: unknown, fallback: string) => {
+  if (payload && typeof payload === "object" && "error" in payload) {
+    const errorValue = (payload as { error?: unknown }).error;
+    if (typeof errorValue === "string" && errorValue.trim()) {
+      return errorValue;
+    }
+  }
+  return fallback;
+};
+
+const parseJsonResponse = async <T,>(response: Response, fallbackError: string): Promise<T> => {
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(extractErrorMessage(payload, fallbackError));
+  }
+
+  if (payload === null || payload === undefined) {
+    throw new Error(fallbackError);
+  }
+
+  return payload as T;
+};
+
+const fetchJson = async <T,>(endpoint: string, fallbackError: string): Promise<T> => {
+  const response = await apiRequest("GET", endpoint);
+  return parseJsonResponse<T>(response, fallbackError);
+};
+
 export default function MessagesPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
 
@@ -70,38 +104,30 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState("");
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
+  const currentUserId = user?.id ? String(user.id) : null;
 
   // --- Queries ---
-  const conversationsQuery = useQuery<ConversationSummary[]>({
+  const conversationsQuery = useQuery<ConversationSummary[], Error>({
     queryKey: ["/api/conversations"],
     enabled: !!user,
     refetchInterval: 15000,
-    queryFn: async () => {
-      const response = await fetch("/api/conversations");
-      if (!response.ok) throw new Error("Failed to fetch conversations");
-      return response.json();
-    },
+    queryFn: async () => fetchJson<ConversationSummary[]>("/api/conversations", "Failed to fetch conversations"),
   });
 
-  const networkUsersQuery = useQuery<NetworkUser[]>({
+  const networkUsersQuery = useQuery<NetworkUser[], Error>({
     queryKey: ["/api/network-users"],
     enabled: !!user,
-    queryFn: async () => {
-      const response = await fetch("/api/network-users");
-      if (!response.ok) throw new Error("Failed to fetch network users");
-      return response.json();
-    },
+    queryFn: async () => fetchJson<NetworkUser[]>("/api/network-users", "Failed to fetch network users"),
   });
 
-  const messagesQuery = useQuery<ChatMessage[]>({
+  const messagesQuery = useQuery<ChatMessage[], Error>({
     queryKey: ["/api/conversations", selectedConversationId, "messages"],
     enabled: !!selectedConversationId && !!user,
-    queryFn: async () => {
-      if (!selectedConversationId) return [];
-      const response = await fetch(`/api/conversations/${selectedConversationId}/messages`);
-      if (!response.ok) throw new Error("Failed to fetch messages");
-      return response.json();
-    },
+    queryFn: async () => fetchJson<ChatMessage[]>(
+      `/api/conversations/${selectedConversationId}/messages`,
+      "Failed to fetch messages"
+    ),
   });
 
   const conversations = useMemo(
@@ -122,18 +148,47 @@ export default function MessagesPage() {
     return conversations.find((conversation) => conversation.id === selectedConversationId) || null;
   }, [conversations, selectedConversationId]);
 
+  const resetUnreadCount = useCallback((conversationId: string | null) => {
+    if (!conversationId) return;
+    queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) =>
+      existing.map((conversation) =>
+        conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+      )
+    );
+  }, [queryClient]);
+
+  const findExistingConversation = useCallback(
+    (participantId: string, propertyId?: string | null, type = "general") => {
+      const normalizedType = (type || "general").toLowerCase();
+      const normalizedPropertyId = propertyId ?? null;
+      return (
+        conversations.find((conversation) => {
+          if (conversation.otherParticipant?.id !== participantId) return false;
+          const conversationType = (conversation.type || "general").toLowerCase();
+          if (conversationType !== normalizedType) return false;
+          const conversationPropertyId = conversation.property?.id ?? null;
+          if (conversationPropertyId !== normalizedPropertyId) return false;
+          return true;
+        }) || null
+      );
+    },
+    [conversations]
+  );
+
   // --- Mutations ---
-  const createConversation = useMutation({
-    mutationFn: async ({ participantId, propertyId, type }: { participantId: string; propertyId?: string; type?: string }) => {
+  const createConversation = useMutation<
+    ConversationSummary,
+    Error,
+    { participantId: string; propertyId?: string; type?: string }
+  >({
+    mutationFn: async ({ participantId, propertyId, type }) => {
       const res = await apiRequest("POST", "/api/conversations", { participantId, propertyId, type });
-      if (!res.ok) {
-        throw new Error("Failed to create conversation");
-      }
-      return res.json();
+      return parseJsonResponse<ConversationSummary>(res, "Failed to create conversation");
     },
     onSuccess: (conversation: ConversationSummary) => {
       setSelectedConversationId(conversation.id);
       setShowNewChatDialog(false);
+      resetUnreadCount(conversation.id);
       queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) => {
         if (existing.some((c) => c.id === conversation.id)) {
           return existing;
@@ -144,18 +199,32 @@ export default function MessagesPage() {
     },
   });
 
-  const sendMessage = useMutation({
-    mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
+  const sendMessage = useMutation<
+    ChatMessage,
+    Error,
+    { conversationId: string; content: string }
+  >({
+    mutationFn: async ({ conversationId, content }) => {
       const res = await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { content });
-      if (!res.ok) {
-        throw new Error("Failed to send message");
-      }
-      return res.json();
+      return parseJsonResponse<ChatMessage>(res, "Failed to send message");
     },
-    onSuccess: () => {
+    onSuccess: (message) => {
       setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ["/api/conversations", selectedConversationId, "messages"] });
+      setChatError(null);
+      resetUnreadCount(message.conversationId);
+      queryClient.setQueryData<ChatMessage[]>(
+        ["/api/conversations", message.conversationId, "messages"],
+        (existing = []) => {
+          if (existing.some((existingMessage) => existingMessage.id === message.id)) {
+            return existing;
+          }
+          return [...existing, message];
+        }
+      );
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    },
+    onError: (error) => {
+      setChatError(error.message || "Unable to send message");
     },
   });
 
@@ -213,6 +282,18 @@ export default function MessagesPage() {
               ];
             }
           );
+          resetUnreadCount(record.conversation_id);
+        } else if (currentUserId && record.sender_id !== currentUserId) {
+          queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) =>
+            existing.map((conversation) =>
+              conversation.id === record.conversation_id
+                ? {
+                    ...conversation,
+                    unreadCount: (conversation.unreadCount || 0) + 1,
+                  }
+                : conversation
+            )
+          );
         }
 
         queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
@@ -222,7 +303,7 @@ export default function MessagesPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, activeConversation?.id, queryClient]);
+  }, [user?.id, activeConversation?.id, currentUserId, queryClient, resetUnreadCount]);
 
   if (isAuthLoading) {
     return (
@@ -243,20 +324,30 @@ export default function MessagesPage() {
     );
   }
 
-  const currentUserId = String(user.id);
-
   // --- Handlers ---
-  const startConversation = (participantId: string) => {
-    createConversation.mutate({ participantId, type: "general" });
+  const handleSelectConversation = (conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    resetUnreadCount(conversationId);
+  };
+
+  const startConversation = (participantId: string, propertyId?: string | null, type = "general") => {
+    const existing = findExistingConversation(participantId, propertyId, type);
+    if (existing) {
+      handleSelectConversation(existing.id);
+      setShowNewChatDialog(false);
+      return;
+    }
+    createConversation.mutate({ participantId, propertyId: propertyId ?? undefined, type });
   };
 
   const handleSend = () => {
-    if (!newMessage.trim() || !activeConversation) return;
+    if (!newMessage.trim() || !activeConversation || sendMessage.isPending) return;
     sendMessage.mutate({
       conversationId: activeConversation.id,
       content: newMessage.trim(),
     });
   };
+  const messagesQueryError = messagesQuery.error ?? null;
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -297,31 +388,58 @@ export default function MessagesPage() {
 
         {/* Messages */}
         <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
-          {messages.map((msg: ChatMessage) => (
+          {messagesQuery.isLoading ? (
+            <p className="text-sm text-neutral-500">Loading messages...</p>
+          ) : messagesQueryError ? (
+            <p className="text-sm text-red-500">{messagesQueryError.message}</p>
+          ) : messages.length === 0 ? (
+            <p className="text-sm text-neutral-500">No messages yet. Say hello!</p>
+          ) : (
+            messages.map((msg: ChatMessage) => (
               <div key={msg.id} className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  msg.senderId === currentUserId ? "bg-primary text-white" : "bg-white border border-neutral-200"
-                }`}>
-                  <p className="text-sm">{msg.content}</p>
-                  <p className={`text-xs mt-1 ${msg.senderId === currentUserId ? "text-primary-200" : "text-neutral-500"}`}>
+                <div
+                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
+                    msg.senderId === currentUserId
+                      ? "bg-neutral-900 text-white"
+                      : "bg-white border border-neutral-200 text-neutral-900"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed break-normal wrap-break-word">{msg.content}</p>
+                  <p
+                    className={`text-xs mt-1 ${
+                      msg.senderId === currentUserId ? "text-white/70" : "text-neutral-500"
+                    }`}
+                  >
                     {new Date(msg.createdAt).toLocaleTimeString()}
                   </p>
                 </div>
               </div>
-            ))}
+            ))
+          )}
         </div>
 
         {/* Input */}
-        <div className="bg-white border-t border-neutral-200 px-6 py-4 flex items-center space-x-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          />
-          <Button onClick={handleSend} disabled={!newMessage.trim()}>
-            <Send size={16} />
-          </Button>
+        <div className="bg-white border-t border-neutral-200 px-6 py-4">
+          <div className="flex flex-col gap-2">
+            {chatError ? <p className="text-xs text-red-500">{chatError}</p> : null}
+            <div className="flex items-center space-x-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  if (chatError) {
+                    setChatError(null);
+                  }
+                }}
+                placeholder="Type a message..."
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                disabled={sendMessage.isPending}
+              />
+              <Button onClick={handleSend} disabled={!newMessage.trim() || sendMessage.isPending}>
+                <Send size={16} />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -401,7 +519,7 @@ export default function MessagesPage() {
         ) : (
           <div className="space-y-3">
             {filteredConversations.map((c) => (
-              <Card key={c.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedConversationId(c.id)}>
+              <Card key={c.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleSelectConversation(c.id)}>
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-3">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
