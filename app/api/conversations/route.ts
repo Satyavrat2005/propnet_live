@@ -29,6 +29,17 @@ type ParticipantRow = {
   profile: ParticipantProfile | ParticipantProfile[] | null;
 };
 
+type ParticipantMembershipRow = {
+  conversation_id: string;
+  profile_id: string;
+};
+
+type ConversationMetaRow = {
+  id: string;
+  type: string | null;
+  property_id: string | null;
+};
+
 type MessageRow = {
   id: string;
   conversation_id: string;
@@ -55,7 +66,7 @@ async function fetchConversationPayload(conversationIds: string[], currentUserId
     serviceSupabase
       .from("conversation_participants")
       .select(
-        "conversation_id, profile:profiles(id, name, phone, agency_name)"
+        "conversation_id, profile:profiles!conversation_participants_profile_id_fkey(id, name, phone, agency_name)"
       )
       .in("conversation_id", conversationIds),
     serviceSupabase
@@ -64,6 +75,7 @@ async function fetchConversationPayload(conversationIds: string[], currentUserId
       .in("conversation_id", conversationIds)
       .order("created_at", { ascending: false }),
   ]);
+
 
   if (conversationsError || participantsError || messagesError) {
     throw new Error(
@@ -103,10 +115,12 @@ async function fetchConversationPayload(conversationIds: string[], currentUserId
   });
 
   return (conversationRows || []).map((conversation: ConversationRow) => {
-    const otherParticipant = (participantRows || [])
+    const conversationParticipants = (participantRows || [])
       .filter((participant: ParticipantRow) => participant.conversation_id === conversation.id)
       .map((participant) => asSingleProfile(participant.profile))
-      .find((profile) => profile && profile.id !== currentUserId) || null;
+      .filter((profile): profile is ParticipantProfile => profile !== null);
+
+    const otherParticipant = conversationParticipants.find((profile) => profile.id !== currentUserId) || null;
 
     const latestMessage = latestMessageByConversation.get(conversation.id) || null;
 
@@ -117,7 +131,7 @@ async function fetchConversationPayload(conversationIds: string[], currentUserId
       otherParticipant: otherParticipant
         ? {
             id: otherParticipant.id,
-            name: otherParticipant.name || "Unknown user",
+            name: otherParticipant.name || "Unknown User",
             phone: otherParticipant.phone,
             agencyName: otherParticipant.agency_name,
           }
@@ -134,6 +148,69 @@ async function fetchConversationPayload(conversationIds: string[], currentUserId
       unreadCount: 0,
     };
   });
+}
+
+async function findSharedConversationId(
+  currentUserId: string,
+  participantId: string,
+  options?: { propertyId?: string | null; type?: string }
+) {
+  const { data, error } = await serviceSupabase
+    .from("conversation_participants")
+    .select("conversation_id, profile_id")
+    .in("profile_id", [currentUserId, participantId]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const memberships = new Map<string, Set<string>>();
+  (data || []).forEach((row: ParticipantMembershipRow) => {
+    const existing = memberships.get(row.conversation_id) ?? new Set<string>();
+    existing.add(row.profile_id);
+    memberships.set(row.conversation_id, existing);
+  });
+
+  const sharedConversationIds = Array.from(memberships.entries())
+    .filter(([, members]) => members.has(currentUserId) && members.has(participantId))
+    .map(([conversationId]) => conversationId);
+
+  if (sharedConversationIds.length === 0) {
+    return null;
+  }
+
+  if (options?.propertyId || options?.type) {
+    const { data: conversations, error: conversationsError } = await serviceSupabase
+      .from("conversations")
+      .select("id, property_id, type")
+      .in("id", sharedConversationIds);
+
+    if (conversationsError) {
+      throw new Error(conversationsError.message);
+    }
+
+    const typedConversations = (conversations || []) as ConversationMetaRow[];
+
+    if (options?.propertyId) {
+      const propertyMatch = typedConversations.find(
+        (conversation) => conversation.property_id === options.propertyId
+      );
+      if (propertyMatch) {
+        return propertyMatch.id;
+      }
+    }
+
+    if (options?.type) {
+      const typeMatch = typedConversations.find(
+        (conversation) => (conversation.type || "general") === (options.type || "general")
+      );
+      if (typeMatch) {
+        return typeMatch.id;
+      }
+    }
+  }
+
+  return sharedConversationIds[0];
 }
 
 export async function GET(req: NextRequest) {
@@ -204,27 +281,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Participant not found" }, { status: 404 });
     }
 
-    const { data: userConversationRows, error: listError } = await serviceSupabase
-      .from("conversation_participants")
-      .select("conversation_id")
-      .eq("profile_id", session.sub);
-
-    if (listError) {
-      console.error("[POST /api/conversations] unable to list user conversations", listError);
-      return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
-    }
-
-    const existingConversationIds = (userConversationRows || []).map((row) => row.conversation_id);
     let existingConversationId: string | null = null;
-
-    if (existingConversationIds.length > 0) {
-      const { data: sharedConversations } = await serviceSupabase
-        .from("conversation_participants")
-        .select("conversation_id")
-        .eq("profile_id", participantId)
-        .in("conversation_id", existingConversationIds);
-
-      existingConversationId = sharedConversations?.[0]?.conversation_id || null;
+    try {
+      existingConversationId = await findSharedConversationId(session.sub, participantId, {
+        propertyId,
+        type,
+      });
+    } catch (matchError) {
+      console.error("[POST /api/conversations] failed to match existing conversation", matchError);
+      return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
     }
 
     if (existingConversationId) {

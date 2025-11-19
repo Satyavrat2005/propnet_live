@@ -52,6 +52,80 @@ const normalizeAddressSegments = (parts: Array<string | null | undefined>) => {
   return result;
 };
 
+const GOOGLE_MAPS_SCRIPT_ID = "propnet-google-maps-script";
+const GOOGLE_MAPS_DATA_ATTR = "data-propnet-google-maps";
+let googleMapsScriptPromise: Promise<void> | null = null;
+
+const ensureGoogleMapsApiLoaded = async () => {
+  if (typeof window === "undefined") return;
+  if (window.google?.maps) return;
+  if (googleMapsScriptPromise) return googleMapsScriptPromise;
+
+  const loadScript = async () => {
+    const response = await fetch("/api/config/google-maps-key");
+    if (!response.ok) {
+      throw new Error("Google Maps API key missing from /api/config/google-maps-key");
+    }
+    const json = await response.json();
+    const key = json?.key;
+    if (!key) {
+      throw new Error("Google Maps API key missing from /api/config/google-maps-key");
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      let targetScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID) as HTMLScriptElement | null;
+
+      const handleLoad = () => {
+        cleanup();
+        resolve();
+      };
+
+      const handleError = () => {
+        cleanup();
+        reject(new Error("Failed to load Google Maps JavaScript API"));
+      };
+
+      function cleanup() {
+        if (!targetScript) return;
+        targetScript.removeEventListener("load", handleLoad);
+        targetScript.removeEventListener("error", handleError);
+      }
+
+      const attachListeners = (element: HTMLScriptElement) => {
+        targetScript = element;
+        element.addEventListener("load", handleLoad);
+        element.addEventListener("error", handleError);
+      };
+
+      if (targetScript) {
+        if (window.google?.maps) {
+          cleanup();
+          resolve();
+          return;
+        }
+        attachListeners(targetScript);
+        return;
+      }
+
+      const scriptEl = document.createElement("script");
+      scriptEl.id = GOOGLE_MAPS_SCRIPT_ID;
+      scriptEl.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}`;
+      scriptEl.async = true;
+      scriptEl.defer = true;
+      scriptEl.setAttribute(GOOGLE_MAPS_DATA_ATTR, "true");
+      attachListeners(scriptEl);
+      document.head.appendChild(scriptEl);
+    });
+  };
+
+  const promise = loadScript();
+  googleMapsScriptPromise = promise;
+  promise.catch(() => {
+    googleMapsScriptPromise = null;
+  });
+  return promise;
+};
+
 export default function MapClient({ initialProperties, initialPrimaryListings }: MapClientProps) {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -193,12 +267,18 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   }, []);
 
   useEffect(() => {
-    let scriptEl: HTMLScriptElement | null = null;
+    if (typeof window === "undefined") return;
     let didCancel = false;
-    const SCRIPT_DATA_ATTR = "data-propnet-google-maps";
 
     const initializeMap = () => {
-      if (!mapRef.current || didCancel || mapInitializedRef.current) return;
+      if (
+        !mapRef.current ||
+        didCancel ||
+        mapInitializedRef.current ||
+        !window.google?.maps
+      ) {
+        return;
+      }
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: { lat: 23.0225, lng: 72.5714 },
         zoom: 11,
@@ -210,69 +290,19 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       mapInitializedRef.current = true;
     };
 
-    const handleScriptLoad = () => {
-      if (didCancel) return;
-      if (window.google?.maps) {
+    ensureGoogleMapsApiLoaded()
+      .then(() => {
+        if (didCancel) return;
         initializeMap();
-      }
-    };
-
-    const loadGoogleMaps = async () => {
-      if (window.google?.maps) {
-        initializeMap();
-        return;
-      }
-
-      const existingScript = document.querySelector<HTMLScriptElement>(
-        `script[${SCRIPT_DATA_ATTR}="true"], script[src*="maps.googleapis.com/maps/api/js"]`
-      );
-
-      if (existingScript) {
-        existingScript.setAttribute(SCRIPT_DATA_ATTR, "true");
-        if (window.google?.maps) {
-          initializeMap();
-        } else {
-          existingScript.addEventListener("load", handleScriptLoad);
+      })
+      .catch((error) => {
+        if (!didCancel) {
+          console.error("Failed to load Google Maps API:", error);
         }
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/config/google-maps-key");
-        const json = await res.json();
-        const key = json?.key;
-        if (!key) {
-          console.error("Google Maps key missing from /api/config/google-maps-key");
-          return;
-        }
-
-        scriptEl = document.createElement("script");
-        scriptEl.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initMap`;
-        scriptEl.async = true;
-        scriptEl.defer = true;
-        scriptEl.setAttribute(SCRIPT_DATA_ATTR, "true");
-        (window as any).initMap = initializeMap;
-        scriptEl.addEventListener("load", handleScriptLoad);
-        document.head.appendChild(scriptEl);
-      } catch (err) {
-        console.error("Failed to load Google Maps API key:", err);
-      }
-    };
-
-    loadGoogleMaps();
+      });
 
     return () => {
       didCancel = true;
-      try {
-        (window as any).initMap = undefined;
-      } catch {
-        // noop
-      }
-      const existingScript = document.querySelector<HTMLScriptElement>(
-        `script[${SCRIPT_DATA_ATTR}="true"], script[src*="maps.googleapis.com/maps/api/js"]`
-      );
-      existingScript?.removeEventListener("load", handleScriptLoad);
-      scriptEl?.removeEventListener("load", handleScriptLoad);
     };
   }, []);
 
