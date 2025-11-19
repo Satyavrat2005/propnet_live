@@ -8,6 +8,14 @@ const serviceSupabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type MessageRow = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+};
+
 async function ensureParticipant(conversationId: string, profileId: string) {
   const { data, error } = await serviceSupabase
     .from("conversation_participants")
@@ -25,6 +33,21 @@ async function ensureParticipant(conversationId: string, profileId: string) {
   }
 
   return true;
+}
+
+async function broadcastConversationMessage(message: MessageRow) {
+  try {
+    const channel = serviceSupabase.channel(`conversation-stream-${message.conversation_id}`);
+    await channel.subscribe();
+    await channel.send({
+      type: "broadcast",
+      event: "message",
+      payload: { message },
+    });
+    await channel.unsubscribe();
+  } catch (err) {
+    console.error("[messages broadcast]", err);
+  }
 }
 
 export async function GET(
@@ -122,6 +145,8 @@ export async function POST(
       .from("conversations")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", conversationId);
+
+    await broadcastConversationMessage(data as MessageRow);
 
     return NextResponse.json(
       {

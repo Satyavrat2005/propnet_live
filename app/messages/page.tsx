@@ -54,6 +54,14 @@ interface ChatMessage {
   createdAt: string;
 }
 
+interface RealtimeMessageRecord {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+}
+
 interface NetworkUser {
   id: string;
   name: string;
@@ -111,6 +119,46 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  const resetUnreadCount = useCallback((conversationId: string | null) => {
+    if (!conversationId) return;
+    queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) =>
+      existing.map((conversation) =>
+        conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
+      )
+    );
+  }, [queryClient]);
+
+  const upsertActiveConversationMessage = useCallback(
+    (record: RealtimeMessageRecord | null | undefined) => {
+      if (!record || !selectedConversationId || record.conversation_id !== selectedConversationId) {
+        return;
+      }
+
+      queryClient.setQueryData<ChatMessage[]>(
+        ["/api/conversations", selectedConversationId, "messages"],
+        (existing = []) => {
+          if (existing.some((message) => message.id === record.id)) {
+            return existing;
+          }
+          return [
+            ...existing,
+            {
+              id: record.id,
+              conversationId: record.conversation_id,
+              senderId: record.sender_id,
+              content: record.content,
+              createdAt: record.created_at,
+            },
+          ];
+        }
+      );
+
+      scrollToBottom();
+      resetUnreadCount(record.conversation_id);
+    },
+    [queryClient, resetUnreadCount, scrollToBottom, selectedConversationId]
+  );
+
   // --- Queries ---
   const conversationsQuery = useQuery<ConversationSummary[], Error>({
     queryKey: ["/api/conversations"],
@@ -151,15 +199,6 @@ export default function MessagesPage() {
     if (!selectedConversationId) return null;
     return conversations.find((conversation) => conversation.id === selectedConversationId) || null;
   }, [conversations, selectedConversationId]);
-
-  const resetUnreadCount = useCallback((conversationId: string | null) => {
-    if (!conversationId) return;
-    queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) =>
-      existing.map((conversation) =>
-        conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation
-      )
-    );
-  }, [queryClient]);
 
   const findExistingConversation = useCallback(
     (participantId: string, propertyId?: string | null, type = "general") => {
@@ -256,7 +295,7 @@ export default function MessagesPage() {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel(`messages-stream-${user.id}`)
+      .channel(`messages-summary-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
         const record = payload.new as {
           id: string;
@@ -268,32 +307,8 @@ export default function MessagesPage() {
 
         if (!record) return;
 
-        const activeConversationId = selectedConversationId;
         const isOwnMessage = currentUserId && record.sender_id === currentUserId;
-        const isActiveConversation = activeConversationId !== null && record.conversation_id === activeConversationId;
-
-        if (isActiveConversation) {
-          queryClient.setQueryData<ChatMessage[]>(
-            ["/api/conversations", activeConversationId, "messages"],
-            (existing = []) => {
-              if (existing.some((message) => message.id === record.id)) {
-                return existing;
-              }
-              return [
-                ...existing,
-                {
-                  id: record.id,
-                  conversationId: record.conversation_id,
-                  senderId: record.sender_id,
-                  content: record.content,
-                  createdAt: record.created_at,
-                },
-              ];
-            }
-          );
-          scrollToBottom();
-          resetUnreadCount(record.conversation_id);
-        }
+        const isActiveConversation = Boolean(selectedConversationId && record.conversation_id === selectedConversationId);
 
         queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) => {
           let found = false;
@@ -321,17 +336,44 @@ export default function MessagesPage() {
         });
 
         if (!isActiveConversation && !isOwnMessage) {
-          // Ensure badges stay accurate even if cache missed
           queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
         }
-
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, selectedConversationId, currentUserId, queryClient, resetUnreadCount, scrollToBottom]);
+  }, [user?.id, selectedConversationId, currentUserId, queryClient]);
+
+  useEffect(() => {
+    if (!user?.id || !selectedConversationId) return;
+
+    const channel = supabase
+      .channel(`conversation-stream-${selectedConversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${selectedConversationId}`,
+        },
+        (payload) => {
+          const record = payload.new as RealtimeMessageRecord | undefined;
+          upsertActiveConversationMessage(record);
+        }
+      )
+      .on("broadcast", { event: "message" }, (payload) => {
+        const record = payload?.payload?.message as RealtimeMessageRecord | undefined;
+        upsertActiveConversationMessage(record);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, selectedConversationId, upsertActiveConversationMessage]);
 
   useEffect(() => {
     if (!activeConversation || messages.length === 0) return;
