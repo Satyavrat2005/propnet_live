@@ -268,12 +268,13 @@ export default function MessagesPage() {
 
         if (!record) return;
 
+        const activeConversationId = selectedConversationId;
         const isOwnMessage = currentUserId && record.sender_id === currentUserId;
-        const isActiveConversation = activeConversation?.id === record.conversation_id;
+        const isActiveConversation = activeConversationId !== null && record.conversation_id === activeConversationId;
 
         if (isActiveConversation) {
           queryClient.setQueryData<ChatMessage[]>(
-            ["/api/conversations", activeConversation.id, "messages"],
+            ["/api/conversations", activeConversationId, "messages"],
             (existing = []) => {
               if (existing.some((message) => message.id === record.id)) {
                 return existing;
@@ -330,7 +331,7 @@ export default function MessagesPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, activeConversation?.id, currentUserId, queryClient, resetUnreadCount, scrollToBottom]);
+  }, [user?.id, selectedConversationId, currentUserId, queryClient, resetUnreadCount, scrollToBottom]);
 
   useEffect(() => {
     if (!activeConversation || messages.length === 0) return;
