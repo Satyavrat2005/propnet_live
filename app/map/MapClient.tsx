@@ -6,10 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MapPin, Navigation, Layers, Phone, Eye, Filter, Home } from "lucide-react";
+import { MapPin, Navigation, Layers, Phone, Eye, Filter, Home, Search } from "lucide-react";
 import PropertyDetailsPanel from "@/components/ui/property-details-panel";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import { formatPrice, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
+import { Input } from "@/components/ui/input";
 import type { MapProperty } from "@/lib/types/map";
 
 const GEOCODE_CACHE_KEY = "propnet_map_geocode";
@@ -36,6 +37,21 @@ type MarkerEntry = {
   clickHandler: () => void;
 };
 
+const normalizeAddressSegments = (parts: Array<string | null | undefined>) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  parts
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .forEach((part) => {
+      const lowered = part!.toLowerCase();
+      if (seen.has(lowered)) return;
+      seen.add(lowered);
+      result.push(part!);
+    });
+  return result;
+};
+
 export default function MapClient({ initialProperties, initialPrimaryListings }: MapClientProps) {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -44,6 +60,9 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsProperty, setDetailsProperty] = useState<Property | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInitializedRef = useRef(false);
@@ -52,6 +71,8 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   const propertyCoordinatesRef = useRef<Record<string, { lat: number; lng: number }>>({});
   const markersRef = useRef<any[]>([]);
   const markersMapRef = useRef<Record<string, MarkerEntry>>({});
+  const activeInfoWindowRef = useRef<any>(null);
+  const highlightCircleRef = useRef<any>(null);
 
   const normalizedPrimary = useMemo(
     () =>
@@ -80,14 +101,25 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
     return allListings.filter((property) => (property.transactionType || "").toLowerCase() === filterType);
   }, [allListings, filterType]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredListings.length / PAGE_SIZE) || 1);
+  const searchFilteredListings = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return filteredListings;
+    return filteredListings.filter((property) => {
+      const title = property.title?.toLowerCase() || "";
+      const location = property.location?.toLowerCase() || "";
+      const building = property.buildingSociety?.toLowerCase() || "";
+      return title.includes(query) || location.includes(query) || building.includes(query);
+    });
+  }, [filteredListings, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(searchFilteredListings.length / PAGE_SIZE) || 1);
   const safeCurrentPage = Math.max(1, Math.min(currentPage, totalPages));
   const paginatedProperties = useMemo(() => {
     const start = (safeCurrentPage - 1) * PAGE_SIZE;
-    return filteredListings.slice(start, start + PAGE_SIZE);
-  }, [filteredListings, safeCurrentPage]);
-  const pageStart = filteredListings.length === 0 ? 0 : (safeCurrentPage - 1) * PAGE_SIZE + 1;
-  const pageEnd = Math.min(safeCurrentPage * PAGE_SIZE, filteredListings.length);
+    return searchFilteredListings.slice(start, start + PAGE_SIZE);
+  }, [searchFilteredListings, safeCurrentPage]);
+  const pageStart = searchFilteredListings.length === 0 ? 0 : (safeCurrentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(safeCurrentPage * PAGE_SIZE, searchFilteredListings.length);
 
   const resolveTransactionMeta = (type?: string | null) => {
     const normalized = (type || "").toLowerCase();
@@ -244,6 +276,17 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
     };
   }, []);
 
+  const closeActiveInfoWindow = useCallback(() => {
+    if (activeInfoWindowRef.current) {
+      try {
+        activeInfoWindowRef.current.close();
+      } catch {
+        /* empty */
+      }
+      activeInfoWindowRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       markersRef.current.forEach((marker) => {
@@ -255,8 +298,60 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       });
       markersRef.current = [];
       markersMapRef.current = {};
+      if (highlightCircleRef.current) {
+        try {
+          highlightCircleRef.current.setMap(null);
+        } catch {
+          /* empty */
+        }
+        highlightCircleRef.current = null;
+      }
+      closeActiveInfoWindow();
     };
+  }, [closeActiveInfoWindow]);
+
+  const highlightPropertyOnMap = useCallback((coords: { lat: number; lng: number }) => {
+    if (typeof window === "undefined" || !window.google) return;
+    const mapInstance = mapInstanceRef.current;
+    if (!mapInstance || !(mapInstance instanceof window.google.maps.Map)) return;
+
+    if (highlightCircleRef.current) {
+      try {
+        highlightCircleRef.current.setMap(null);
+      } catch {
+        /* empty */
+      }
+    }
+
+    highlightCircleRef.current = new window.google.maps.Circle({
+      center: coords,
+      radius: 60,
+      strokeColor: "#2563eb",
+      strokeOpacity: 0.9,
+      strokeWeight: 2,
+      fillColor: "#2563eb",
+      fillOpacity: 0.15,
+      clickable: false,
+      map: mapInstance,
+    });
   }, []);
+
+  useEffect(() => {
+    if (!selectedProperty && highlightCircleRef.current) {
+      try {
+        highlightCircleRef.current.setMap(null);
+      } catch {
+        /* empty */
+      }
+      highlightCircleRef.current = null;
+    }
+  }, [selectedProperty]);
+
+  useEffect(() => {
+    if (!selectedProperty) {
+      closeActiveInfoWindow();
+    }
+  }, [selectedProperty, closeActiveInfoWindow]);
 
   const persistMarkerDetailsButton = useCallback(
     (propertyId: string, property: Property, infoWindow: any) => {
@@ -283,7 +378,14 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   const geocodeProperty = useCallback(
     async (property: Property) => {
       const cacheKey = property.id.toString();
-      const geocodeAddressKey = property.fullAddress || property.buildingSociety || property.location || cacheKey;
+      const addressSegments = normalizeAddressSegments([
+        property.fullAddress,
+        property.buildingSociety,
+        property.location,
+        "Gujarat",
+        "India",
+      ]);
+      const geocodeAddressKey = addressSegments.join(", ") || cacheKey;
 
       if (typeof property.lat === "number" && typeof property.lng === "number") {
         return { lat: property.lat, lng: property.lng };
@@ -300,8 +402,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       }
 
       try {
-        const addressParts = [property.fullAddress, property.buildingSociety, property.location, "Gujarat, India"].filter(Boolean);
-        const address = addressParts.join(", ");
+        const address = addressSegments.join(", ").slice(0, 220);
         const response = await fetch(`/api/places/geocode?address=${encodeURIComponent(address)}`);
         const data = await response.json();
 
@@ -331,6 +432,22 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
     },
     [persistGeocodeCache]
   );
+
+  const geocodeAddress = useCallback(async (address: string) => {
+    try {
+      const response = await fetch(`/api/places/geocode?address=${encodeURIComponent(address)}`);
+      if (!response.ok) {
+        return null;
+      }
+      const data = await response.json();
+      if (data?.success && typeof data.latitude === "number" && typeof data.longitude === "number") {
+        return { lat: data.latitude, lng: data.longitude };
+      }
+    } catch (error) {
+      console.error("[map] manual geocode failed", error);
+    }
+    return null;
+  }, []);
 
   const addMarkersToMap = useCallback(
     async (listings: Property[]) => {
@@ -424,7 +541,12 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
 
           const clickHandler = () => {
             setSelectedProperty(property);
+            mapInstance.setCenter({ lat: coords.lat, lng: coords.lng });
+            mapInstance.setZoom(16);
+            highlightPropertyOnMap(coords);
+            closeActiveInfoWindow();
             infoWindow.open(mapInstance, marker);
+            activeInfoWindowRef.current = infoWindow;
             persistMarkerDetailsButton(property.id, property, infoWindow);
           };
 
@@ -462,7 +584,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       markersRef.current = newMarkers;
       markersMapRef.current = newMarkersMap;
     },
-    [geocodeProperty, persistMarkerDetailsButton, userLocation]
+    [geocodeProperty, persistMarkerDetailsButton, userLocation, highlightPropertyOnMap, closeActiveInfoWindow]
   );
 
   useEffect(() => {
@@ -494,6 +616,8 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
         const coords = await geocodeProperty(property);
         mapInstance.setCenter({ lat: coords.lat, lng: coords.lng });
         mapInstance.setZoom(16);
+        highlightPropertyOnMap(coords);
+        closeActiveInfoWindow();
 
         const markerData = markersMapRef.current[property.id];
         if (markerData?.marker) {
@@ -503,8 +627,38 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
         console.error("Failed to center on property:", property.id, error);
       }
     },
-    [geocodeProperty]
+    [geocodeProperty, highlightPropertyOnMap, closeActiveInfoWindow]
   );
+
+  const handleSearchSubmit = useCallback(async () => {
+    const query = searchQuery.trim();
+    if (!query) {
+      setSearchError("Enter an address to search");
+      return;
+    }
+    if (typeof window === "undefined" || !window.google) return;
+    const mapInstance = mapInstanceRef.current;
+    if (!mapInstance || !(mapInstance instanceof window.google.maps.Map)) {
+      setSearchError("Map not ready yet");
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+    try {
+      const coords = await geocodeAddress(query);
+      if (!coords) {
+        setSearchError("Address not found");
+        return;
+      }
+      setSelectedProperty(null);
+      highlightPropertyOnMap(coords);
+      mapInstance.setCenter(coords);
+      mapInstance.setZoom(15);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [geocodeAddress, highlightPropertyOnMap, searchQuery]);
 
   useEffect(() => {
     window.openListing = (propertyId: string | number) => {
@@ -527,6 +681,10 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
 
   const propertyTypes = ["all", "sale", "rent", "primary"];
   const getFilterLabel = (type: string) => (type === "all" ? "All" : getListingTypeLabel(type));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, searchQuery]);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -553,9 +711,9 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       </div>
 
       <div className="bg-white border-b border-neutral-200 px-6 py-3">
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Filter size={16} className="text-neutral-600" />
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             {propertyTypes.map((type) => (
               <Button
                 key={type}
@@ -586,6 +744,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
           </div>
         )}
 
+
         <div className="absolute top-4 right-4 flex flex-col space-y-2 z-1000">
           <Button
             variant="outline"
@@ -607,7 +766,39 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       </div>
 
       <div className="px-6 py-4 property-list-section">
-        <h2 className="text-lg font-semibold text-neutral-900 mb-4">Properties in View ({filteredListings.length})</h2>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <h2 className="text-lg font-semibold text-neutral-900">
+            Properties in View ({searchFilteredListings.length})
+          </h2>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchError(null);
+              }}
+              placeholder="Search title or location"
+              className="w-full sm:w-64"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSearchSubmit();
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-w-[88px]"
+              onClick={handleSearchSubmit}
+              disabled={isSearching}
+            >
+              <Search size={14} className="mr-1" />
+              {isSearching ? "Searching" : "Search"}
+            </Button>
+          </div>
+        </div>
+        {searchError ? <p className="text-xs text-red-500 mt-2">{searchError}</p> : null}
         <div className="space-y-3">
           {paginatedProperties.length === 0 && (
             <Card>
