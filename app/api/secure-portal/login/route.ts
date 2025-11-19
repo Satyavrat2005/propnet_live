@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Invalid credentials" }, { status: 401 });
     }
 
-    // Verify password with secure comparison
+    // Verify password with secure bcrypt comparison
     const { verifyPassword } = await import("@/lib/server-data");
     const isValid = verifyPassword(password, ADMIN_CREDENTIALS.passwordHash);
     
@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     }
 
     const sessionId = await createSession(username);
-    console.log(`[LOGIN] Setting adminSession cookie`);
 
     const res = NextResponse.json({ success: true });
     // cookie options appropriate for local dev and production:

@@ -56,9 +56,9 @@ export const SIGNUPS: BetaSignup[] = [
 // In production, store hashed passwords in a database
 export const ADMIN_CREDENTIALS = {
   username: process.env.ADMIN_USERNAME || "admin@example.com",
-  // This is a bcrypt hash of "Admin123!" - you should hash your own password
-  // To generate: Use an online bcrypt generator or Node.js: bcrypt.hashSync('YourPassword', 10)
-  passwordHash: process.env.ADMIN_PASSWORD_HASH || "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+  // Bcrypt hash for "Admin123!" - generated with bcrypt.hashSync('Admin123!', 12)
+  // Using hardcoded hash because .env.local strips $ characters from bcrypt hashes
+  passwordHash: "$2b$12$jK/m6vR3Fs3ROuxB4gy/ZOm2uSK5/7OFyNzkysAfZj.ZGbxhp1f/O",
 };
 
 /**
@@ -78,10 +78,18 @@ export function verifyPassword(password: string, storedHash: string): boolean {
   try {
     // Support bcrypt format from environment
     if (storedHash.startsWith("$2a$") || storedHash.startsWith("$2b$")) {
-      // For bcrypt hashes, we'll use a simple comparison for now
-      // In production, use bcrypt.compareSync(password, storedHash)
-      // For now, allow hardcoded password for backward compatibility
-      return password === process.env.ADMIN_PASSWORD || password === "Admin123!";
+      const bcrypt = require("bcrypt");
+      // First try bcrypt comparison
+      const bcryptMatch = bcrypt.compareSync(password, storedHash);
+      if (bcryptMatch) return true;
+      
+      // Fallback: check plain password from env (for backward compatibility)
+      const envPassword = process.env.ADMIN_PASSWORD;
+      if (envPassword && password === envPassword) {
+        return true;
+      }
+      
+      return false;
     }
     
     // Support PBKDF2 format
