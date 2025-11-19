@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -105,7 +105,11 @@ export default function MessagesPage() {
   const [showNewChatDialog, setShowNewChatDialog] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [chatError, setChatError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const currentUserId = user?.id ? String(user.id) : null;
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   // --- Queries ---
   const conversationsQuery = useQuery<ConversationSummary[], Error>({
@@ -212,6 +216,7 @@ export default function MessagesPage() {
       setNewMessage("");
       setChatError(null);
       resetUnreadCount(message.conversationId);
+      scrollToBottom();
       queryClient.setQueryData<ChatMessage[]>(
         ["/api/conversations", message.conversationId, "messages"],
         (existing = []) => {
@@ -263,7 +268,10 @@ export default function MessagesPage() {
 
         if (!record) return;
 
-        if (activeConversation?.id === record.conversation_id) {
+        const isOwnMessage = currentUserId && record.sender_id === currentUserId;
+        const isActiveConversation = activeConversation?.id === record.conversation_id;
+
+        if (isActiveConversation) {
           queryClient.setQueryData<ChatMessage[]>(
             ["/api/conversations", activeConversation.id, "messages"],
             (existing = []) => {
@@ -282,28 +290,52 @@ export default function MessagesPage() {
               ];
             }
           );
+          scrollToBottom();
           resetUnreadCount(record.conversation_id);
-        } else if (currentUserId && record.sender_id !== currentUserId) {
-          queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) =>
-            existing.map((conversation) =>
-              conversation.id === record.conversation_id
-                ? {
-                    ...conversation,
-                    unreadCount: (conversation.unreadCount || 0) + 1,
-                  }
-                : conversation
-            )
-          );
         }
 
-        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+        queryClient.setQueryData<ConversationSummary[]>(["/api/conversations"], (existing = []) => {
+          let found = false;
+          const updated = existing.map((conversation) => {
+            if (conversation.id !== record.conversation_id) {
+              return conversation;
+            }
+            found = true;
+            const nextUnread = isActiveConversation || isOwnMessage
+              ? 0
+              : (conversation.unreadCount || 0) + 1;
+            return {
+              ...conversation,
+              unreadCount: nextUnread,
+              lastMessage: {
+                id: record.id,
+                content: record.content,
+                senderId: record.sender_id,
+                createdAt: record.created_at,
+              },
+              lastMessageAt: record.created_at,
+            };
+          });
+          return found ? updated : existing;
+        });
+
+        if (!isActiveConversation && !isOwnMessage) {
+          // Ensure badges stay accurate even if cache missed
+          queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+        }
+
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, activeConversation?.id, currentUserId, queryClient, resetUnreadCount]);
+  }, [user?.id, activeConversation?.id, currentUserId, queryClient, resetUnreadCount, scrollToBottom]);
+
+  useEffect(() => {
+    if (!activeConversation || messages.length === 0) return;
+    scrollToBottom();
+  }, [messages, activeConversation, scrollToBottom]);
 
   if (isAuthLoading) {
     return (
@@ -395,26 +427,29 @@ export default function MessagesPage() {
           ) : messages.length === 0 ? (
             <p className="text-sm text-neutral-500">No messages yet. Say hello!</p>
           ) : (
-            messages.map((msg: ChatMessage) => (
-              <div key={msg.id} className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
-                    msg.senderId === currentUserId
-                      ? "bg-neutral-900 text-white"
-                      : "bg-white border border-neutral-200 text-neutral-900"
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed break-normal wrap-break-word">{msg.content}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      msg.senderId === currentUserId ? "text-white/70" : "text-neutral-500"
+            <>
+              {messages.map((msg: ChatMessage) => (
+                <div key={msg.id} className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
+                      msg.senderId === currentUserId
+                        ? "bg-neutral-900 text-white"
+                        : "bg-white border border-neutral-200 text-neutral-900"
                     }`}
                   >
-                    {new Date(msg.createdAt).toLocaleTimeString()}
-                  </p>
+                    <p className="text-sm leading-relaxed break-normal wrap-break-word">{msg.content}</p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        msg.senderId === currentUserId ? "text-white/70" : "text-neutral-500"
+                      }`}
+                    >
+                      {new Date(msg.createdAt).toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+              <div ref={messagesEndRef} />
+            </>
           )}
         </div>
 
