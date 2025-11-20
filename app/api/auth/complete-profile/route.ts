@@ -26,6 +26,18 @@ async function fileToBase64(file: File): Promise<string> {
   return buffer.toString("base64");
 }
 
+/**
+ * Helper: normalize phone to E.164 format (with + prefix)
+ */
+function normalizePhoneToE164(raw: string): string {
+  const s = (raw || "").trim();
+  if (!s) return s;
+  if (s.startsWith("+")) return s; // already E.164
+  const digits = s.replace(/\D/g, "");
+  // Default to +91 if no country code provided
+  return `+91${digits}`;
+}
+
 export async function POST(req: Request) {
   // Return early if Supabase is not configured
   if (!supabase) {
@@ -54,7 +66,14 @@ export async function POST(req: Request) {
 
     // form fields
     const phoneField = (formData.get("phone") as string) ?? null;
-    const phone = phoneFromCookie ?? (phoneField ? String(phoneField).replace(/\D/g, "") : null);
+    
+    // Normalize phone from both sources to E.164 format
+    let phone: string | null = null;
+    if (phoneField) {
+      phone = normalizePhoneToE164(phoneField);
+    } else if (phoneFromCookie) {
+      phone = normalizePhoneToE164(phoneFromCookie);
+    }
 
     const name = (formData.get("name") as string) ?? null;
     const email = (formData.get("email") as string) ?? null;
@@ -133,7 +152,7 @@ export async function POST(req: Request) {
       const { data: existingProfile } = await supabase
         .from("profiles")
         .select("status")
-        .eq("phone", String(phone).replace(/\D/g, ""))
+        .eq("phone", phone)
         .maybeSingle();
       
       // Keep existing status if approved, otherwise set to pending
@@ -144,7 +163,7 @@ export async function POST(req: Request) {
 
     // Prepare payload to upsert into profiles
     const row: any = {
-      phone: phone ? String(phone).replace(/\D/g, "") : null,
+      phone: phone || null,
       name: name ?? null,
       email: email ?? null,
       bio: bio ?? null,
