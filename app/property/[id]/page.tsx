@@ -126,7 +126,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       {/* Header */}
       <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
         <div className="flex items-center justify-between px-6 py-4">
-          <button className="text-primary" onClick={() => router.push("/feed")} type="button" aria-label="Back to feed">
+          <button className="text-primary" onClick={() => router.back()} type="button" aria-label="Go back">
             <ArrowLeft size={24} />
           </button>
           <div className="flex items-center space-x-3">
