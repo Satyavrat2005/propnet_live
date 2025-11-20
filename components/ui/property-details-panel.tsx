@@ -31,6 +31,9 @@ export interface PropertyDetailsData {
   bhk?: number | null;
   buildingSociety?: string | null;
   location?: string | null;
+  fullAddress?: string | null;
+  flatNumber?: string | null;
+  floor?: string | null;
   description?: string | null;
   listingType?: string | null;
   promoter?: string | null;
@@ -39,6 +42,7 @@ export interface PropertyDetailsData {
   totalAreaOfLand?: number | string | null;
   totalCarpetArea?: number | string | null;
   owner?: PropertyOwnerDetails | null;
+  broker?: PropertyOwnerDetails | null;
 }
 
 interface PropertyDetailsPanelProps {

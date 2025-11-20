@@ -66,29 +66,20 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
     if (property.bhk) shareText += `🛏️ Bedrooms: ${property.bhk}\n`;
     if (property.bathrooms) shareText += `🚿 Bathrooms: ${property.bathrooms}\n`;
     if (property.propertyType) shareText += `🏢 Type: ${property.propertyType}\n`;
-    if (property.furnishing) shareText += `🪑 Furnishing: ${property.furnishing}\n`;
-    if (property.facing) shareText += `🧭 Facing: ${property.facing}\n`;
     if (property.floor) shareText += `📶 Floor: ${property.floor}\n`;
-    if (property.ageOfProperty) shareText += `🗓️ Age: ${property.ageOfProperty}\n`;
+    if (property.buildingSociety) shareText += `🏢 Building: ${property.buildingSociety}\n`;
     
     // Location Section
     shareText += `\n📍 LOCATION\n`;
     shareText += `${property.location}\n`;
     if (property.fullAddress) shareText += `${property.fullAddress}\n`;
-    if (property.flatNumber || property.floorNumber) {
-      shareText += `Flat/Floor: ${property.flatNumber || 'N/A'}, Floor ${property.floorNumber || 'N/A'}\n`;
+    if (property.flatNumber) {
+      shareText += `Flat: ${property.flatNumber}\n`;
     }
-    if (property.locality) shareText += `Locality: ${property.locality}\n`;
-    if (property.landmark) shareText += `Landmark: ${property.landmark}\n`;
     
     // Description
     if (property.description) {
       shareText += `\n📝 DESCRIPTION\n${property.description}\n`;
-    }
-    
-    // Amenities
-    if (property.amenities && property.amenities.length > 0) {
-      shareText += `\n✨ AMENITIES\n${property.amenities.join(', ')}\n`;
     }
     
     // Broker Contact
