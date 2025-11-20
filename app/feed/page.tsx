@@ -62,10 +62,10 @@ export default function PropertyFeedPage() {
           property.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesTab = selectedTab === "all" || property.transactionType === selectedTab;
-        const matchesPropertyType = !filters.propertyType || property.propertyType === filters.propertyType;
-        const matchesBHK = !filters.bhk || property.bhk?.toString() === filters.bhk;
+        const matchesPropertyType = !filters.propertyType || filters.propertyType === 'all' || property.propertyType === filters.propertyType;
+        const matchesBHK = !filters.bhk || filters.bhk === 'all' || property.bhk?.toString() === filters.bhk;
         const matchesLocation = !filters.location || property.location?.toLowerCase().includes(filters.location.toLowerCase());
-        const matchesListingType = !filters.listingType || property.listingType === filters.listingType;
+        const matchesListingType = !filters.listingType || filters.listingType === 'all' || property.listingType === filters.listingType;
 
         const propertyPrice = parsePriceToNumber(property.price);
         const matchesPriceRange = propertyPrice >= priceRange[0] && propertyPrice <= priceRange[1];
@@ -228,7 +228,7 @@ export default function PropertyFeedPage() {
         {showFilters && (
           <Card className="mx-4 mb-3 border-t-0 rounded-t-none shadow-sm">
             <CardContent className="p-4 space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Select
                   value={filters.propertyType}
                   onValueChange={(value) =>
@@ -238,7 +238,8 @@ export default function PropertyFeedPage() {
                   <SelectTrigger className="text-sm">
                     <SelectValue placeholder="Property Type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="Apartment">Apartment</SelectItem>
                     <SelectItem value="Villa">Villa</SelectItem>
                     <SelectItem value="House">Independent House</SelectItem>
@@ -258,7 +259,8 @@ export default function PropertyFeedPage() {
                   <SelectTrigger className="text-sm">
                     <SelectValue placeholder="Bedrooms" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">All Bedrooms</SelectItem>
                     <SelectItem value="1">1 BHK</SelectItem>
                     <SelectItem value="2">2 BHK</SelectItem>
                     <SelectItem value="3">3 BHK</SelectItem>
@@ -266,42 +268,54 @@ export default function PropertyFeedPage() {
                     <SelectItem value="5">5+ BHK</SelectItem>
                   </SelectContent>
                 </Select>
-
-                <Select
-                  value={filters.listingType}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, listingType: value }))
-                  }
-                >
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Listing Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="exclusive">Exclusive</SelectItem>
-                    <SelectItem value="colisting">Co-Listing</SelectItem>
-                    <SelectItem value="shared">Open Market</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
-              {/* Price Range */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Price Range: ₹{priceRange[0].toLocaleString()} - ₹
-                  {priceRange[1].toLocaleString()}
+              {/* Price Range with Input Fields */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Price Range
                 </label>
-                <Slider
-                  value={priceRange}
-                  onValueChange={setPriceRange}
-                  max={100000000}
-                  min={0}
-                  step={50000}
-                  className="w-full"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Min Price</label>
+                    <Input
+                      type="number"
+                      placeholder="Min"
+                      value={priceRange[0]}
+                      onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Max Price</label>
+                    <Input
+                      type="number"
+                      placeholder="Max"
+                      value={priceRange[1]}
+                      onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="px-1">
+                  <Slider
+                    value={priceRange}
+                    onValueChange={setPriceRange}
+                    max={100000000}
+                    min={0}
+                    step={100000}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>₹0</span>
+                    <span>₹10 Cr</span>
+                  </div>
+                </div>
               </div>
 
               {/* Location */}
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
                 <Input
                   placeholder="Enter location"
                   value={filters.location}
@@ -315,20 +329,25 @@ export default function PropertyFeedPage() {
                 />
               </div>
 
-              {/* Clear */}
-              {activeFiltersCount > 0 && (
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    onClick={clearFilters}
-                    size="sm"
-                    className="text-sm"
-                  >
-                    <X size={14} className="mr-1" />
-                    Clear All
-                  </Button>
-                </div>
-              )}
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={clearFilters}
+                  size="sm"
+                  className="text-sm flex-1 border border-gray-300 bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-500"
+                >
+                  <X size={14} className="mr-1" />
+                  Reset Filters
+                </Button>
+                <Button
+                  onClick={() => setShowFilters(false)}
+                  size="sm"
+                  className="text-sm flex-1 border border-gray-300 bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-500"
+                >
+                  Apply Filters
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

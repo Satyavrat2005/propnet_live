@@ -51,7 +51,57 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
   const handleShare = () => {
     const formattedPrice = getSafeFormattedPrice(property.price ?? undefined, property.transactionType ?? undefined, property.rentFrequency);
     const formattedArea = formatArea(property.size ?? 0, property.sizeUnit);
-    const shareText = `${property.title}\n📍 ${property.location}\n💰 ${formattedPrice}\n📐 ${formattedArea}`;
+    
+    // Transaction type header
+    const transactionHeader = property.transactionType === 'rent' ? '🏠 FOR RENT' : '🏡 FOR SALE';
+    
+    // Build comprehensive share text
+    let shareText = `${transactionHeader}\n\n`;
+    shareText += `${property.title}\n\n`;
+    
+    // Property Details Section
+    shareText += `📋 PROPERTY DETAILS\n`;
+    shareText += `💰 Price: ${formattedPrice}\n`;
+    shareText += `📐 Size: ${formattedArea}\n`;
+    if (property.bhk) shareText += `🛏️ Bedrooms: ${property.bhk}\n`;
+    if (property.bathrooms) shareText += `🚿 Bathrooms: ${property.bathrooms}\n`;
+    if (property.propertyType) shareText += `🏢 Type: ${property.propertyType}\n`;
+    if (property.furnishing) shareText += `🪑 Furnishing: ${property.furnishing}\n`;
+    if (property.facing) shareText += `🧭 Facing: ${property.facing}\n`;
+    if (property.floor) shareText += `📶 Floor: ${property.floor}\n`;
+    if (property.ageOfProperty) shareText += `🗓️ Age: ${property.ageOfProperty}\n`;
+    
+    // Location Section
+    shareText += `\n📍 LOCATION\n`;
+    shareText += `${property.location}\n`;
+    if (property.fullAddress) shareText += `${property.fullAddress}\n`;
+    if (property.flatNumber || property.floorNumber) {
+      shareText += `Flat/Floor: ${property.flatNumber || 'N/A'}, Floor ${property.floorNumber || 'N/A'}\n`;
+    }
+    if (property.locality) shareText += `Locality: ${property.locality}\n`;
+    if (property.landmark) shareText += `Landmark: ${property.landmark}\n`;
+    
+    // Description
+    if (property.description) {
+      shareText += `\n📝 DESCRIPTION\n${property.description}\n`;
+    }
+    
+    // Amenities
+    if (property.amenities && property.amenities.length > 0) {
+      shareText += `\n✨ AMENITIES\n${property.amenities.join(', ')}\n`;
+    }
+    
+    // Broker Contact
+    if (property.owner?.name || property.broker?.name) {
+      const brokerName = property.owner?.name || property.broker?.name || 'Agent';
+      const brokerPhone = property.owner?.phone || property.broker?.phone || 'Not provided';
+      const agencyName = property.owner?.agencyName || property.broker?.agencyName || '';
+      
+      shareText += `\n📞 CONTACT BROKER\n`;
+      shareText += `Name: ${brokerName}\n`;
+      if (agencyName) shareText += `Agency: ${agencyName}\n`;
+      shareText += `Phone: ${brokerPhone}\n`;
+    }
     
     if (navigator.share) {
       navigator.share({
@@ -63,7 +113,9 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
       navigator.clipboard.writeText(shareText);
       toast({
         title: "Copied to clipboard",
-        description: "Property details copied to clipboard",
+        description: "Property details with broker contact copied to clipboard",
+        className: "bg-white border border-gray-200",
+        style: { backgroundColor: "white", color: "black" },
       });
     }
   };
