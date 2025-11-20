@@ -169,7 +169,7 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
       )}
 
       <div className="space-y-3">
-        <p className="text-xs font-medium text-muted-foreground">Broker Details</p>
+        <p className="text-xs font-medium text-muted-foreground">Owner Details</p>
         <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-3">
             {property.owner?.profilePhotoUrl ? (
@@ -180,12 +180,12 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
               />
             ) : (
               <div className="h-12 w-12 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center">
-                {ownerName.charAt(0) || "B"}
+                {ownerName.charAt(0) || "O"}
               </div>
             )}
             <div>
               <p className="text-sm font-semibold text-neutral-900">{ownerName}</p>
-              <p className="text-xs text-muted-foreground">{property.owner?.agencyName || "Real Estate Agent"}</p>
+              <p className="text-xs text-muted-foreground">{property.owner?.agencyName || "Property Owner"}</p>
             </div>
           </div>
           {property.owner?.email && (
@@ -198,7 +198,7 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
             <Phone size={14} className="text-muted-foreground" />
             <span>{ownerPhone || "Not provided"}</span>
           </div>
-          {onCall && (
+          {/* {onCall && (
             <Button
               size="sm"
               className="w-full flex items-center justify-center space-x-2"
@@ -206,9 +206,9 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
               disabled={!ownerPhone}
             >
               <Phone size={14} />
-              <span>Call Broker</span>
+              <span>Call Owner</span>
             </Button>
-          )}
+          )} */}
         </div>
       </div>
 
