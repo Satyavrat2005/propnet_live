@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Heart, Share2, MapPin, Phone, Eye } from "lucide-react";
+import { Heart, Share2, MapPin, Eye, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import ContactModal from "@/components/ui/contact-modal";
 import { formatArea, getSafeFormattedPrice } from "@/utils/formatters";
 import { asMediaUrl } from "@/lib/utils";
 import type { PropertyDetailsData } from "@/components/ui/property-details-panel";
@@ -29,7 +28,6 @@ interface CompactPropertyCardProps {
 export default function CompactPropertyCard({ property, onViewDetails }: CompactPropertyCardProps) {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false);
   const { toast } = useToast();
   const handleDetailsClick = () => {
     if (onViewDetails) {
@@ -131,13 +129,22 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setShowContactModal(true)}
-                  className="text-xs px-2 py-1 h-6 border-gray-300"
+                  onClick={() => {
+                    if (!property.ownerId) {
+                      toast({
+                        title: "Broker unavailable",
+                        description: "This property does not have a listed broker yet.",
+                      });
+                      return;
+                    }
+                    router.push(`/messages?participantId=${String(property.ownerId)}&propertyId=${property.id}`);
+                  }}
+                  className="text-xs px-2 py-1 h-6 border-gray-300 flex items-center gap-1"
                 >
-                  <Phone size={10} className="mr-1" />
-                  Contact
+                  <MessageCircle size={10} className="mr-1" />
+                  Message
                 </Button>
-                
+        
                 <Button size="sm" variant="ghost" onClick={handleDetailsClick}
                   className="text-xs px-2 py-1 h-6"
                 >
@@ -191,12 +198,6 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
         </div>
       </div>
 
-      <ContactModal
-        isOpen={showContactModal}
-        onClose={() => setShowContactModal(false)}
-        propertyOwner={property.owner ?? { name: '', phone: '' }}
-        propertyTitle={property.title ?? 'Property'}
-      />
     </>
   );
 }

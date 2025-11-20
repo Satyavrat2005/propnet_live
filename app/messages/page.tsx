@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,11 +17,9 @@ import {
 import {
   MessageCircle,
   Search,
-  Phone,
   User,
   Clock,
   Send,
-  MoreVertical,
   Building2,
   Plus,
 } from "lucide-react";
@@ -132,6 +131,10 @@ export default function MessagesPage() {
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
+  const searchParams = useSearchParams();
+  const participantIdParam = searchParams?.get("participantId") ?? null;
+  const propertyIdParam = searchParams?.get("propertyId") ?? null;
+  const autoConversationKey = useRef<string | null>(null);
 
   const resetUnreadCount = useCallback(
     (conversationId: string | null) => {
@@ -455,50 +458,40 @@ export default function MessagesPage() {
     scrollToBottom();
   }, [messages, activeConversation, scrollToBottom]);
 
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <Card className="p-8 text-center space-y-3">
-          <MessageCircle className="mx-auto text-neutral-400" size={48} />
-          <p className="text-sm text-neutral-600">
-            Please sign in to view your messages.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
   // --- Handlers ---
-  const handleSelectConversation = (conversationId: string) => {
-    setSelectedConversationId(conversationId);
-    resetUnreadCount(conversationId);
-  };
+  const handleSelectConversation = useCallback(
+    (conversationId: string) => {
+      setSelectedConversationId(conversationId);
+      resetUnreadCount(conversationId);
+    },
+    [resetUnreadCount]
+  );
 
-  const startConversation = (
-    participantId: string,
-    propertyId?: string | null,
-    type = "general"
-  ) => {
-    const existing = findExistingConversation(participantId, propertyId, type);
-    if (existing) {
-      handleSelectConversation(existing.id);
-      setShowNewChatDialog(false);
-      return;
-    }
-    createConversation.mutate({
-      participantId,
-      propertyId: propertyId ?? undefined,
-      type,
-    });
-  };
+  const startConversation = useCallback(
+    (participantId: string, propertyId?: string | null, type = "general") => {
+      const existing = findExistingConversation(participantId, propertyId, type);
+      if (existing) {
+        handleSelectConversation(existing.id);
+        setShowNewChatDialog(false);
+        return;
+      }
+      createConversation.mutate({
+        participantId,
+        propertyId: propertyId ?? undefined,
+        type,
+      });
+    },
+    [createConversation, findExistingConversation, handleSelectConversation]
+  );
+
+  useEffect(() => {
+    if (!participantIdParam || !user?.id) return;
+    const key = `${participantIdParam}-${propertyIdParam ?? ""}`;
+    if (autoConversationKey.current === key) return;
+    autoConversationKey.current = key;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    startConversation(participantIdParam, propertyIdParam);
+  }, [participantIdParam, propertyIdParam, startConversation, user?.id]);
 
   const handleSend = () => {
     if (!newMessage.trim() || !activeConversation || sendMessage.isPending)
@@ -520,6 +513,27 @@ export default function MessagesPage() {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <Card className="p-8 text-center space-y-3">
+          <MessageCircle className="mx-auto text-neutral-400" size={48} />
+          <p className="text-sm text-neutral-600">
+            Please sign in to view your messages.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   // --- Chat view ---
   if (activeConversation) {
