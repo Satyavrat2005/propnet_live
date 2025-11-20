@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Search, Filter, X, Sparkles, Home } from "lucide-react";
+import { Plus, Search, Filter, X, Sparkles, Home, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CompactPropertyCard, { FeedProperty } from "@/components/ui/compact-property-card";
 import MobileNavigation from "@/components/layout/mobile-navigation";
@@ -70,16 +70,16 @@ export default function PropertyFeedPage() {
         const propertyPrice = parsePriceToNumber(property.price);
         const matchesPriceRange = propertyPrice >= priceRange[0] && propertyPrice <= priceRange[1];
 
-      return (
-        matchesSearch &&
-        matchesTab &&
-        matchesPropertyType &&
-        matchesBHK &&
-        matchesLocation &&
-        matchesListingType &&
-        matchesPriceRange
-      );
-    })
+        return (
+          matchesSearch &&
+          matchesTab &&
+          matchesPropertyType &&
+          matchesBHK &&
+          matchesLocation &&
+          matchesListingType &&
+          matchesPriceRange
+        );
+      })
     : [];
 
   const clearFilters = () => {
@@ -107,6 +107,14 @@ export default function PropertyFeedPage() {
   const handleCloseDetails = () => {
     setIsDetailModalOpen(false);
     setSelectedProperty(null);
+  };
+
+  const handleMessageBroker = (ownerId?: string | number | null, propertyId?: string | null) => {
+    if (!ownerId) {
+      return;
+    }
+    const normalizedOwnerId = String(ownerId);
+    router.push(`/messages?participantId=${normalizedOwnerId}${propertyId ? `&propertyId=${propertyId}` : ""}`);
   };
 
   if (isLoading) {
@@ -381,13 +389,18 @@ export default function PropertyFeedPage() {
           {selectedProperty && (
             <PropertyDetailsPanel
               property={selectedProperty}
-              onCall={() => {
-                if (selectedProperty.owner?.phone) {
-                  window.open(`tel:${selectedProperty.owner.phone}`, "_self");
-                }
-              }}
               actions={
                 <div className="pt-4 space-y-2">
+                  <Button
+                    className="w-full flex items-center justify-center space-x-2"
+                    onClick={() => {
+                      handleMessageBroker(selectedProperty.ownerId, selectedProperty.id);
+                      handleCloseDetails();
+                    }}
+                  >
+                    <MessageCircle size={16} />
+                    <span>Message Broker</span>
+                  </Button>
                   <Button
                     className="w-full"
                     onClick={() => {
