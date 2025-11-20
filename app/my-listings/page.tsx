@@ -431,6 +431,20 @@ function PropertyForm({
                       <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
                         <input
                           type="radio"
+                          id={editingProperty ? "colisting-edit" : "colisting"}
+                          value="colisting"
+                          checked={field.value === "colisting"}
+                          onChange={() => field.onChange("colisting")}
+                          className="mt-1"
+                        />
+                        <label htmlFor={editingProperty ? "colisting-edit" : "colisting"} className="flex-1 cursor-pointer">
+                          <div className="font-medium text-gray-900">Allow Co-Listing</div>
+                          <div className="text-sm text-gray-600">Multiple agents can list with permission</div>
+                        </label>
+                      </div>
+                      <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+                        <input
+                          type="radio"
                           id={editingProperty ? "shared-edit" : "shared"}
                           value="shared"
                           checked={field.value === "shared"}
@@ -628,8 +642,8 @@ export default function MyListings() {
       buildingSociety: "",
       description: "",
       bhk: 0,
-      listingType: "shared",
-      isPubliclyVisible: true,
+      listingType: "exclusive",
+      isPubliclyVisible: false,
       ownerName: "",
       ownerPhone: "",
       commissionTerms: "",
