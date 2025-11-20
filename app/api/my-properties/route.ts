@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 import { verifySession } from "@/lib/auth/session";
 import { sendSms } from "@/lib/twilio";
+import { buildOwnerConsentSms } from "@/lib/ownerConsentSms";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -501,26 +502,20 @@ export async function POST(req: NextRequest) {
             .eq("id", userId)
             .single();
 
-          const ownerFirstName = mapped.ownerName ? String(mapped.ownerName).split(" ")[0] : "Hi";
           const agentName = agentProfile?.name || "Your agent";
-          const listingTypeLabel = mapped.listingType ? mapped.listingType.toString() : "Listing";
-          const areaSnippet = mapped.size
-            ? `${mapped.size}${mapped.sizeUnit ? ` ${mapped.sizeUnit}` : ""}`
-            : null;
-          const priceSnippet = mapped.price ? String(mapped.price) : "Price on request";
-
-          const smsBodyLines = [
-            `${ownerFirstName}, ${agentName} wants to list your property on PropNet.`,
-            `"${mapped.title}" at ${mapped.location}`,
-            [mapped.propertyType, mapped.bhk ? `${mapped.bhk} BHK` : null, areaSnippet]
-              .filter(Boolean)
-              .join(" • "),
-            `Price: ${priceSnippet}`,
-            `Review & approve: ${ownerConsentUrl}`,
-            `Listing type: ${listingTypeLabel}`,
-          ].filter(Boolean);
-
-          const smsBody = smsBodyLines.join("\n");
+          const smsBody = buildOwnerConsentSms({
+            ownerName: mapped.ownerName,
+            agentName,
+            propertyTitle: mapped.title,
+            location: mapped.location,
+            propertyType: mapped.propertyType,
+            bhk: mapped.bhk,
+            size: mapped.size,
+            sizeUnit: mapped.sizeUnit,
+            price: mapped.price,
+            listingType: mapped.listingType ? mapped.listingType.toString() : undefined,
+            ownerConsentUrl,
+          });
 
           try {
             await sendSms({ to: ownerPhoneE164, body: smsBody });

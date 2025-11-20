@@ -838,6 +838,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
           {paginatedProperties.map((property: Property) => {
             const priceDisplay = resolvePriceLabel(property);
             const badgeLabel = getListingTypeLabel(property.transactionType || undefined);
+            const contactPhone = property.broker?.phone || property.owner?.phone || "";
 
             return (
               <Card
@@ -865,11 +866,11 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (property.owner.phone) {
-                                window.open(`tel:${property.owner.phone}`, "_self");
+                              if (contactPhone) {
+                                window.open(`tel:${contactPhone}`, "_self");
                               }
                             }}
-                            disabled={!property.owner.phone}
+                            disabled={!contactPhone}
                           >
                             <Phone size={12} className="mr-1" />
                             Contact
@@ -938,8 +939,9 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
             <PropertyDetailsPanel
               property={detailsProperty}
               onCall={() => {
-                if (detailsProperty.owner?.phone) {
-                  window.open(`tel:${detailsProperty.owner.phone}`, "_self");
+                const phone = detailsProperty.broker?.phone || detailsProperty.owner?.phone;
+                if (phone) {
+                  window.open(`tel:${phone}`, "_self");
                 }
               }}
               actions={

@@ -94,7 +94,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const handleShareWhatsApp = () => {
-    const rawPhone = property.owner?.phone ?? null;
+    const rawPhone = property.broker?.phone ?? property.owner?.phone ?? null;
     const digitsOnly = rawPhone?.replace(/\D/g, "") || "";
     const whatsappNumber = (() => {
       if (!digitsOnly) return null;
@@ -156,11 +156,15 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="p-6 space-y-6">
-          <PropertyDetailsPanel property={property} onCall={() => {
-            if (property.owner?.phone) {
-              window.open(`tel:${property.owner.phone}`, "_self");
-            }
-          }} />
+          <PropertyDetailsPanel
+            property={property}
+            onCall={() => {
+              const phone = property.broker?.phone ?? property.owner?.phone;
+              if (phone) {
+                window.open(`tel:${phone}`, "_self");
+              }
+            }}
+          />
 
           {property.coAgents?.length > 0 && (
             <div className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4">

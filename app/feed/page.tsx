@@ -408,6 +408,12 @@ export default function PropertyFeedPage() {
           {selectedProperty && (
             <PropertyDetailsPanel
               property={selectedProperty}
+              onCall={() => {
+                const phone = selectedProperty.broker?.phone ?? selectedProperty.owner?.phone;
+                if (phone) {
+                  window.open(`tel:${phone}`, "_self");
+                }
+              }}
               actions={
                 <div className="pt-4 space-y-2">
                   <Button

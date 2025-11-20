@@ -19,9 +19,9 @@ type PropertyRow = {
   bhk: number | null;
   location: string | null;
   full_address: string | null;
-  flat_number : string | null;
-  floor : string | null;
-  building_society : string | null;
+  flat_number: string | null;
+  floor: string | null;
+  building_society: string | null;
   description: string | null;
   listing_type: string | null;
   property_photos: string[] | null;
@@ -35,12 +35,22 @@ type PropertyRow = {
   owner_phone: string | null;
   created_at: string | null;
   updated_at: string | null;
-  profiles?: Array<{
-    name?: string | null;
-    agency_name?: string | null;
-    profile_photo_url?: string | null;
-    phone?: string | null;
-  }> | null;
+  profiles?:
+    | Array<{
+        name?: string | null;
+        agency_name?: string | null;
+        profile_photo_url?: string | null;
+        phone?: string | null;
+        email?: string | null;
+      }>
+    | {
+        name?: string | null;
+        agency_name?: string | null;
+        profile_photo_url?: string | null;
+        phone?: string | null;
+        email?: string | null;
+      }
+    | null;
 };
 
 function parseScopeOfWork(value: unknown): string[] {
@@ -67,6 +77,24 @@ function toOwnerObject(row: PropertyRow) {
     agencyName: null,
     profilePhotoUrl: null,
     email: null,
+  };
+}
+
+function toBrokerObject(row: PropertyRow) {
+  const profileRecord = Array.isArray(row.profiles)
+    ? row.profiles[0]
+    : row.profiles;
+
+  if (!profileRecord) {
+    return null;
+  }
+
+  return {
+    name: profileRecord.name || null,
+    phone: profileRecord.phone || null,
+    agencyName: profileRecord.agency_name || null,
+    profilePhotoUrl: profileRecord.profile_photo_url || null,
+    email: profileRecord.email || null,
   };
 }
 
@@ -127,7 +155,7 @@ export async function GET(req: NextRequest) {
         owner_phone,
         created_at,
         updated_at,
-        profiles(name, agency_name, profile_photo_url, phone)
+        profiles(name, agency_name, profile_photo_url, phone, email)
       `
       )
       .order("created_at", { ascending: false })
@@ -169,6 +197,7 @@ export async function GET(req: NextRequest) {
       commissionTerms: row.commission_terms,
       scopeOfWork: parseScopeOfWork(row.scope_of_work),
       owner: toOwnerObject(row),
+      broker: toBrokerObject(row),
       ownerApprovalStatus: row.approval_status,
       isPubliclyVisible: row.public_property,
       lat: row.latitude,

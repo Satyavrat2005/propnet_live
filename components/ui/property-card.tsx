@@ -16,8 +16,9 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
   const hasCoAgents = property.coAgents && property.coAgents.length > 0;
   const primaryPhoto = asMediaUrl(property.photos?.[0]) ||
     "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400";
-  const ownerName = property.owner?.name || "Property Owner";
-  const ownerInitial = ownerName.charAt(0) || "P";
+  const contact = property.broker || property.owner || {};
+  const ownerName = contact.name || "Property Broker";
+  const ownerInitial = ownerName.charAt(0) || "B";
   const priceLabel = formatPrice(Number(property.price) || 0, property.transactionType, property.rentFrequency);
   const sizeLabel = property.size ? formatArea(property.size, property.sizeUnit || "sq.ft") : "";
 

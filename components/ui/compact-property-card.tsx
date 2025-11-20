@@ -83,10 +83,10 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
     }
     
     // Broker Contact
-    if (property.owner?.name || property.broker?.name) {
-      const brokerName = property.owner?.name || property.broker?.name || 'Agent';
-      const brokerPhone = property.owner?.phone || property.broker?.phone || 'Not provided';
-      const agencyName = property.owner?.agencyName || property.broker?.agencyName || '';
+    if (property.broker?.name || property.owner?.name) {
+      const brokerName = property.broker?.name || property.owner?.name || 'Agent';
+      const brokerPhone = property.broker?.phone || property.owner?.phone || 'Not provided';
+      const agencyName = property.broker?.agencyName || property.owner?.agencyName || '';
       
       shareText += `\n📞 CONTACT BROKER\n`;
       shareText += `Name: ${brokerName}\n`;

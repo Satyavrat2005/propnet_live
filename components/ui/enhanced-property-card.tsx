@@ -21,7 +21,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
 
   const isOwner = currentUserId === property.ownerId;
   const hasCoAgents = property.coAgents && property.coAgents.length > 0;
-  const contactInfo = property.owner || { name: "", phone: "", agencyName: "" };
+  const contactInfo = property.broker || property.owner || null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -201,20 +201,20 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
         </div>
 
         <div className="space-y-2">
-          {property.owner && (
+          {contactInfo && (
             <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                   <span className="text-primary font-semibold text-sm">
-                    {property.owner.name?.charAt(0) || property.owner.phone?.charAt(0) || 'U'}
+                    {contactInfo.name?.charAt(0) || contactInfo.phone?.charAt(0) || 'B'}
                   </span>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-neutral-900">
-                    {property.owner.name || 'Property Owner'}
+                    {contactInfo.name || 'Listing Broker'}
                   </div>
                   <div className="text-xs text-neutral-500">
-                    Listed by {property.owner.userType || 'Owner'}
+                    {contactInfo.agencyName || 'Real Estate Agent'}
                   </div>
                 </div>
               </div>
@@ -290,7 +290,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
       <ContactModal
         isOpen={showContactModal}
         onClose={() => setShowContactModal(false)}
-        propertyOwner={contactInfo}
+        propertyOwner={contactInfo || { name: "", phone: "", agencyName: "" }}
         propertyTitle={property.title}
       />
     </div>

@@ -26,7 +26,7 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
     } else {
       toast({
         title: "Message Sent",
-        description: "Your message has been sent to the property owner.",
+        description: "Your message has been sent to the property broker.",
       });
       setMessage("");
       onClose();
@@ -40,7 +40,7 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
       >
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-neutral-900">
-            Contact Owner
+            Contact Broker
           </DialogTitle>
         </DialogHeader>
 
@@ -48,7 +48,7 @@ export default function ContactModal({ isOpen, onClose, propertyOwner, propertyT
           {/* Owner Info */}
           <div className="flex items-center space-x-3 p-3 bg-neutral-50 rounded-lg">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-              {propertyOwner.name?.charAt(0) || "O"}
+              {propertyOwner.name?.charAt(0) || "B"}
             </div>
             <div>
               <div className="font-medium text-neutral-900">{propertyOwner.name}</div>

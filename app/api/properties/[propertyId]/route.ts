@@ -32,6 +32,21 @@ function parseScopeOfWork(value: any): string[] {
   }
 }
 
+function extractBrokerProfile(row: { profiles?: any }) {
+  const profileRecord = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+  if (!profileRecord) {
+    return null;
+  }
+
+  return {
+    name: profileRecord.name || null,
+    phone: profileRecord.phone || null,
+    agencyName: profileRecord.agency_name || null,
+    profilePhotoUrl: profileRecord.profile_photo_url || null,
+    email: profileRecord.email || null,
+  };
+}
+
 async function getUserFromCookie(req: NextRequest) {
   const cookie = req.headers.get("cookie") || "";
   const part = cookie.split(";").find((c) => c.trim().startsWith("session="));
@@ -163,6 +178,7 @@ export async function GET(
         owner_phone,
         created_at,
         updated_at
+        ,profiles(name, agency_name, profile_photo_url, phone, email)
       `
       )
       .eq("property_id", propertyId)
@@ -176,6 +192,8 @@ export async function GET(
     if (!data) {
       return NextResponse.json({ message: "Property not found" }, { status: 404 });
     }
+
+    const broker = extractBrokerProfile(data);
 
     const payload = {
       id: data.property_id,
@@ -199,6 +217,7 @@ export async function GET(
         phone: data.owner_phone ?? null,
         email: null,
       },
+      broker,
       ownerApprovalStatus: data.approval_status,
       isPubliclyVisible: data.public_property,
       lat: data.latitude,
@@ -317,7 +336,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
       .update(normalizedPayload)
       .eq("property_id", propertyId)
       .select(
-        `property_id, id, property_title, property_type, transaction_type, sale_price, area, area_unit, bhk, location, full_address, description, listing_type, property_photos, commission_terms, scope_of_work, approval_status, public_property, latitude, longitude, owner_name, owner_phone, created_at, updated_at`
+        `property_id, id, property_title, property_type, transaction_type, sale_price, area, area_unit, bhk, location, full_address, description, listing_type, property_photos, commission_terms, scope_of_work, approval_status, public_property, latitude, longitude, owner_name, owner_phone, created_at, updated_at, profiles(name, agency_name, profile_photo_url, phone, email)`
       )
       .single();
 
@@ -388,6 +407,8 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
       if (!smsError) smsError = smsSetupErr?.message || "Failed to prepare SMS";
     }
 
+    const broker = extractBrokerProfile(updated);
+
     const payload = {
       id: updated.property_id,
       ownerId: updated.id,
@@ -410,6 +431,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
         phone: updated.owner_phone ?? null,
         email: null,
       },
+      broker,
       ownerApprovalStatus: updated.approval_status,
       isPubliclyVisible: updated.public_property,
       lat: updated.latitude,

@@ -23,6 +23,22 @@ type PropertyRow = {
   owner_name: string | null;
   owner_phone: string | null;
   created_at: string | null;
+  profiles?:
+    | Array<{
+        name?: string | null;
+        agency_name?: string | null;
+        profile_photo_url?: string | null;
+        phone?: string | null;
+        email?: string | null;
+      }>
+    | {
+        name?: string | null;
+        agency_name?: string | null;
+        profile_photo_url?: string | null;
+        phone?: string | null;
+        email?: string | null;
+      }
+    | null;
 };
 
 type PrimaryListingRow = {
@@ -73,7 +89,8 @@ const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> 
         longitude,
         owner_name,
         owner_phone,
-        created_at
+        created_at,
+        profiles(name, agency_name, profile_photo_url, phone, email)
       `)
       .eq("approval_status", "approved")
       .order("created_at", { ascending: false })
@@ -97,7 +114,20 @@ const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> 
     offset += PAGE_SIZE;
   }
 
-  return rows.map((row: PropertyRow): MapProperty => ({
+  return rows.map((row: PropertyRow): MapProperty => {
+    const profileRecord = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+
+    const broker = profileRecord
+      ? {
+          name: trimText(profileRecord.name, TEXT_LIMITS.ownerName) || null,
+          phone: profileRecord.phone || null,
+          agencyName: profileRecord.agency_name || null,
+          profilePhotoUrl: profileRecord.profile_photo_url || null,
+          email: profileRecord.email || null,
+        }
+      : null;
+
+    return {
     id: row.property_id,
     title: trimText(row.property_title || "Untitled Property", TEXT_LIMITS.title) || "Untitled Property",
     propertyType: row.property_type,
@@ -112,13 +142,15 @@ const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> 
       agencyName: null,
       profilePhotoUrl: null,
     },
+      broker,
     lat: row.latitude,
     lng: row.longitude,
     createdAt: row.created_at,
     description: trimText(row.description, TEXT_LIMITS.description),
     details: null,
     listingSource: "property",
-  }));
+    };
+  });
 }, ["map-properties"], { revalidate: 300 });
 
 const fetchPrimaryListings = unstable_cache(async (): Promise<MapProperty[]> => {

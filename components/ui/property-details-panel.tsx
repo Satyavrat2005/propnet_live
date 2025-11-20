@@ -61,8 +61,9 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
   const listingBadge = property.listingType ? getListingTypeLabel(property.listingType) : property.transactionType ? property.transactionType : null;
   const listingColor = property.listingType ? getListingTypeBadgeColor(property.listingType) : "bg-gray-100 text-gray-700";
   const isPrimary = (property.transactionType || "").toLowerCase() === "primary";
-  const ownerName = property.owner?.name || "Owner";
-  const ownerPhone = property.owner?.phone || "";
+  const contact = property.broker || property.owner || null;
+  const contactName = contact?.name || "Broker";
+  const contactPhone = contact?.phone || "";
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -172,38 +173,38 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
         <p className="text-xs font-medium text-muted-foreground">Broker Details</p>
         <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-3">
-            {property.owner?.profilePhotoUrl ? (
+            {contact?.profilePhotoUrl ? (
               <img 
-                src={property.owner.profilePhotoUrl} 
-                alt={ownerName}
+                src={contact.profilePhotoUrl} 
+                alt={contactName}
                 className="h-12 w-12 rounded-full object-cover"
               />
             ) : (
               <div className="h-12 w-12 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center">
-                {ownerName.charAt(0) || "B"}
+                {contactName.charAt(0) || "B"}
               </div>
             )}
             <div>
-              <p className="text-sm font-semibold text-neutral-900">{ownerName}</p>
-              <p className="text-xs text-muted-foreground">{property.owner?.agencyName || "Real Estate Agent"}</p>
+              <p className="text-sm font-semibold text-neutral-900">{contactName}</p>
+              <p className="text-xs text-muted-foreground">{contact?.agencyName || "Real Estate Agent"}</p>
             </div>
           </div>
-          {property.owner?.email && (
+          {contact?.email && (
             <div className="flex items-center gap-2 text-sm text-neutral-700">
               <span className="text-muted-foreground">✉</span>
-              <span>{property.owner.email}</span>
+              <span>{contact.email}</span>
             </div>
           )}
           <div className="flex items-center gap-2 text-sm text-neutral-700">
             <Phone size={14} className="text-muted-foreground" />
-            <span>{ownerPhone || "Not provided"}</span>
+            <span>{contactPhone || "Not provided"}</span>
           </div>
           {onCall && (
             <Button
               size="sm"
               className="w-full flex items-center justify-center space-x-2"
               onClick={onCall}
-              disabled={!ownerPhone}
+              disabled={!contactPhone}
             >
               <Phone size={14} />
               <span>Call Broker</span>

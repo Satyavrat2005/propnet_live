@@ -16,6 +16,13 @@ export interface MapProperty {
     agencyName?: string | null;
     profilePhotoUrl?: string | null;
   };
+  broker?: {
+    name: string | null;
+    phone: string | null;
+    agencyName?: string | null;
+    profilePhotoUrl?: string | null;
+    email?: string | null;
+  } | null;
   lat?: number | null;
   lng?: number | null;
   createdAt?: string | null;
