@@ -98,20 +98,26 @@ export default function Page() {
     e.preventDefault();
     if (newPin !== confirmPin) return alert("PINs do not match");
     if (newPin.length < 4) return alert("PIN must be at least 4 digits");
-    // Call a server endpoint to set new PIN for user (not implemented here).
-    // For a drop-in demo, just alert and redirect to login.
+    
+    const p = normalizePhone(phone);
     setLoading(true);
     try {
-      // You can implement /api/auth/set-pin to actually persist the PIN server-side.
-      // For now we simulate success:
-      await new Promise((r) => setTimeout(r, 700));
+      const res = await fetch("/api/auth/reset-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: p, newPin }),
+      });
+      const json = await res.json();
       setLoading(false);
-      alert("PIN set successfully. You will be redirected to login.");
+      
+      if (!res.ok) return alert(json?.error || "Failed to reset PIN");
+      
+      alert("PIN reset successfully. You will be redirected to login.");
       router.push("/auth/login");
     } catch (err) {
       setLoading(false);
       console.error(err);
-      alert("Failed to set PIN");
+      alert("Failed to reset PIN");
     }
   };
 
@@ -121,9 +127,9 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-t-lg">
+        <CardHeader className="text-center bg-linear-to-r from-red-600 to-pink-600 text-white rounded-t-lg">
           <div className="flex items-center justify-center mb-2">
             {step === "phone" && <Smartphone className="h-8 w-8" />}
             {step === "verify" && <MessageSquare className="h-8 w-8" />}
@@ -154,7 +160,7 @@ export default function Page() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={phone.length !== 10 || loading}>
+                <Button type="submit" className="w-full bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={phone.length !== 10 || loading}>
                   {loading ? "Sending..." : "Send Reset Code"}
                 </Button>
 
@@ -179,7 +185,7 @@ export default function Page() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={code.length !== 6 || loading}>
+                <Button type="submit" className="w-full bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={code.length !== 6 || loading}>
                   {loading ? "Verifying..." : "Verify Code"}
                 </Button>
 
@@ -214,7 +220,7 @@ export default function Page() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={newPin.length < 4 || confirmPin.length < 4 || loading}>
+                <Button type="submit" className="w-full bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={newPin.length < 4 || confirmPin.length < 4 || loading}>
                   {loading ? "Setting PIN..." : "Set New PIN"}
                 </Button>
 

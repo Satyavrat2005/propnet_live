@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
     let userId: string;
     try {
       const payload = await verifySession(sessionCookie);
-      userId = String(payload.sub);
+      // Support both old format (id) and new format (sub)
+      userId = String((payload as any).sub || (payload as any).id);
     } catch {
       return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }

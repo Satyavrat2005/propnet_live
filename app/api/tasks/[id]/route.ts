@@ -24,7 +24,8 @@ export async function PATCH(req: NextRequest, { params }: { params: any }) {
     }
 
     const payload = await verifySession(token);
-    const userId = payload.sub;
+    // Support both old format (id) and new format (sub)
+    const userId = (payload as any).sub || (payload as any).id;
 
     // Next.js may pass params as a Promise — await it first.
     const resolvedParams = await params;

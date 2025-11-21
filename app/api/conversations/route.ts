@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 import { getSessionUser } from "@/lib/auth/getSessionUser";
+import { getUserIdFromSession } from "@/lib/auth/session";
 
 // Service role client for privileged operations (never expose to frontend)
 const serviceSupabase = createClient(
@@ -216,14 +217,19 @@ async function findSharedConversationId(
 export async function GET(req: NextRequest) {
   try {
     const session = await getSessionUser(req);
-    if (!session?.sub) {
+    if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const userId = getUserIdFromSession(session);
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
     const { data: participationRows, error } = await serviceSupabase
       .from("conversation_participants")
       .select("conversation_id")
-      .eq("profile_id", session.sub);
+      .eq("profile_id", userId);
 
     if (error) {
       console.error("[GET /api/conversations] participation error", error);
@@ -235,7 +241,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([]);
     }
 
-    const payload = await fetchConversationPayload(conversationIds, session.sub);
+    const payload = await fetchConversationPayload(conversationIds, userId);
     return NextResponse.json(payload, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unexpected error";
@@ -247,8 +253,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionUser(req);
-    if (!session?.sub) {
+    if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const userId = getUserIdFromSession(session);
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -260,7 +271,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "participantId is required" }, { status: 400 });
     }
 
-    if (participantId === session.sub) {
+    if (participantId === userId) {
       return NextResponse.json({ error: "Cannot start a conversation with yourself" }, { status: 400 });
     }
 
@@ -283,7 +294,7 @@ export async function POST(req: NextRequest) {
 
     let existingConversationId: string | null = null;
     try {
-      existingConversationId = await findSharedConversationId(session.sub, participantId, {
+      existingConversationId = await findSharedConversationId(userId, participantId, {
         propertyId,
         type,
       });
@@ -293,7 +304,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (existingConversationId) {
-      const payload = await fetchConversationPayload([existingConversationId], session.sub);
+      const payload = await fetchConversationPayload([existingConversationId], userId);
       const existing = payload?.[0];
       if (!existing) {
         return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
@@ -313,7 +324,7 @@ export async function POST(req: NextRequest) {
     }
 
     const participantsPayload = [
-      { conversation_id: newConversation.id, profile_id: session.sub },
+      { conversation_id: newConversation.id, profile_id: userId },
       { conversation_id: newConversation.id, profile_id: participantId },
     ];
 
@@ -327,7 +338,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
     }
 
-    const payload = await fetchConversationPayload([newConversation.id], session.sub);
+    const payload = await fetchConversationPayload([newConversation.id], userId);
     const createdConversation = payload?.[0];
     if (!createdConversation) {
       return NextResponse.json({ error: "Conversation payload missing" }, { status: 500 });

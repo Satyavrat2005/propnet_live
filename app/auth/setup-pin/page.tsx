@@ -1,0 +1,197 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Key, Shield, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+export default function SetupPinPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const phone = searchParams?.get("phone") ?? "";
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (pin.length < 4 || pin.length > 6) {
+      toast({
+        title: "Invalid PIN",
+        description: "PIN must be 4-6 digits",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (pin !== confirmPin) {
+      toast({
+        title: "PIN Mismatch",
+        description: "PINs do not match. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/auth/setup-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, pin, keepLoggedIn }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        toast({
+          title: "Setup Failed",
+          description: data.error || "Failed to setup PIN",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "PIN Created Successfully",
+        description: "Redirecting to complete your profile...",
+      });
+
+      router.push("/auth/complete-profile");
+    } catch (error) {
+      console.error("Setup PIN error:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg py-8">
+          <div className="flex items-center justify-center mb-3">
+            <div className="bg-white/20 p-3 rounded-full">
+              <Key className="h-10 w-10" />
+            </div>
+          </div>
+          <CardTitle className="text-3xl font-bold">Create Your PIN</CardTitle>
+          <CardDescription className="text-blue-100 text-base mt-2">
+            Set up a secure 4-6 digit PIN for quick access
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-6 space-y-6">
+          {/* Security Features */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-2 mb-2">
+              <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+              <h3 className="font-semibold text-blue-900">Security Features</h3>
+            </div>
+            <ul className="space-y-2 text-sm text-blue-800 ml-7">
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>Your PIN is encrypted and stored securely</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>Use your PIN for quick login instead of OTP</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>Keep this PIN private and memorable</span>
+              </li>
+            </ul>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Create PIN */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Create PIN (4-6 digits)
+              </label>
+              <Input
+                type="password"
+                placeholder="••••••"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="text-center text-2xl tracking-widest"
+                maxLength={6}
+                required
+              />
+              <p className="text-xs text-gray-500 text-center">
+                Enter 4-6 digits that you can easily remember
+              </p>
+            </div>
+
+            {/* Confirm PIN */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Confirm PIN
+              </label>
+              <Input
+                type="password"
+                placeholder="••••••"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="text-center text-2xl tracking-widest"
+                maxLength={6}
+                required
+              />
+            </div>
+
+            {/* Keep logged in */}
+            <div className="flex items-start space-x-3 pt-2">
+              <Checkbox
+                id="keepLoggedIn"
+                checked={keepLoggedIn}
+                onCheckedChange={(checked) => setKeepLoggedIn(checked as boolean)}
+              />
+              <label
+                htmlFor="keepLoggedIn"
+                className="text-sm text-gray-700 cursor-pointer leading-relaxed"
+              >
+                Keep me logged in on this device
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-6 text-lg"
+              disabled={loading || pin.length < 4 || confirmPin.length < 4}
+            >
+              {loading ? "Creating PIN..." : "Create PIN"}
+            </Button>
+          </form>
+
+          {/* Footer */}
+          <div className="text-center pt-4 border-t">
+            <p className="text-sm text-gray-600">
+              Forgot Password?{" "}
+              <button
+                onClick={() => router.push("/auth/forgot-password")}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Reset Password
+              </button>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

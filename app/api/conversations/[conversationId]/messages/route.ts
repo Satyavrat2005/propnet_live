@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSessionUser } from "@/lib/auth/getSessionUser";
+import { getUserIdFromSession } from "@/lib/auth/session";
 
 // Service role client stays on the server, never expose to the browser
 const serviceSupabase = createClient(
@@ -56,8 +57,13 @@ export async function GET(
 ) {
   try {
     const session = await getSessionUser(req);
-    if (!session?.sub) {
+    if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const userId = getUserIdFromSession(session);
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
     const { conversationId } = await context.params;
@@ -65,7 +71,7 @@ export async function GET(
       return NextResponse.json({ error: "conversationId is required" }, { status: 400 });
     }
 
-    const isMember = await ensureParticipant(conversationId, session.sub);
+    const isMember = await ensureParticipant(conversationId, userId);
     if (!isMember) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
@@ -103,8 +109,13 @@ export async function POST(
 ) {
   try {
     const session = await getSessionUser(req);
-    if (!session?.sub) {
+    if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const userId = getUserIdFromSession(session);
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
     const { conversationId } = await context.params;
@@ -119,14 +130,14 @@ export async function POST(
       return NextResponse.json({ error: "Message content is required" }, { status: 400 });
     }
 
-    const isMember = await ensureParticipant(conversationId, session.sub);
+    const isMember = await ensureParticipant(conversationId, userId);
     if (!isMember) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     const messagePayload = {
       conversation_id: conversationId,
-      sender_id: session.sub,
+      sender_id: userId,
       content: content.trim(),
     };
 

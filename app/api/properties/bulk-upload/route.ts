@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { insertPropertySchema } from "@/lib/schema";
-import { verifySession } from "@/lib/auth/session";
+import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 
 type CsvRow = Record<string, string | null | undefined>;
 
@@ -226,7 +226,7 @@ async function getUserFromCookie(req: NextRequest): Promise<string | null> {
   try {
     const token = part.split("=")[1];
     const session = await verifySession(token);
-    return session.sub as string;
+    return getUserIdFromSession(session);
   } catch {
     return null;
   }

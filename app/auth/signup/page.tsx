@@ -7,11 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Smartphone, MessageSquare, CheckCircle2 } from "lucide-react";
 
 /**
- * Signup page — same flow as login but purpose "signup"
- * After successful verification, server returns requiresProfileComplete; redirect accordingly.
+ * Login page
+ * - sends OTP using /api/auth/send-otp
+ * - verifies via /api/auth/verify-otp
+ * - redirects to /auth/complete-profile if profile incomplete, else /dashboard
+ * - fallback: if verify-otp response doesn't include requiresProfileComplete, it calls /api/auth/me
+ *   to determine redirect.
  */
 
 export default function Page() {
@@ -42,12 +47,12 @@ export default function Page() {
 
   const sendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    setError(null);
     setMessage(null);
+    setError(null);
 
     const p = normalizePhone(phone);
     if (p.length !== 10) {
-      setError("Enter a 10-digit phone number.");
+      setError("Enter a valid 10-digit phone number.");
       return;
     }
 
@@ -56,28 +61,56 @@ export default function Page() {
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: p, purpose: "signup" }),
+        body: JSON.stringify({ phone: p, purpose: "login" }),
       });
       const json = await res.json();
       setLoading(false);
+
       if (!res.ok) {
-        setError(json?.error || "Failed to send code.");
+        const msg = json?.error || "Failed to send verification code.";
+        // Twilio-specific hint detection
+        if (/permission|verify|trial|not authorized|not enabled/i.test(msg)) {
+          setError(msg + " — On Twilio trial you must verify recipient numbers or upgrade your account. See Twilio console.");
+        } else {
+          setError(msg);
+        }
         return;
       }
+
+      // success: show otp input
       setShowOtp(true);
+      setMessage(json?.message || "Verification code sent.");
       startResendCountdown();
-      setMessage(json?.message || "Verification code sent");
     } catch (err: any) {
       setLoading(false);
-      console.error(err);
-      setError("Error sending code. Try again.");
+      console.error("sendCode error:", err);
+      setError("Network error sending code. Check server logs and .env variables.");
+    }
+  };
+
+  // Helper: fetch /api/auth/me to determine profile status if verify endpoint doesn't return it
+  const checkProfileAndRedirect = async () => {
+    try {
+      const meRes = await fetch("/api/auth/me");
+      if (!meRes.ok) return router.push("/auth/complete-profile");
+      const meJson = await meRes.json();
+      const profile = meJson?.user ?? null;
+      if (profile && profile.profile_complete === true) {
+        router.push("/dashboard");
+      } else {
+        router.push("/auth/complete-profile");
+      }
+    } catch (err) {
+      console.error("checkProfileAndRedirect error:", err);
+      // fallback
+      router.push("/auth/complete-profile");
     }
   };
 
   const verifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setMessage(null);
+    setError(null);
 
     const p = normalizePhone(phone);
     if (code.trim().length === 0) {
@@ -90,33 +123,24 @@ export default function Page() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: p, code: code.trim(), purpose: "signup" }),
+        body: JSON.stringify({ phone: p, code: code.trim(), purpose: "login" }),
       });
       const json = await res.json();
       setLoading(false);
+
       if (!res.ok) {
-        setError(json?.error || "Verification failed");
+        const msg = json?.error || "Verification failed";
+        setError(msg);
         return;
       }
 
-      // Use server-provided redirectTo path
-      if (json?.redirectTo) {
-        setMessage("Verification successful. Redirecting...");
-        router.push(json.redirectTo);
-        return;
-      }
-
-      // Fallback: Use requiresProfileComplete flag (backward compatibility)
-      const requiresProfile = json?.requiresProfileComplete === true;
-      if (requiresProfile) {
-        router.push("/auth/complete-profile");
-      } else {
-        router.push("/dashboard");
-      }
+      // Redirect to setup PIN after OTP verification
+      setMessage("Verification successful. Redirecting to PIN setup...");
+      router.push(`/auth/setup-pin?phone=${encodeURIComponent(p)}`);
     } catch (err: any) {
       setLoading(false);
-      console.error(err);
-      setError("Verification error. Try again.");
+      console.error("verifyCode error:", err);
+      setError("Network error verifying code. Check server logs.");
     }
   };
 
@@ -132,13 +156,14 @@ export default function Page() {
           <div className="flex items-center justify-center mb-2">
             {showOtp ? <MessageSquare className="h-8 w-8" /> : <Smartphone className="h-8 w-8" />}
           </div>
-          <CardTitle className="text-2xl font-bold">{showOtp ? "Verify Your Phone" : "Get Started"}</CardTitle>
+          <CardTitle className="text-2xl font-bold">{showOtp ? "Verify Your Phone" : "Login to PropNet"}</CardTitle>
           <CardDescription className="text-blue-100">
-            {showOtp ? "Enter the 6-digit code sent to your phone" : "Enter your mobile number to join PropNet"}
+            {showOtp ? "Enter the 6-digit code sent to your phone" : "Enter your registered mobile number to continue"}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6">
+          {/* show messages */}
           {message && <div className="mb-4 text-sm text-green-700 bg-green-50 p-2 rounded">{message}</div>}
           {error && <div className="mb-4 text-sm text-red-700 bg-red-50 p-2 rounded">{error}</div>}
 
@@ -148,13 +173,25 @@ export default function Page() {
                 <Label htmlFor="phone">Mobile Number</Label>
                 <div className="flex">
                   <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">+91</span>
-                  <Input id="phone" type="tel" placeholder="9876543210" value={phone} onChange={(e) => setPhone(normalizePhone(e.target.value))} className="rounded-l-none" maxLength={10} required />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(normalizePhone(e.target.value))}
+                    className="rounded-l-none"
+                    maxLength={10}
+                    required
+                  />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">You'll receive a verification code via SMS</p>
               </div>
 
-              <Button type="submit" className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" disabled={phone.length !== 10 || loading}>
-                {loading ? "Sending Code..." : "Send Verification Code"}
+              <Button
+                type="submit"
+                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                disabled={phone.replace(/\D/g, "").length !== 10 || loading}
+              >
+                {loading ? "Sending..." : "Send Verification Code"}
               </Button>
             </form>
           ) : (
@@ -166,16 +203,29 @@ export default function Page() {
 
               <div>
                 <Label htmlFor="otp">Verification Code</Label>
-                <Input id="otp" type="text" placeholder="123456" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} className="text-center text-2xl tracking-widest" maxLength={6} required />
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="123456"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="text-center text-2xl tracking-widest"
+                  maxLength={6}
+                  required
+                />
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" disabled={code.length !== 6 || loading}>
+                <Button
+                  type="submit"
+                  className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  disabled={code.length !== 6 || loading}
+                >
                   {loading ? "Verifying..." : "Verify Code"}
                 </Button>
 
                 <div className="flex justify-between items-center">
-                  <Button type="button" variant="outline" onClick={() => { setShowOtp(false); setCode(""); }}>
+                  <Button type="button" variant="outline" onClick={() => { setShowOtp(false); setCode(""); setMessage(null); setError(null); }}>
                     Back
                   </Button>
 

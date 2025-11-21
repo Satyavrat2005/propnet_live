@@ -116,7 +116,8 @@ export async function GET(req: NextRequest) {
 
     const { verifySession } = await import("@/lib/auth/session");
     const payload = await verifySession(token);
-    const userId = payload.sub;
+    // Support both old format (id) and new format (sub)
+    const userId = (payload as any).sub || (payload as any).id;
 
     const { searchParams } = new URL(req.url);
     const includePending = searchParams.get("includePending") === "true";

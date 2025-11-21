@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
     }
 
     const payload = await verifySession(token);
-    const userId = payload.sub;
+    // Support both old format (id) and new format (sub)
+    const userId = (payload as any).sub || (payload as any).id;
 
     // fetch properties only for the logged-in user
     const { data: props, error } = await supabase

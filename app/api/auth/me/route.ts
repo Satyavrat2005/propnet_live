@@ -16,7 +16,13 @@ export async function GET(req: NextRequest) {
     }
 
     const payload = await verifySession(token);
-    const userId = payload.sub;
+    
+    // Support both old format (id) and new format (sub)
+    const userId = (payload as any).sub || (payload as any).id;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid session format" }, { status: 401 });
+    }
 
     const { data, error } = await supabase
       .from("profiles")
@@ -29,7 +35,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ user: data }, { status: 200 });
-  } catch {
+  } catch (err) {
+    console.error("Auth me error:", err);
     return NextResponse.json({ error: "Invalid session" }, { status: 401 });
   }
 }

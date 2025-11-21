@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
-import { verifySession } from "@/lib/auth/session";
+import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 import { sendSms } from "@/lib/twilio";
 import { buildOwnerConsentSms } from "@/lib/ownerConsentSms";
 
@@ -88,7 +88,7 @@ async function getUserFromCookie(req: NextRequest) {
   try {
     const token = part.split("=")[1];
     const session = await verifySession(token);
-    return session.sub as string;
+    return getUserIdFromSession(session);
   } catch {
     return null;
   }

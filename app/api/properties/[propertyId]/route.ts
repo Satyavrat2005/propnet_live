@@ -1,7 +1,7 @@
 // app/api/properties/[propertyId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifySession } from "@/lib/auth/session";
+import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 import { Buffer } from "node:buffer";
 import { sendSms } from "@/lib/twilio";
 import { randomUUID } from "crypto";
@@ -54,7 +54,7 @@ async function getUserFromCookie(req: NextRequest) {
   try {
     const token = part.split("=")[1];
     const session = await verifySession(token);
-    return session.sub as string;
+    return getUserIdFromSession(session);
   } catch {
     return null;
   }

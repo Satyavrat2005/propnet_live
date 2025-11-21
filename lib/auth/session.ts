@@ -21,6 +21,14 @@ export async function verifySession(token: string) {
   return payload as SessionPayload;
 }
 
+/**
+ * Helper to extract user ID from session payload.
+ * Supports both old format (id) and new format (sub) for backward compatibility.
+ */
+export function getUserIdFromSession(session: any): string {
+  return session.sub || session.id || "";
+}
+
 export function getSessionCookieHeader(token: string) {
   const isProd = process.env.NODE_ENV === "production";
   // httpOnly, secure, sameSite=lax

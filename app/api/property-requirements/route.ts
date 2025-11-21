@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifySession } from "@/lib/auth/session";
+import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +17,7 @@ async function getUserFromCookie(req: NextRequest) {
   try {
     const token = part.split("=")[1];
     const session = await verifySession(token);
-    return session.sub as string;
+    return getUserIdFromSession(session);
   } catch {
     return null;
   }

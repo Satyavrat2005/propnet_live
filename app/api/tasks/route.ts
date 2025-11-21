@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     }
 
     const payload = await verifySession(token);
-    const userId = payload.sub;
+    // Support both old format (id) and new format (sub)
+    const userId = (payload as any).sub || (payload as any).id;
 
     // Only return tasks for the logged-in user
     const { data, error } = await supabase
@@ -51,7 +52,8 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await verifySession(token);
-    const userId = payload.sub;
+    // Support both old format (id) and new format (sub)
+    const userId = (payload as any).sub || (payload as any).id;
 
     const body = await req.json();
     const { task_text } = body;

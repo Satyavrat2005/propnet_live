@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSessionUser } from "@/lib/auth/getSessionUser";
+import { getUserIdFromSession } from "@/lib/auth/session";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,14 +11,19 @@ const supabase = createClient(
 export async function GET(req: NextRequest) {
   try {
     const session = await getSessionUser(req);
-    if (!session?.sub) {
+    if (!session) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const userId = getUserIdFromSession(session);
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
     const { data, error } = await supabase
       .from("profiles")
       .select("id, name, phone, agency_name")
-      .neq("id", session.sub)
+      .neq("id", userId)
       .order("name", { ascending: true });
 
     if (error) {

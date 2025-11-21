@@ -41,9 +41,9 @@ export default function ClientsPage() {
   });
 
   const { data: rawProperties = [] } = useQuery({
-    queryKey: ["/api/properties"],
+    queryKey: ["/api/properties", "mine"],
     queryFn: async () => {
-      const r = await fetch("/api/properties", { credentials: "include" });
+      const r = await fetch("/api/properties?mine=true", { credentials: "include" });
       if (!r.ok) return [];
       return r.json();
     },

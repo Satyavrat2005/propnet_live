@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifySession } from "@/lib/auth/session";
+import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { Buffer } from "node:buffer";
 
@@ -20,7 +20,7 @@ async function getUserFromCookie(req: NextRequest) {
   try {
     const token = part.split("=")[1];
     const session = await verifySession(token);
-    return session.sub as string;
+    return getUserIdFromSession(session);
   } catch {
     return null;
   }

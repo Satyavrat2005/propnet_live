@@ -1,6 +1,7 @@
 // app/api/auth/complete-profile/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifySession } from "@/lib/auth/session";
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -48,9 +49,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const formData = await req.formData();
-
-    // read phone from cookie if present (propnet_phone)
+    // Read session cookie to get user's phone
     const cookieHeader = req.headers.get("cookie") || "";
     const cookies = Object.fromEntries(
       cookieHeader
@@ -62,18 +61,45 @@ export async function POST(req: Request) {
           return [k, decodeURIComponent(v.join("="))];
         })
     );
-    const phoneFromCookie = cookies["propnet_phone"] ?? null;
+    const sessionToken = cookies["session"] ?? null;
 
-    // form fields
-    const phoneField = (formData.get("phone") as string) ?? null;
-    
-    // Normalize phone from both sources to E.164 format
-    let phone: string | null = null;
-    if (phoneField) {
-      phone = normalizePhoneToE164(phoneField);
-    } else if (phoneFromCookie) {
-      phone = normalizePhoneToE164(phoneFromCookie);
+    if (!sessionToken) {
+      return NextResponse.json(
+        { error: "Unauthorized - no session found" },
+        { status: 401 }
+      );
     }
+
+    // Verify session and get user data
+    let sessionData;
+    try {
+      sessionData = await verifySession(sessionToken);
+    } catch (err) {
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
+    const phone = sessionData.phone; // Get phone from session
+    // Support both old format (id) and new format (sub)
+    const userId = (sessionData as any).sub || (sessionData as any).id;
+
+    if (!phone) {
+      return NextResponse.json(
+        { error: "No phone number found in session" },
+        { status: 400 }
+      );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "No user ID found in session" },
+        { status: 400 }
+      );
+    }
+
+    const formData = await req.formData();
 
     const name = (formData.get("name") as string) ?? null;
     const email = (formData.get("email") as string) ?? null;
@@ -147,23 +173,24 @@ export async function POST(req: Request) {
     }
 
     // Check existing profile status to avoid overwriting approved status
-    let existingStatus = "pending";
-    if (phone) {
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("status")
-        .eq("phone", phone)
-        .maybeSingle();
-      
-      // Keep existing status if approved, otherwise set to pending
-      if (existingProfile?.status === "approved") {
-        existingStatus = "approved";
-      }
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("status, password")
+      .eq("id", userId)
+      .maybeSingle();
+    
+    if (!existingProfile) {
+      return NextResponse.json(
+        { error: "Profile not found" },
+        { status: 404 }
+      );
     }
 
-    // Prepare payload to upsert into profiles
-    const row: any = {
-      phone: phone || null,
+    // Keep existing status if approved, otherwise set to pending
+    const existingStatus = existingProfile.status === "approved" ? "approved" : "pending";
+
+    // Prepare payload to UPDATE the existing profile (using user ID, not phone)
+    const updateData: any = {
       name: name ?? null,
       email: email ?? null,
       bio: bio ?? null,
@@ -174,9 +201,9 @@ export async function POST(req: Request) {
       website: website ?? null,
       area_of_expertise: areaOfExpertise.length ? areaOfExpertise : null,
       working_regions: workingRegions.length ? workingRegions : null,
-      profile_photo_url: profilePhotoUrl,
+      profile_photo_url: profilePhotoUrl || existingProfile.profile_photo_url,
       profile_complete: true,
-      status: existingStatus, // Set status to pending for new profiles, keep approved if already approved
+      status: existingStatus,
       updated_at: new Date().toISOString(),
     };
 
@@ -184,41 +211,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Server misconfiguration: missing Supabase credentials" }, { status: 500 });
     }
 
-    if (row.phone) {
-      // upsert by phone
-      const { data: upserted, error: upsertErr } = await supabase
-        .from("profiles")
-        .upsert(row, { onConflict: "phone" })
-        .select()
-        .single();
+    // UPDATE the existing profile by ID (not upsert, to avoid creating duplicates)
+    const { data: updated, error: updateErr } = await supabase
+      .from("profiles")
+      .update(updateData)
+      .eq("id", userId)
+      .select()
+      .single();
 
-      if (upsertErr) {
-        console.error("Supabase upsert error in complete-profile:", upsertErr);
-        return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
-      }
-
-      const responseProfile = upserted
-        ? { ...upserted, profilePhoto: upserted.profile_photo_url }
-        : upserted;
-      return NextResponse.json({ success: true, profile: responseProfile });
-    } else {
-      // insert new
-      const { data: inserted, error: insertErr } = await supabase
-        .from("profiles")
-        .insert(row)
-        .select()
-        .single();
-
-      if (insertErr) {
-        console.error("Supabase insert error in complete-profile:", insertErr);
-        return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
-      }
-
-      const responseProfile = inserted
-        ? { ...inserted, profilePhoto: inserted.profile_photo_url }
-        : inserted;
-      return NextResponse.json({ success: true, profile: responseProfile });
+    if (updateErr) {
+      console.error("Supabase update error in complete-profile:", updateErr);
+      return NextResponse.json({ error: "Failed to save profile" }, { status: 500 });
     }
+
+    const responseProfile = updated
+      ? { ...updated, profilePhoto: updated.profile_photo_url }
+      : updated;
+    return NextResponse.json({ success: true, profile: responseProfile });
   } catch (err: any) {
     console.error("Unexpected error in /api/auth/complete-profile:", err);
     return NextResponse.json({ error: err?.message || "Failed to complete profile" }, { status: 500 });

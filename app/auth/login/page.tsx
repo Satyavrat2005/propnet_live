@@ -6,17 +6,18 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Smartphone, MessageSquare, CheckCircle2 } from "lucide-react";
 
 /**
- * Login page
- * - sends OTP using /api/auth/send-otp
- * - verifies via /api/auth/verify-otp
- * - redirects to /auth/complete-profile if profile incomplete, else /dashboard
- * - fallback: if verify-otp response doesn't include requiresProfileComplete, it calls /api/auth/me
- *   to determine redirect.
+ * Signup page — same flow as login but purpose "signup"
+ * After successful verification, server returns requiresProfileComplete; redirect accordingly.
  */
 
 export default function Page() {
@@ -47,70 +48,47 @@ export default function Page() {
 
   const sendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    setMessage(null);
     setError(null);
+    setMessage(null);
 
     const p = normalizePhone(phone);
     if (p.length !== 10) {
-      setError("Enter a valid 10-digit phone number.");
+      setError("Enter a 10-digit phone number.");
       return;
     }
 
     try {
       setLoading(true);
-      const res = await fetch("/api/auth/send-otp", {
+      
+      // Check if phone exists in database
+      const checkRes = await fetch("/api/auth/check-phone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: p, purpose: "login" }),
+        body: JSON.stringify({ phone: p }),
       });
-      const json = await res.json();
+      
+      const checkData = await checkRes.json();
       setLoading(false);
-
-      if (!res.ok) {
-        const msg = json?.error || "Failed to send verification code.";
-        // Twilio-specific hint detection
-        if (/permission|verify|trial|not authorized|not enabled/i.test(msg)) {
-          setError(msg + " — On Twilio trial you must verify recipient numbers or upgrade your account. See Twilio console.");
-        } else {
-          setError(msg);
-        }
+      
+      if (!checkRes.ok || !checkData.exists) {
+        setError("Phone number not registered. Please sign up first.");
         return;
       }
 
-      // success: show otp input
-      setShowOtp(true);
-      setMessage(json?.message || "Verification code sent.");
-      startResendCountdown();
+      // Phone exists, redirect to PIN entry
+      router.push(`/auth/enter-pin?phone=${encodeURIComponent(`+91${p}`)}`);
+      
     } catch (err: any) {
       setLoading(false);
-      console.error("sendCode error:", err);
-      setError("Network error sending code. Check server logs and .env variables.");
-    }
-  };
-
-  // Helper: fetch /api/auth/me to determine profile status if verify endpoint doesn't return it
-  const checkProfileAndRedirect = async () => {
-    try {
-      const meRes = await fetch("/api/auth/me");
-      if (!meRes.ok) return router.push("/auth/complete-profile");
-      const meJson = await meRes.json();
-      const profile = meJson?.user ?? null;
-      if (profile && profile.profile_complete === true) {
-        router.push("/dashboard");
-      } else {
-        router.push("/auth/complete-profile");
-      }
-    } catch (err) {
-      console.error("checkProfileAndRedirect error:", err);
-      // fallback
-      router.push("/auth/complete-profile");
+      console.error(err);
+      setError("Error checking phone number. Try again.");
     }
   };
 
   const verifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage(null);
     setError(null);
+    setMessage(null);
 
     const p = normalizePhone(phone);
     if (code.trim().length === 0) {
@@ -123,14 +101,16 @@ export default function Page() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: p, code: code.trim(), purpose: "login" }),
+        body: JSON.stringify({
+          phone: p,
+          code: code.trim(),
+          purpose: "signup",
+        }),
       });
       const json = await res.json();
       setLoading(false);
-
       if (!res.ok) {
-        const msg = json?.error || "Verification failed";
-        setError(msg);
+        setError(json?.error || "Verification failed");
         return;
       }
 
@@ -141,25 +121,17 @@ export default function Page() {
         return;
       }
 
-      // Fallback 1: Use requiresProfileComplete flag (backward compatibility)
-      if (typeof json?.requiresProfileComplete === "boolean") {
-        const requiresProfile = json.requiresProfileComplete;
-        setMessage("Verification successful. Redirecting...");
-        if (requiresProfile) {
-          router.push("/auth/complete-profile");
-        } else {
-          router.push("/dashboard");
-        }
-        return;
+      // Fallback: Use requiresProfileComplete flag (backward compatibility)
+      const requiresProfile = json?.requiresProfileComplete === true;
+      if (requiresProfile) {
+        router.push("/auth/complete-profile");
+      } else {
+        router.push("/dashboard");
       }
-
-      // Fallback 2: call /api/auth/me to determine profile completeness
-      setMessage("Verification successful. Checking profile...");
-      await checkProfileAndRedirect();
     } catch (err: any) {
       setLoading(false);
-      console.error("verifyCode error:", err);
-      setError("Network error verifying code. Check server logs.");
+      console.error(err);
+      setError("Verification error. Try again.");
     }
   };
 
@@ -173,25 +145,42 @@ export default function Page() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
           <div className="flex items-center justify-center mb-2">
-            {showOtp ? <MessageSquare className="h-8 w-8" /> : <Smartphone className="h-8 w-8" />}
+            {showOtp ? (
+              <MessageSquare className="h-8 w-8" />
+            ) : (
+              <Smartphone className="h-8 w-8" />
+            )}
           </div>
-          <CardTitle className="text-2xl font-bold">{showOtp ? "Verify Your Phone" : "Login to PropNet"}</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            {showOtp ? "Verify Your Phone" : "Get Started"}
+          </CardTitle>
           <CardDescription className="text-blue-100">
-            {showOtp ? "Enter the 6-digit code sent to your phone" : "Enter your registered mobile number to continue"}
+            {showOtp
+              ? "Enter the 6-digit code sent to your phone"
+              : "Enter your mobile number to join PropNet"}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="p-6">
-          {/* show messages */}
-          {message && <div className="mb-4 text-sm text-green-700 bg-green-50 p-2 rounded">{message}</div>}
-          {error && <div className="mb-4 text-sm text-red-700 bg-red-50 p-2 rounded">{error}</div>}
+          {message && (
+            <div className="mb-4 text-sm text-green-700 bg-green-50 p-2 rounded">
+              {message}
+            </div>
+          )}
+          {error && (
+            <div className="mb-4 text-sm text-red-700 bg-red-50 p-2 rounded">
+              {error}
+            </div>
+          )}
 
           {!showOtp ? (
             <form onSubmit={sendCode} className="space-y-4">
               <div>
                 <Label htmlFor="phone">Mobile Number</Label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">+91</span>
+                  <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">
+                    +91
+                  </span>
                   <Input
                     id="phone"
                     type="tel"
@@ -203,21 +192,26 @@ export default function Page() {
                     required
                   />
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  You'll receive a verification code via SMS
+                </p>
               </div>
 
               <Button
                 type="submit"
                 className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                disabled={phone.replace(/\D/g, "").length !== 10 || loading}
+                disabled={phone.length !== 10 || loading}
               >
-                {loading ? "Sending..." : "Send Verification Code"}
+                {loading ? "Sending Code..." : "Send Verification Code"}
               </Button>
             </form>
           ) : (
             <form onSubmit={verifyCode} className="space-y-4">
               <div className="text-center mb-4">
                 <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">Code sent to: <span className="font-medium">+91 {phone}</span></p>
+                <p className="text-sm text-gray-600">
+                  Code sent to: <span className="font-medium">+91 {phone}</span>
+                </p>
               </div>
 
               <div>
@@ -227,7 +221,9 @@ export default function Page() {
                   type="text"
                   placeholder="123456"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) =>
+                    setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
                   className="text-center text-2xl tracking-widest"
                   maxLength={6}
                   required
@@ -244,24 +240,43 @@ export default function Page() {
                 </Button>
 
                 <div className="flex justify-between items-center">
-                  <Button type="button" variant="outline" onClick={() => { setShowOtp(false); setCode(""); setMessage(null); setError(null); }}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowOtp(false);
+                      setCode("");
+                    }}
+                  >
                     Back
                   </Button>
 
-                  <Button type="button" variant="ghost" onClick={handleResend} disabled={resendTimer > 0 || loading} className="text-sm">
-                    {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend Code"}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleResend}
+                    disabled={resendTimer > 0 || loading}
+                    className="text-sm"
+                  >
+                    {resendTimer > 0
+                      ? `Resend in ${resendTimer}s`
+                      : "Resend Code"}
                   </Button>
                 </div>
               </div>
             </form>
           )}
 
-          {/* <div className="mt-6 text-center">
+          <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               New to PropNet?{" "}
-              <Link href="/auth/signup"><span className="text-blue-600 hover:text-blue-800 font-medium">Sign up here</span></Link>
+              <Link href="/auth/signup">
+                <span className="text-blue-600 hover:text-blue-800 font-medium">
+                  Sign up here
+                </span>
+              </Link>
             </p>
-          </div> */}
+          </div>
         </CardContent>
       </Card>
     </div>
