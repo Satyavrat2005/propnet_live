@@ -6,6 +6,8 @@ const PUBLIC_ROUTES = [
   "/auth/login",
   "/auth/signup",
   "/auth/forgot-password",
+  "/auth/enter-pin",
+  "/auth/setup-pin",
   "/admin/login",
 ];
 

@@ -193,14 +193,9 @@ export default function ProfilePage() {
     {
       icon: HomeIcon,
       label: "Properties",
-      action: () => router.push("/feed"),
+      action: () => router.push("/my-listings"),
     },
-    // {
-    //   icon: Handshake,
-    //   label: "Co-listing Requests",
-    //   badge: pendingRequests > 0 ? pendingRequests : null,
-    //   action: () => router.push("/colisting-requests"),
-    // },
+   
     {
       icon: UserIcon,
       label: "Edit Profile",
@@ -221,7 +216,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center px-6 text-center">
         <h2 className="text-2xl font-semibold text-neutral-900 mb-2">Sign in to view your profile</h2>
         <p className="text-neutral-500 mb-6">Your conversations, listings, and co-listing requests will appear here once you log in.</p>
-        <Button onClick={() => router.push("/login")}>Go to login</Button>
+        <Button onClick={() => router.push("/auth/login")}>Go to login</Button>
       </div>
     );
   }

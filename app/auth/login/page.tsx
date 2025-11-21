@@ -193,7 +193,7 @@ export default function Page() {
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  You'll receive a verification code via SMS
+                  Enter the 10-digit mobile number linked to your account.
                 </p>
               </div>
 
@@ -205,10 +205,10 @@ export default function Page() {
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Sending Code...
+                    Logging in...
                   </div>
                 ) : (
-                  "Send Verification Code"
+                  "Login"
                 )}
               </Button>
             </form>

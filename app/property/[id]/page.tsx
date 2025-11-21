@@ -5,7 +5,7 @@ import React, { use } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share, Heart, FileText, MessageCircle } from "lucide-react";
+import { ArrowLeft, Share, Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -86,38 +86,78 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const priceLabel = formatPrice(Number(property.price) || 0, property.transactionType, property.rentFrequency);
   const sizeLabel = property.size ? formatArea(property.size, property.sizeUnit || "sq ft") : "N/A";
 
-  const handleGeneratePDF = () => {
-    toast({
-      title: "PDF Generated",
-      description: "Property flyer has been generated successfully!",
-    });
-  };
-
-  const handleShareWhatsApp = () => {
-    const rawPhone = property.broker?.phone ?? property.owner?.phone ?? null;
-    const digitsOnly = rawPhone?.replace(/\D/g, "") || "";
-    const whatsappNumber = (() => {
-      if (!digitsOnly) return null;
-      if (digitsOnly.length === 12 && digitsOnly.startsWith("91")) return digitsOnly;
-      if (digitsOnly.length === 11 && digitsOnly.startsWith("0")) return `91${digitsOnly.slice(1)}`;
-      if (digitsOnly.length === 10) return `91${digitsOnly}`;
-      return digitsOnly;
-    })();
-
-    if (!whatsappNumber) {
-      toast({
-        title: "Phone number unavailable",
-        description: "We couldn't find a valid broker number for WhatsApp sharing.",
-        variant: "destructive",
-      });
-      return;
+  const handleShareProperty = async () => {
+    // Transaction type header
+    const transactionHeader = property.transactionType === 'rent' ? '🏠 FOR RENT' : '🏡 FOR SALE';
+    
+    // Build comprehensive share text
+    let shareText = `${transactionHeader}\n\n`;
+    shareText += `${property.title}\n\n`;
+    
+    // Property Details Section
+    shareText += `📋 PROPERTY DETAILS\n`;
+    shareText += `💰 Price: ${priceLabel}\n`;
+    shareText += `📐 Size: ${sizeLabel}\n`;
+    if (property.bhk) shareText += `🛏️ Bedrooms: ${property.bhk}\n`;
+    if (property.bathrooms) shareText += `🚿 Bathrooms: ${property.bathrooms}\n`;
+    if (property.propertyType) shareText += `🏢 Type: ${property.propertyType}\n`;
+    if (property.floor) shareText += `📶 Floor: ${property.floor}\n`;
+    if (property.buildingSociety) shareText += `🏢 Building: ${property.buildingSociety}\n`;
+    
+    // Location Section
+    shareText += `\n📍 LOCATION\n`;
+    shareText += `${property.location}\n`;
+    if (property.fullAddress) shareText += `${property.fullAddress}\n`;
+    if (property.flatNumber) {
+      shareText += `Flat: ${property.flatNumber}\n`;
     }
-
-    const message = `🏠 ${property.title}\n📍 ${property.location}\n💰 ${priceLabel}\n📐 ${sizeLabel}\n\nContact me for more details!`;
-    const shareUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-
-    if (typeof window !== "undefined") {
-      window.open(shareUrl, "_blank");
+    
+    // Description
+    if (property.description) {
+      shareText += `\n📝 DESCRIPTION\n${property.description}\n`;
+    }
+    
+    // Broker Contact
+    if (property.broker?.name || property.owner?.name) {
+      const brokerName = property.broker?.name || property.owner?.name || 'Agent';
+      const brokerPhone = property.broker?.phone || property.owner?.phone || 'Not provided';
+      const agencyName = property.broker?.agencyName || property.owner?.agencyName || '';
+      
+      shareText += `\n📞 CONTACT BROKER\n`;
+      shareText += `Name: ${brokerName}\n`;
+      if (agencyName) shareText += `Agency: ${agencyName}\n`;
+      shareText += `Phone: ${brokerPhone}\n`;
+    }
+    
+    // Always copy to clipboard
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast({
+        title: "Copied to clipboard",
+        description: "Property details with broker contact copied to clipboard",
+      });
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = shareText;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast({
+          title: "Copied to clipboard",
+          description: "Property details with broker contact copied to clipboard",
+        });
+      } catch (fallbackError) {
+        toast({
+          title: "Copy failed",
+          description: "Unable to copy to clipboard. Please try again.",
+          variant: "destructive",
+        });
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -129,14 +169,14 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <button className="text-primary" onClick={() => router.back()} type="button" aria-label="Go back">
             <ArrowLeft size={24} />
           </button>
-          <div className="flex items-center space-x-3">
+          {/* <div className="flex items-center space-x-3">
             <button className="text-neutral-400" type="button" aria-label="Share">
               <Share size={20} />
             </button>
             <button className="text-neutral-400" type="button" aria-label="Favorite">
               <Heart size={20} />
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -148,7 +188,8 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <img
             src={primaryPhoto}
             alt={property.title}
-            className="w-full h-64 object-cover"
+            className="w-full object-contain bg-gray-100"
+            style={{ maxHeight: '500px' }}
           />
           <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
             1 / {Math.max((property.photos && property.photos.length) || 0, 1)}
@@ -158,12 +199,6 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         <div className="p-6 space-y-6">
           <PropertyDetailsPanel
             property={property}
-            onCall={() => {
-              const phone = property.broker?.phone ?? property.owner?.phone;
-              if (phone) {
-                window.open(`tel:${phone}`, "_self");
-              }
-            }}
           />
 
           {property.coAgents?.length > 0 && (
@@ -209,22 +244,13 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           )}
 
           {canShare && (
-            <div className="space-y-3">
-              <Button
-                onClick={handleGeneratePDF}
-                className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-200"
-              >
-                <FileText size={20} />
-                <span>Generate PDF Flyer</span>
-              </Button>
-              <Button
-                onClick={handleShareWhatsApp}
-                className="w-full border-2 border-green-500 bg-green-500 hover:bg-green-600 hover:border-green-600 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-200"
-              >
-                <MessageCircle size={20} />
-                <span>Share on WhatsApp</span>
-              </Button>
-            </div>
+            <Button
+              onClick={handleShareProperty}
+              className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-200"
+            >
+              <Share size={20} />
+              <span>Copy Property Details For Sharing</span>
+            </Button>
           )}
         </div>
       </div>

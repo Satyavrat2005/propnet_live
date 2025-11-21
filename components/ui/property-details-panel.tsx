@@ -199,17 +199,6 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
             <Phone size={14} className="text-muted-foreground" />
             <span>{contactPhone || "Not provided"}</span>
           </div>
-          {onCall && (
-            <Button
-              size="sm"
-              className="w-full flex items-center justify-center space-x-2"
-              onClick={onCall}
-              disabled={!contactPhone}
-            >
-              <Phone size={14} />
-              <span>Call Broker</span>
-            </Button>
-          )}
         </div>
       </div>
 

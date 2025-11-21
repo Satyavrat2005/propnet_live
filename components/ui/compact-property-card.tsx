@@ -48,7 +48,7 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
     });
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const formattedPrice = getSafeFormattedPrice(property.price ?? undefined, property.transactionType ?? undefined, property.rentFrequency);
     const formattedArea = formatArea(property.size ?? 0, property.sizeUnit);
     
@@ -94,20 +94,35 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
       shareText += `Phone: ${brokerPhone}\n`;
     }
     
-    if (navigator.share) {
-      navigator.share({
-        title: property.title ?? undefined,
-        text: shareText,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(shareText);
+    // Always copy to clipboard, never use native share dialog
+    try {
+      await navigator.clipboard.writeText(shareText);
       toast({
         title: "Copied to clipboard",
         description: "Property details with broker contact copied to clipboard",
-        className: "bg-white border border-gray-200",
-        style: { backgroundColor: "white", color: "black" },
       });
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = shareText;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast({
+          title: "Copied to clipboard",
+          description: "Property details with broker contact copied to clipboard",
+        });
+      } catch (err) {
+        toast({
+          title: "Copy failed",
+          description: "Unable to copy to clipboard. Please try again.",
+          variant: "destructive",
+        });
+      }
+      document.body.removeChild(textArea);
     }
   };
 
