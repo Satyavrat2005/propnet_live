@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  type KeyboardEventHandler,
+  type FocusEventHandler,
+} from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Building2 } from "lucide-react";
@@ -19,6 +25,9 @@ interface GooglePlacesAutocompleteProps {
   label?: string;
   className?: string;
   types?: string[];
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  onFocus?: FocusEventHandler<HTMLInputElement>;
+  onBlur?: FocusEventHandler<HTMLInputElement>;
 }
 
 export default function GooglePlacesAutocomplete({
@@ -27,7 +36,10 @@ export default function GooglePlacesAutocomplete({
   placeholder = "Enter building or society name...",
   label,
   className = "",
-  types = ["establishment", "geocode"]
+  types = ["establishment", "geocode"],
+  onKeyDown,
+  onFocus,
+  onBlur,
 }: GooglePlacesAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -113,11 +125,18 @@ export default function GooglePlacesAutocomplete({
     }
   };
 
-  const handleBlur = () => {
-    // Delay hiding suggestions to allow click events
+  const handleInputFocus: FocusEventHandler<HTMLInputElement> = (event) => {
+    if (value.length >= 2) {
+      setShowSuggestions(true);
+    }
+    onFocus?.(event);
+  };
+
+  const handleInputBlur: FocusEventHandler<HTMLInputElement> = (event) => {
     setTimeout(() => {
       setShowSuggestions(false);
     }, 200);
+    onBlur?.(event);
   };
 
   useEffect(() => {
@@ -143,8 +162,9 @@ export default function GooglePlacesAutocomplete({
           id="google-places-input"
           value={value}
           onChange={handleInputChange}
-          onBlur={handleBlur}
-          onFocus={() => value.length >= 2 && setShowSuggestions(true)}
+          onBlur={handleInputBlur}
+          onFocus={handleInputFocus}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           className="pl-10"
           autoComplete="off"
