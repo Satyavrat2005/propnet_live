@@ -193,9 +193,16 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                   size="sm"
                   onClick={() => requestColistingMutation.mutate()}
                   disabled={requestColistingMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="border-2 border-blue-500 bg-blue-500 hover:bg-blue-600 hover:border-blue-600 text-white transition-all duration-200"
                 >
-                  {requestColistingMutation.isPending ? <div className="loading-spinner" /> : "Request"}
+                  {requestColistingMutation.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Requesting...
+                    </div>
+                  ) : (
+                    "Request"
+                  )}
                 </Button>
               </div>
             </div>
@@ -205,14 +212,14 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             <div className="space-y-3">
               <Button
                 onClick={handleGeneratePDF}
-                className="w-full bg-accent text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
+                className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-200"
               >
                 <FileText size={20} />
                 <span>Generate PDF Flyer</span>
               </Button>
               <Button
                 onClick={handleShareWhatsApp}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-green-700"
+                className="w-full border-2 border-green-500 bg-green-500 hover:bg-green-600 hover:border-green-600 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-200"
               >
                 <MessageCircle size={20} />
                 <span>Share on WhatsApp</span>

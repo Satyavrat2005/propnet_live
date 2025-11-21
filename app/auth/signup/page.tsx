@@ -188,10 +188,17 @@ export default function Page() {
 
               <Button
                 type="submit"
-                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
                 disabled={phone.replace(/\D/g, "").length !== 10 || loading}
               >
-                {loading ? "Sending..." : "Send Verification Code"}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sending...
+                  </div>
+                ) : (
+                  "Send Verification Code"
+                )}
               </Button>
             </form>
           ) : (
@@ -218,10 +225,17 @@ export default function Page() {
               <div className="space-y-3">
                 <Button
                   type="submit"
-                  className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
                   disabled={code.length !== 6 || loading}
                 >
-                  {loading ? "Verifying..." : "Verify Code"}
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Verifying...
+                    </div>
+                  ) : (
+                    "Verify Code"
+                  )}
                 </Button>
 
                 <div className="flex justify-between items-center">

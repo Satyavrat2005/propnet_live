@@ -199,15 +199,20 @@ export default function BulkUploadPage() {
             <Button
               onClick={handleUpload}
               disabled={uploadFiles.length === 0 || uploadMutation.isPending}
-              className="w-full flex items-center justify-center space-x-2"
+              className="w-full flex items-center justify-center space-x-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
               type="button"
             >
               {uploadMutation.isPending ? (
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                  <span>Uploading...</span>
+                </div>
               ) : (
-                <Upload size={16} />
+                <>
+                  <Upload size={16} />
+                  <span>Upload Properties</span>
+                </>
               )}
-              <span>{uploadMutation.isPending ? "Uploading..." : "Upload Properties"}</span>
             </Button>
           </CardContent>
         </Card>

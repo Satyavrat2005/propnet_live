@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Search, Filter, X, Sparkles, Home, MessageCircle } from "lucide-react";
+import { Plus, Search, Filter, X, Sparkles, Home, MessageCircle, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CompactPropertyCard, { FeedProperty } from "@/components/ui/compact-property-card";
 import MobileNavigation from "@/components/layout/mobile-navigation";
@@ -131,9 +131,19 @@ export default function PropertyFeedPage() {
       <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1 className="text-xl font-bold text-neutral-900">Properties</h1>
-              <p className="text-sm text-neutral-500">{filteredProperties.length} listings available</p>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => router.push('/dashboard')} 
+                className="text-primary hover:opacity-80"
+                type="button"
+                aria-label="Go back"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div>
+                <h1 className="text-xl font-bold text-neutral-900">Properties</h1>
+                <p className="text-sm text-neutral-500">{filteredProperties.length} listings available</p>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -435,7 +445,11 @@ export default function PropertyFeedPage() {
                   >
                     View Full Listing
                   </Button>
-                  <Button variant="outline" className="w-full" onClick={handleCloseDetails}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition-all duration-200" 
+                    onClick={handleCloseDetails}
+                  >
                     Close
                   </Button>
                 </div>

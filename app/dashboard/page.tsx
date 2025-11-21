@@ -26,6 +26,7 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
+  ArrowLeft,
 } from "lucide-react";
 
 /**
@@ -320,9 +321,19 @@ export default function Dashboard() {
       {/* Header */}
       <div className="bg-white border-b border-neutral-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-neutral-900">Welcome back!</h1>
-            <p className="text-sm text-neutral-600">{user?.name || user?.phone}</p>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => router.push('/')} 
+              className="text-primary hover:opacity-80"
+              type="button"
+              aria-label="Go to home"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-neutral-900">Welcome back!</h1>
+              <p className="text-sm text-neutral-600">{user?.name || user?.phone}</p>
+            </div>
           </div>
           <button
             type="button"

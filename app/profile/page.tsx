@@ -290,13 +290,13 @@ export default function ProfilePage() {
 
             <button
               onClick={logout}
-              className="w-full flex items-center justify-between p-4 border border-red-200 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
+              className="w-full flex items-center justify-between p-4 border-2 border-red-500 bg-red-500 hover:bg-red-600 hover:border-red-600 rounded-lg text-white transition-all duration-200"
             >
               <div className="flex items-center space-x-3">
                 <LogOutIcon size={20} />
                 <span>Logout</span>
               </div>
-              <ChevronRight className="text-red-300" size={16} />
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>

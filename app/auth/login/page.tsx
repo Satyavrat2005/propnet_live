@@ -199,10 +199,17 @@ export default function Page() {
 
               <Button
                 type="submit"
-                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
                 disabled={phone.length !== 10 || loading}
               >
-                {loading ? "Sending Code..." : "Send Verification Code"}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sending Code...
+                  </div>
+                ) : (
+                  "Send Verification Code"
+                )}
               </Button>
             </form>
           ) : (

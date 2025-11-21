@@ -449,14 +449,14 @@ export default function QuickPostPage() {
               <Button
                 onClick={handleExtract}
                 disabled={extractMutation.isPending || !inputText.trim()}
-                className="flex-1"
+                className="flex-1 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
                 type="button"
               >
                 {extractMutation.isPending ? (
-                  <>
-                    <Wand2 size={16} className="mr-2 animate-spin" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Extracting...
-                  </>
+                  </div>
                 ) : (
                   <>
                     <Wand2 size={16} className="mr-2" />
@@ -485,8 +485,16 @@ export default function QuickPostPage() {
                   disabled={createAllMutation.isPending}
                   size="sm"
                   type="button"
+                  className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
                 >
-                  {createAllMutation.isPending ? "Creating..." : "Create All Listings"}
+                  {createAllMutation.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Creating...
+                    </div>
+                  ) : (
+                    "Create All Listings"
+                  )}
                 </Button>
               </div>
             </CardHeader>

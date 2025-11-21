@@ -160,8 +160,19 @@ export default function Page() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={phone.length !== 10 || loading}>
-                  {loading ? "Sending..." : "Send Reset Code"}
+                <Button 
+                  type="submit" 
+                  className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200" 
+                  disabled={phone.length !== 10 || loading}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Sending...
+                    </div>
+                  ) : (
+                    "Send Reset Code"
+                  )}
                 </Button>
 
                 <Button type="button" variant="outline" className="w-full" onClick={() => router.push("/auth/login")}>
@@ -185,8 +196,19 @@ export default function Page() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={code.length !== 6 || loading}>
-                  {loading ? "Verifying..." : "Verify Code"}
+                <Button 
+                  type="submit" 
+                  className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200" 
+                  disabled={code.length !== 6 || loading}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Verifying...
+                    </div>
+                  ) : (
+                    "Verify Code"
+                  )}
                 </Button>
 
                 <div className="flex justify-between items-center">
@@ -220,8 +242,19 @@ export default function Page() {
               </div>
 
               <div className="space-y-3">
-                <Button type="submit" className="w-full bg-linear-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700" disabled={newPin.length < 4 || confirmPin.length < 4 || loading}>
-                  {loading ? "Setting PIN..." : "Set New PIN"}
+                <Button 
+                  type="submit" 
+                  className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200" 
+                  disabled={newPin.length < 4 || confirmPin.length < 4 || loading}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Setting PIN...
+                    </div>
+                  ) : (
+                    "Set New PIN"
+                  )}
                 </Button>
 
                 <Button type="button" variant="outline" className="w-full" onClick={() => { setStep("verify"); }}>

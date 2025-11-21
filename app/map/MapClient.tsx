@@ -2,11 +2,12 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { MapPin, Navigation, Layers, Phone, Eye, Filter, Home, Search } from "lucide-react";
+import { MapPin, Navigation, Layers, Phone, Eye, Filter, Home, Search, ArrowLeft } from "lucide-react";
 import PropertyDetailsPanel from "@/components/ui/property-details-panel";
 import MobileNavigation from "@/components/layout/mobile-navigation";
 import { formatPrice, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
@@ -130,6 +131,7 @@ const ensureGoogleMapsApiLoaded = async () => {
 };
 
 export default function MapClient({ initialProperties, initialPrimaryListings }: MapClientProps) {
+  const router = useRouter();
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
@@ -768,9 +770,19 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
     <div className="min-h-screen bg-neutral-50">
       <div className="bg-white border-b border-neutral-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-neutral-900">Property Map</h1>
-            <p className="text-sm text-neutral-600">{filteredListings.length} properties found</p>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => router.push('/dashboard')} 
+              className="text-primary hover:opacity-80"
+              type="button"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-neutral-900">Property Map</h1>
+              <p className="text-sm text-neutral-600">{filteredListings.length} properties found</p>
+            </div>
           </div>
           <Button
             variant="outline"

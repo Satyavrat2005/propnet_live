@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,13 +16,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Search, X, Building } from "lucide-react";
+import { Search, X, Building, ArrowLeft } from "lucide-react";
 import EnhancedPropertyCard from "@/components/ui/enhanced-property-card";
 import { useAuth } from "@/hooks/use-auth";
 import { formatPrice } from "@/utils/formatters";
 import { safeFetch } from "@/lib/safeFetch";
 
 export default function PropertySearchPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState({
@@ -143,8 +145,18 @@ export default function PropertySearchPage() {
     <div className="container mx-auto p-4 max-w-7xl">
       {/* Search Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Find Your Perfect Property</h1>
-        <p className="text-gray-600">Search through verified listings from trusted agents</p>
+        <div className="flex items-center gap-4 mb-2">
+          <button 
+            onClick={() => router.back()} 
+            className="text-primary hover:opacity-80"
+            type="button"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900">Find Your Perfect Property</h1>
+        </div>
+        <p className="text-gray-600 ml-12">Search through verified listings from trusted agents</p>
       </div>
 
       {/* Search Bar */}

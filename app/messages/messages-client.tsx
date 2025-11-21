@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
   Send,
   Building2,
   Plus,
+  ArrowLeft,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -115,6 +116,7 @@ const fetchJson = async <T,>(
 };
 
 export default function MessagesClient() {
+  const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
 
   const queryClient = useQueryClient();
@@ -636,8 +638,13 @@ export default function MessagesClient() {
               <Button
                 onClick={handleSend}
                 disabled={!newMessage.trim() || sendMessage.isPending}
+                className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
               >
-                <Send size={16} />
+                {sendMessage.isPending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send size={16} />
+                )}
               </Button>
             </div>
           </div>
@@ -651,11 +658,21 @@ export default function MessagesClient() {
     <div className="min-h-screen bg-neutral-50">
       {/* Header */}
       <div className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-neutral-900">Messages</h1>
-          <p className="text-sm text-neutral-600">
-            {filteredConversations.length} conversations
-          </p>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => router.push('/dashboard')} 
+            className="text-primary hover:opacity-80"
+            type="button"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-neutral-900">Messages</h1>
+            <p className="text-sm text-neutral-600">
+              {filteredConversations.length} conversations
+            </p>
+          </div>
         </div>
         <Dialog
           open={showNewChatDialog}
@@ -665,7 +682,11 @@ export default function MessagesClient() {
           }}
         >
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition-all duration-200"
+            >
               <Plus size={16} className="mr-1" /> New Chat
             </Button>
           </DialogTrigger>

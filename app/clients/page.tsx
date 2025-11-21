@@ -2,12 +2,13 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import MobileNavigation from "@/components/layout/mobile-navigation";
-import { Users, TrendingUp, Clock, Target, Plus, ChevronRight } from "lucide-react";
+import { Users, TrendingUp, Clock, Target, Plus, ChevronRight, ArrowLeft } from "lucide-react";
 
 /**
  * Clients page — images-only photo rendering (no URL text).
@@ -15,6 +16,7 @@ import { Users, TrendingUp, Clock, Target, Plus, ChevronRight } from "lucide-rea
 
 export default function ClientsPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"overview" | "clients" | "deals" | "tasks">("overview");
 
@@ -369,6 +371,14 @@ export default function ClientsPage() {
       <div className="px-8 pt-8 pb-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
+            <button 
+              onClick={() => router.back()} 
+              className="text-primary hover:opacity-80 mt-1"
+              type="button"
+              aria-label="Go back"
+            >
+              <ArrowLeft size={24} />
+            </button>
             <div className="rounded-2xl p-3 bg-linear-to-br from-[#6b5cff] to-[#a84dff] shadow-md">
               <Users className="w-6 h-6 text-white" />
             </div>
@@ -562,7 +572,10 @@ export default function ClientsPage() {
         {activeTab === "tasks" && (
           <div className="space-y-6">
             <div className="flex items-center justify-end">
-              <Button onClick={() => setShowAddTask(true)} className="flex items-center gap-2 bg-linear-to-br from-[#6b5cff] to-[#a84dff] text-white shadow-md">
+              <Button 
+                onClick={() => setShowAddTask(true)} 
+                className="flex items-center gap-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white shadow-md transition-all duration-200"
+              >
                 <Plus className="w-4 h-4" />
                 Add Task
               </Button>
@@ -837,7 +850,20 @@ export default function ClientsPage() {
               <textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="E.g., Call client to confirm documents" className="w-full h-28 p-3 border rounded-md mb-4" />
               <div className="flex items-center justify-end gap-3">
                 <Button variant="ghost" onClick={() => setShowAddTask(false)}>Cancel</Button>
-                <Button type="submit" className="bg-linear-to-br from-[#6b5cff] to-[#a84dff] text-white">Add Task</Button>
+                <Button 
+                  type="submit" 
+                  disabled={createTaskMutation.isPending}
+                  className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                >
+                  {createTaskMutation.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Adding...
+                    </div>
+                  ) : (
+                    "Add Task"
+                  )}
+                </Button>
               </div>
             </form>
           </div>

@@ -272,9 +272,23 @@ export default function EditProfile() {
             </button>
             <h2 className="text-lg font-semibold text-neutral-900">Edit Profile</h2>
           </div>
-          <Button onClick={handleSubmit} disabled={saving || !initialLoaded} size="sm" className="flex items-center space-x-2">
-            <Save size={16} />
-            <span>{saving ? "Saving..." : "Save"}</span>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={saving || !initialLoaded} 
+            size="sm" 
+            className="flex items-center space-x-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+          >
+            {saving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                <span>Save</span>
+              </>
+            )}
           </Button>
         </div>
       </div>

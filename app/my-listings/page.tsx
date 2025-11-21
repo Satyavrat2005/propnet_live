@@ -66,6 +66,8 @@ type PropertyFormProps = {
   setAgreementFiles: (files: File[]) => void;
   editingProperty: any;
   onCancel: () => void;
+  isCreating?: boolean;
+  isUpdating?: boolean;
 };
 
 function PropertyForm({
@@ -77,6 +79,8 @@ function PropertyForm({
   setAgreementFiles,
   editingProperty,
   onCancel,
+  isCreating = false,
+  isUpdating = false,
 }: PropertyFormProps) {
   const scopeOfWorkOptions = useMemo(
     () => [
@@ -583,8 +587,19 @@ function PropertyForm({
           >
             Cancel
           </Button>
-          <Button type="submit" className="flex-1">
-            {editingProperty ? "Save Changes" : "Create Listing"}
+          <Button 
+            type="submit" 
+            disabled={isCreating || isUpdating}
+            className="flex-1 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+          >
+            {(isCreating || isUpdating) ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {editingProperty ? "Saving..." : "Creating..."}
+              </div>
+            ) : (
+              editingProperty ? "Save Changes" : "Create Listing"
+            )}
           </Button>
         </div>
       </form>
@@ -881,7 +896,11 @@ export default function MyListings() {
             }}
           >
             <DialogTrigger asChild>
-              <Button size="sm" className="flex items-center space-x-2" onClick={() => setIsAddDialogOpen(true)}>
+              <Button 
+                size="sm" 
+                className="flex items-center space-x-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200" 
+                onClick={() => setIsAddDialogOpen(true)}
+              >
                 <Plus size={16} />
                 <span>Add Listing</span>
               </Button>
@@ -909,6 +928,8 @@ export default function MyListings() {
                   setSelectedFiles([]);
                   setAgreementFiles([]);
                 }}
+                isCreating={createPropertyMutation.isPending}
+                isUpdating={updatePropertyMutation.isPending}
               />
             </DialogContent>
           </Dialog>
@@ -948,6 +969,8 @@ export default function MyListings() {
                   setSelectedFiles([]);
                   setAgreementFiles([]);
                 }}
+                isCreating={createPropertyMutation.isPending}
+                isUpdating={updatePropertyMutation.isPending}
               />
             </DialogContent>
           </Dialog>

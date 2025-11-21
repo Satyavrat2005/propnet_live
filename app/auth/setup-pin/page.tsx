@@ -171,10 +171,17 @@ function SetupPinContent() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-6 text-lg"
+              className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white py-6 text-lg transition-all duration-200"
               disabled={loading || pin.length < 4 || confirmPin.length < 4}
             >
-              {loading ? "Creating PIN..." : "Create PIN"}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Creating PIN...
+                </div>
+              ) : (
+                "Create PIN & Continue"
+              )}
             </Button>
           </form>
 

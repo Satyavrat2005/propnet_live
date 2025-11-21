@@ -49,6 +49,7 @@ type PropertyFormProps = {
   setSelectedFiles: (files: File[]) => void;
   agreementFiles: File[];
   setAgreementFiles: (files: File[]) => void;
+  isPending?: boolean;
 };
 
 function PropertyForm({
@@ -58,6 +59,7 @@ function PropertyForm({
   setSelectedFiles,
   agreementFiles,
   setAgreementFiles,
+  isPending = false,
 }: PropertyFormProps) {
   // memoized to keep the same reference across renders (prevents re-renders affecting focus)
   const scopeOfWorkOptions = useMemo(
@@ -583,8 +585,19 @@ function PropertyForm({
           >
             Cancel
           </Button>
-          <Button type="submit" className="flex-1">
-            Create Listing
+          <Button 
+            type="submit" 
+            disabled={isPending}
+            className="flex-1 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+          >
+            {isPending ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Creating...
+              </div>
+            ) : (
+              "Create Listing"
+            )}
           </Button>
         </div>
       </form>
@@ -730,6 +743,7 @@ export default function AddPropertyPage() {
           setSelectedFiles={setSelectedFiles}
           agreementFiles={agreementFiles}
           setAgreementFiles={setAgreementFiles}
+          isPending={createPropertyMutation.isPending}
         />
       </div>
     </div>

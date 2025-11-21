@@ -17,7 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Edit, Trash2, MapPin, Building, DollarSign, Calendar } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Building, DollarSign, Calendar, ArrowLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -242,9 +242,19 @@ export default function RequirementsPage() {
   return (
     <div className="container mx-auto p-4 max-w-4xl pb-20">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Property Requirements</h1>
-          <p className="text-gray-600">Manage your property search requirements</p>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => window.history.length > 1 ? window.history.back() : null} 
+            className="text-primary hover:opacity-80"
+            type="button"
+            aria-label="Go back"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Property Requirements</h1>
+            <p className="text-gray-600">Manage your property search requirements</p>
+          </div>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -254,7 +264,7 @@ export default function RequirementsPage() {
                 setEditingRequirement(null);
                 form.reset();
               }}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
               type="button"
             >
               <Plus size={16} />
@@ -482,12 +492,16 @@ export default function RequirementsPage() {
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
+                    className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
                   >
-                    {createMutation.isPending || updateMutation.isPending
-                      ? "Saving..."
-                      : editingRequirement
-                      ? "Update"
-                      : "Create"}
+                    {createMutation.isPending || updateMutation.isPending ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </div>
+                    ) : (
+                      editingRequirement ? "Update" : "Create"
+                    )}
                   </Button>
                 </div>
               </form>
