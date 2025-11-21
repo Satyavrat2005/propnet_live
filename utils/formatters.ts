@@ -87,6 +87,7 @@ export function getListingTypeBadgeColor(type?: string): string {
     "sell": "bg-orange-100 text-orange-800",
     "lease": "bg-purple-100 text-purple-800",
     "primary": "bg-amber-100 text-amber-800",
+    "secondary": "bg-indigo-100 text-indigo-800",
   };
 
   return colorMap[type?.toLowerCase() || ""] || "bg-gray-100 text-gray-800";
@@ -103,6 +104,7 @@ export function getListingTypeLabel(type?: string): string {
     "sell": "For Sale",
     "lease": "Lease",
     "primary": "Primary Listing",
+    "secondary": "Secondary Listing",
   };
 
   return labelMap[type?.toLowerCase() || ""] || type || "Property";

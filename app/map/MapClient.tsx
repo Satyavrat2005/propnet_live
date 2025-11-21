@@ -37,6 +37,9 @@ type MarkerEntry = {
   clickHandler: () => void;
 };
 
+type SecondaryFilterType = "sale" | "rent";
+type SecondaryFilterState = Record<SecondaryFilterType, boolean>;
+
 const normalizeAddressSegments = (parts: Array<string | null | undefined>) => {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -137,6 +140,9 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   const [searchQuery, setSearchQuery] = useState("");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [secondaryFilters, setSecondaryFilters] = useState<SecondaryFilterState>({ sale: true, rent: true });
+  const [isSecondaryMenuOpen, setIsSecondaryMenuOpen] = useState(false);
+  const [secondaryModeActive, setSecondaryModeActive] = useState(false);
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInitializedRef = useRef(false);
@@ -147,6 +153,27 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   const markersMapRef = useRef<Record<string, MarkerEntry>>({});
   const activeInfoWindowRef = useRef<any>(null);
   const highlightCircleRef = useRef<any>(null);
+  const secondaryMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const toggleSecondaryFilter = useCallback((type: SecondaryFilterType) => {
+    setSecondaryFilters((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!secondaryMenuRef.current) return;
+      if (secondaryMenuRef.current.contains(event.target as Node)) return;
+      setIsSecondaryMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const normalizedPrimary = useMemo(
     () =>
@@ -169,11 +196,32 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   );
 
   const allListings = useMemo(() => [...normalizedProperties, ...normalizedPrimary], [normalizedProperties, normalizedPrimary]);
+  const secondaryFilterOptions: Array<{ label: string; type: SecondaryFilterType }> = useMemo(
+    () => [
+      { label: "For Sale", type: "sale" },
+      { label: "For Rent", type: "rent" },
+    ],
+    []
+  );
 
   const filteredListings = useMemo(() => {
-    if (filterType === "all") return allListings;
-    return allListings.filter((property) => (property.transactionType || "").toLowerCase() === filterType);
-  }, [allListings, filterType]);
+    if (secondaryModeActive) {
+      return allListings.filter((property) => {
+        if (property.listingSource !== "property") return false;
+        const type = (property.transactionType || "").toLowerCase();
+        if (type === "sale" && secondaryFilters.sale) return true;
+        if (type === "rent" && secondaryFilters.rent) return true;
+        return false;
+      });
+    }
+
+    const baseListings =
+      filterType === "all"
+        ? allListings
+        : allListings.filter((property) => (property.transactionType || "").toLowerCase() === filterType);
+
+    return baseListings;
+  }, [allListings, filterType, secondaryModeActive, secondaryFilters]);
 
   const searchFilteredListings = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -714,7 +762,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterType, searchQuery]);
+  }, [filterType, searchQuery, secondaryModeActive, secondaryFilters.sale, secondaryFilters.rent]);
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -741,15 +789,17 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       </div>
 
       <div className="bg-white border-b border-neutral-200 px-6 py-3">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Filter size={16} className="text-neutral-600" />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {propertyTypes.map((type) => (
               <Button
                 key={type}
                 variant={filterType === type ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
+                  setIsSecondaryMenuOpen(false);
+                  setSecondaryModeActive(false);
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
@@ -757,6 +807,36 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
                 {getFilterLabel(type)}
               </Button>
             ))}
+            <div className="relative" ref={secondaryMenuRef}>
+              <Button
+                variant={secondaryModeActive ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setIsSecondaryMenuOpen((prev) => !prev);
+                  setSecondaryModeActive(true);
+                }}
+              >
+                Secondary Listing
+              </Button>
+              {isSecondaryMenuOpen ? (
+                <div className="absolute left-0 z-50 mt-2 w-48 rounded-2xl border border-neutral-200 bg-white p-4 text-xs shadow-xl">
+                  <p className="mb-2 font-semibold text-neutral-700">Filter Secondary</p>
+                  <div className="space-y-2">
+                    {secondaryFilterOptions.map(({ label, type }) => (
+                      <label key={type} className="flex items-center gap-2 text-neutral-700">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-neutral-300 text-primary focus:ring-0"
+                          checked={secondaryFilters[type]}
+                          onChange={() => toggleSecondaryFilter(type)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
