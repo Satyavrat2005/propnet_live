@@ -3,8 +3,9 @@
 
 import { useEffect, useState, FormEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save } from "lucide-react";
+import { Save, User, Building2, Briefcase, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {AppLayout} from "@/components/layout/app-layout";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -263,46 +264,54 @@ export default function EditProfile() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center">
-            <button className="text-primary mr-4" onClick={() => router.push("/profile")} type="button">
-              <ArrowLeft size={24} />
-            </button>
-            <h2 className="text-lg font-semibold text-neutral-900">Edit Profile</h2>
+    <AppLayout>
+      <div className="max-w-4xl mx-auto w-full">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Edit Profile</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Update your personal and professional information
+            </p>
           </div>
           <Button 
             onClick={handleSubmit} 
             disabled={saving || !initialLoaded} 
             size="sm" 
-            className="flex items-center space-x-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+            className="btn-primary group"
           >
             {saving ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                 <span>Saving...</span>
               </>
             ) : (
               <>
-                <Save size={16} />
+                <Save size={16} className="mr-2 group-hover:scale-110 transition-transform" />
                 <span>Save</span>
               </>
             )}
           </Button>
         </div>
-      </div>
-
-      <div className="flex-1 px-6 py-6 space-y-6">
         {!initialLoaded && (
-          <div className="text-center py-8 text-sm text-neutral-500">Loading profile…</div>
+          <Card className="card-modern">
+            <CardContent className="py-16 text-center">
+              <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-sm text-muted-foreground">Loading profile…</p>
+            </CardContent>
+          </Card>
         )}
 
         {initialLoaded && !profile && (
-          <Card>
-            <CardContent className="py-6 text-center space-y-3">
-              <p className="text-sm text-neutral-600">Sign in to populate your profile details.</p>
-              <Button variant="outline" onClick={() => router.push("/login")}>
+          <Card className="card-modern">
+            <CardContent className="py-16 text-center space-y-4">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-4 bg-muted rounded-full">
+                  <User className="w-12 h-12 text-muted-foreground" />
+                </div>
+              </div>
+              <p className="text-foreground font-medium">Please sign in to access your profile</p>
+              <Button variant="outline" onClick={() => router.push("/login")} className="btn-secondary">
                 Go to login
               </Button>
             </CardContent>
@@ -310,96 +319,126 @@ export default function EditProfile() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
+          <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="border-b bg-linear-to-r from-primary/5 to-primary/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                <CardTitle className="text-base font-semibold text-foreground">Personal Information</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <Label>Profile Photo</Label>
+                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Profile Photo
+                  </Label>
                   <FileUpload key={fileUploadKey} onFilesChange={handlePhotoChange} maxFiles={1} />
-                  <p className="text-xs text-neutral-500 mt-1">Upload your profile photo (optional)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Upload your profile photo (optional)</p>
                   {profilePhotoPreview ? (
-                    <div className="mt-3 flex items-center space-x-3">
-                      <div className="w-16 h-16 rounded-full overflow-hidden border border-neutral-200">
+                    <div className="mt-4 flex items-center gap-4 p-4 bento-card">
+                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/20 ring-2 ring-primary/10">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={profilePhotoPreview} alt="Profile preview" className="w-full h-full object-cover" />
                       </div>
-                      <span className="text-xs text-neutral-500">This preview reflects what will be saved.</span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Profile Preview</p>
+                        <p className="text-xs text-muted-foreground mt-1">This will be your profile picture</p>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-neutral-400 mt-3">No profile photo uploaded yet.</p>
+                    <p className="text-xs text-muted-foreground mt-3">No profile photo uploaded yet.</p>
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" value={form.name} onChange={(e) => handleInput("name", e.target.value)} placeholder="Enter your full name" />
+                  <Label htmlFor="name" className="text-sm font-medium text-muted-foreground">Full Name</Label>
+                  <Input id="name" value={form.name} onChange={(e) => handleInput("name", e.target.value)} placeholder="Enter your full name" className="input-modern" />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" value={form.email} onChange={(e) => handleInput("email", e.target.value)} placeholder="Enter your email address" />
+                  <Label htmlFor="email" className="text-sm font-medium text-muted-foreground">Email</Label>
+                  <Input id="email" value={form.email} onChange={(e) => handleInput("email", e.target.value)} placeholder="Enter your email address" className="input-modern" />
                 </div>
                 <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" value={form.city} onChange={(e) => handleInput("city", e.target.value)} placeholder="Enter your city" />
+                  <Label htmlFor="city" className="text-sm font-medium text-muted-foreground">City</Label>
+                  <Input id="city" value={form.city} onChange={(e) => handleInput("city", e.target.value)} placeholder="Enter your city" className="input-modern" />
                 </div>
                 <div>
-                  <Label htmlFor="experience">Experience</Label>
-                  <Input id="experience" value={form.experience} onChange={(e) => handleInput("experience", e.target.value)} placeholder="e.g., 5 years" />
+                  <Label htmlFor="experience" className="text-sm font-medium text-muted-foreground">Experience</Label>
+                  <Input id="experience" value={form.experience} onChange={(e) => handleInput("experience", e.target.value)} placeholder="e.g., 5 years" className="input-modern" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Agency Information</CardTitle>
+          <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="border-b bg-linear-to-r from-blue-500/5 to-blue-500/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                  <Building2 className="w-5 h-5 text-blue-600" />
+                </div>
+                <CardTitle className="text-base font-semibold text-foreground">Agency Information</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div>
-                <Label htmlFor="agencyName">Agency Name</Label>
-                <Input id="agencyName" value={form.agencyName} onChange={(e) => handleInput("agencyName", e.target.value)} placeholder="Enter your agency name" />
+                <Label htmlFor="agencyName" className="text-sm font-medium text-muted-foreground">Agency Name</Label>
+                <Input id="agencyName" value={form.agencyName} onChange={(e) => handleInput("agencyName", e.target.value)} placeholder="Enter your agency name" className="input-modern" />
               </div>
               <div>
-                <Label htmlFor="reraId">RERA ID</Label>
-                <Input id="reraId" value={form.reraId} onChange={(e) => handleInput("reraId", e.target.value)} placeholder="Enter your RERA registration number" />
+                <Label htmlFor="reraId" className="text-sm font-medium text-muted-foreground">RERA ID</Label>
+                <Input id="reraId" value={form.reraId} onChange={(e) => handleInput("reraId", e.target.value)} placeholder="Enter your RERA registration number" className="input-modern" />
               </div>
               <div>
-                <Label htmlFor="website">Website</Label>
-                <Input id="website" value={form.website} onChange={(e) => handleInput("website", e.target.value)} placeholder="https://yourwebsite.com" />
+                <Label htmlFor="website" className="text-sm font-medium text-muted-foreground">Website</Label>
+                <Input id="website" value={form.website} onChange={(e) => handleInput("website", e.target.value)} placeholder="https://yourwebsite.com" className="input-modern" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Professional Details</CardTitle>
+          <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="border-b bg-linear-to-r from-purple-500/5 to-purple-500/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                  <Briefcase className="w-5 h-5 text-purple-600" />
+                </div>
+                <CardTitle className="text-base font-semibold text-foreground">Professional Details</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div>
-                <Label htmlFor="areaOfExpertise">Area of Expertise</Label>
-                <Input id="areaOfExpertise" value={form.areaOfExpertise} onChange={(e) => handleInput("areaOfExpertise", e.target.value)} placeholder="e.g., Residential, Commercial, Luxury Properties" />
-                <p className="text-xs text-neutral-500 mt-1">Separate multiple areas with commas</p>
+                <Label htmlFor="areaOfExpertise" className="text-sm font-medium text-muted-foreground">Area of Expertise</Label>
+                <Input id="areaOfExpertise" value={form.areaOfExpertise} onChange={(e) => handleInput("areaOfExpertise", e.target.value)} placeholder="e.g., Residential, Commercial, Luxury Properties" className="input-modern" />
+                <p className="text-xs text-muted-foreground mt-1">Separate multiple areas with commas</p>
               </div>
               <div>
-                <Label htmlFor="workingRegions">Working Regions</Label>
-                <Input id="workingRegions" value={form.workingRegions} onChange={(e) => handleInput("workingRegions", e.target.value)} placeholder="e.g., Mumbai, Pune, Delhi" />
-                <p className="text-xs text-neutral-500 mt-1">Separate multiple regions with commas</p>
+                <Label htmlFor="workingRegions" className="text-sm font-medium text-muted-foreground">Working Regions</Label>
+                <Input id="workingRegions" value={form.workingRegions} onChange={(e) => handleInput("workingRegions", e.target.value)} placeholder="e.g., Mumbai, Pune, Delhi" className="input-modern" />
+                <p className="text-xs text-muted-foreground mt-1">Separate multiple regions with commas</p>
               </div>
               <div>
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" value={form.bio} onChange={(e) => handleInput("bio", e.target.value)} placeholder="Tell us about yourself and your expertise..." rows={4} />
+                <Label htmlFor="bio" className="text-sm font-medium text-muted-foreground">Bio</Label>
+                <Textarea id="bio" value={form.bio} onChange={(e) => handleInput("bio", e.target.value)} placeholder="Tell us about yourself and your expertise..." rows={4} className="input-modern" />
               </div>
             </CardContent>
           </Card>
 
-          <Button type="submit" disabled={saving || !initialLoaded} className="w-full flex items-center justify-center space-x-2" size="lg">
-            {saving ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Save size={20} />}
-            <span>{saving ? "Saving..." : "Save Changes"}</span>
+          <Button type="submit" disabled={saving || !initialLoaded} className="w-full btn-primary group" size="lg">
+            {saving ? (
+              <>
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2" />
+                <span>Saving Changes...</span>
+              </>
+            ) : (
+              <>
+                <Save size={20} className="mr-2 group-hover:scale-110 transition-transform" />
+                <span>Save Changes</span>
+              </>
+            )}
           </Button>
         </form>
       </div>
-    </div>
+    </AppLayout>
   );
 }

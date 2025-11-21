@@ -27,7 +27,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { ArrowLeft, Shield, Upload } from "lucide-react";
+import { Shield, Upload, Home, Building2, MapPin, FileText, CheckCircle2 } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,6 +35,7 @@ import { UseFormReturn, useForm } from "react-hook-form";
 
 import FileUpload from "@/components/ui/file-upload";
 import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
+import { AppLayout } from "@/components/layout/app-layout";
 
 import { insertPropertySchema } from "@/lib/schema";
 
@@ -78,25 +79,30 @@ function PropertyForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
         {/* Property Details */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="bg-white border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">
-              Property Details
-            </CardTitle>
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+          <CardHeader className="border-b bg-linear-to-r from-primary/5 to-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                <Home className="w-5 h-5 text-primary" />
+              </div>
+              <CardTitle className="text-base font-semibold text-foreground">
+                Property Details
+              </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4 pt-6 bg-white">
+          <CardContent className="space-y-4 pt-6">
             <FormField
               control={form.control}
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Property Title</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Property Title</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Beautiful 2 BHK Apartment..."
                       {...field}
                       autoComplete="off"
-                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="input-modern"
                     />
                   </FormControl>
                   <FormMessage />
@@ -110,10 +116,10 @@ function PropertyForm({
                 name="propertyType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Property Type</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Property Type</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-white border-gray-300">
+                        <SelectTrigger className="input-modern">
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                       </FormControl>
@@ -134,10 +140,10 @@ function PropertyForm({
                 name="transactionType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Transaction Type</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Transaction Type</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-white border-gray-300">
+                        <SelectTrigger className="input-modern">
                           <SelectValue placeholder="Select transaction" />
                         </SelectTrigger>
                       </FormControl>
@@ -158,7 +164,7 @@ function PropertyForm({
                 name="bhk"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">BHK (Optional)</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">BHK (Optional)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -166,7 +172,7 @@ function PropertyForm({
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                         autoComplete="off"
-                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                        className="input-modern"
                       />
                     </FormControl>
                     <FormMessage />
@@ -179,13 +185,13 @@ function PropertyForm({
                 name="size"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Area</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Area</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="1200"
                         {...field}
                         autoComplete="off"
-                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                        className="input-modern"
                       />
                     </FormControl>
                     <FormMessage />
@@ -198,10 +204,10 @@ function PropertyForm({
                 name="sizeUnit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Area Unit</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Area Unit</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="bg-white border-gray-300">
+                        <SelectTrigger className="input-modern">
                           <SelectValue placeholder="Select unit" />
                         </SelectTrigger>
                       </FormControl>
@@ -224,7 +230,7 @@ function PropertyForm({
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">
+                    <FormLabel className="text-sm font-medium text-muted-foreground">
                       {form.watch("transactionType") === "rent" ? "Monthly Rent" : "Sale Price"}
                     </FormLabel>
                     <FormControl>
@@ -232,7 +238,7 @@ function PropertyForm({
                         placeholder={form.watch("transactionType") === "rent" ? "₹25,000/month" : "₹50 Lakhs"}
                         {...field}
                         autoComplete="off"
-                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                        className="input-modern"
                       />
                     </FormControl>
                     <FormMessage />
@@ -246,10 +252,10 @@ function PropertyForm({
                   name="rentFrequency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Rent Frequency</FormLabel>
+                      <FormLabel className="text-sm font-medium text-muted-foreground">Rent Frequency</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger className="bg-white border-gray-300">
+                          <SelectTrigger className="input-modern">
                             <SelectValue placeholder="Select frequency" />
                           </SelectTrigger>
                         </FormControl>
@@ -270,13 +276,13 @@ function PropertyForm({
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Location (Area, City)</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Location (Area, City)</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Bandra West, Mumbai"
                       {...field}
                       autoComplete="off"
-                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="input-modern"
                     />
                   </FormControl>
                   <FormMessage />
@@ -289,11 +295,11 @@ function PropertyForm({
               name="fullAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Full Address</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Full Address</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Complete address with landmarks..."
-                      className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="resize-none input-modern"
                       rows={3}
                       {...field}
                     />
@@ -309,13 +315,13 @@ function PropertyForm({
                 name="flatNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Flat/Unit No.</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Flat/Unit No.</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="A-101"
                         {...field}
                         autoComplete="off"
-                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                        className="input-modern"
                       />
                     </FormControl>
                     <p className="text-xs text-gray-500 mt-1">Encrypted & used only for verification</p>
@@ -329,13 +335,13 @@ function PropertyForm({
                 name="floorNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Floor No.</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Floor No.</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="3rd Floor"
                         {...field}
                         autoComplete="off"
-                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                        className="input-modern"
                       />
                     </FormControl>
                     <FormMessage />
@@ -348,7 +354,7 @@ function PropertyForm({
                 name="buildingSociety"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Building/Society</FormLabel>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Building/Society</FormLabel>
                     <FormControl>
                       <GooglePlacesAutocomplete
                         value={field.value || ""}
@@ -368,11 +374,11 @@ function PropertyForm({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Description</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Description</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Property details, amenities, nearby facilities..."
-                      className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="resize-none input-modern"
                       rows={4}
                       {...field}
                     />
@@ -383,7 +389,7 @@ function PropertyForm({
             />
 
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Property Photos (Up to 10)
               </label>
               <FileUpload onFilesChange={setSelectedFiles} maxFiles={10} />
@@ -392,13 +398,18 @@ function PropertyForm({
         </Card>
 
         {/* Listing Type */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="bg-white border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900">
-              Listing Type
-            </CardTitle>
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+          <CardHeader className="border-b bg-linear-to-r from-purple-500/5 to-purple-500/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                <Building2 className="w-5 h-5 text-purple-600" />
+              </div>
+              <CardTitle className="text-base font-semibold text-foreground">
+                Listing Type
+              </CardTitle>
+            </div>
           </CardHeader>
-        <CardContent className="pt-6 bg-white">
+        <CardContent className="pt-6">
           <FormField
             control={form.control}
             name="listingType"
@@ -406,32 +417,32 @@ function PropertyForm({
               <FormItem>
                 <FormControl>
                   <div className="space-y-3">
-                    <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+                    <div className="flex items-start space-x-3 p-4 bento-card cursor-pointer group" onClick={() => field.onChange("exclusive")}>
                       <input
                         type="radio"
                         id="exclusive"
                         value="exclusive"
                         checked={field.value === "exclusive"}
                         onChange={() => field.onChange("exclusive")}
-                        className="mt-1"
+                        className="mt-1 text-primary"
                       />
                       <label htmlFor="exclusive" className="flex-1 cursor-pointer">
-                        <div className="font-medium text-gray-900">Exclusive</div>
-                        <div className="text-sm text-gray-600">Only I can list and share it</div>
+                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors">Exclusive</div>
+                        <div className="text-sm text-muted-foreground">Only I can list and share it</div>
                       </label>
                     </div>
-                    <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+                    <div className="flex items-start space-x-3 p-4 bento-card cursor-pointer group" onClick={() => field.onChange("shared")}>
                       <input
                         type="radio"
                         id="shared"
                         value="shared"
                         checked={field.value === "shared"}
                         onChange={() => field.onChange("shared")}
-                        className="mt-1"
+                        className="mt-1 text-primary"
                       />
                       <label htmlFor="shared" className="flex-1 cursor-pointer">
-                        <div className="font-medium text-gray-900">Shared Within Network</div>
-                        <div className="text-sm text-gray-600">Platform-controlled visibility</div>
+                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors">Shared Within Network</div>
+                        <div className="text-sm text-muted-foreground">Platform-controlled visibility</div>
                       </label>
                     </div>
                   </div>
@@ -445,15 +456,15 @@ function PropertyForm({
             control={form.control}
             name="isPubliclyVisible"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-gray-200 p-4 mt-4 bg-white">
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 bento-card p-4 mt-4">
                 <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-1" />
                 </FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel className="text-gray-900 font-medium">
+                  <FormLabel className="text-foreground font-semibold cursor-pointer">
                     Allow this property to appear in public agent feed and search?
                   </FormLabel>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Enable to make this listing visible in general search and feed. Disable for private listing sharing only.
                   </p>
                 </div>
@@ -464,29 +475,35 @@ function PropertyForm({
         </Card>
 
         {/* Owner Details */}
-        <Card className="bg-white border-gray-200">
-          <CardHeader className="bg-white border-b border-gray-100">
-            <CardTitle className="text-base font-semibold text-gray-900 flex items-center">
-              <Shield size={16} className="mr-2 text-green-600" />
-              Owner Details (Encrypted & Secure)
-            </CardTitle>
-            <p className="text-xs text-gray-600 mt-1">
-              Owner will receive a consent request with clear terms
-            </p>
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+          <CardHeader className="border-b bg-linear-to-r from-green-500/5 to-green-500/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                <Shield className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <CardTitle className="text-base font-semibold text-foreground flex items-center">
+                  Owner Details (Encrypted & Secure)
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Owner will receive a consent request with clear terms
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4 pt-6 bg-white">
+          <CardContent className="space-y-4 pt-6">
             <FormField
               control={form.control}
               name="ownerName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Owner Name</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Owner Name</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Property owner's full name"
                       {...field}
                       autoComplete="off"
-                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="input-modern"
                     />
                   </FormControl>
                   <p className="text-xs text-gray-500">This information is encrypted and never shared publicly</p>
@@ -500,13 +517,13 @@ function PropertyForm({
               name="ownerPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Owner Phone Number</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Owner Phone Number</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="+91 9876543210"
                       {...field}
                       autoComplete="off"
-                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="input-modern"
                     />
                   </FormControl>
                   <p className="text-xs text-gray-500">Required for verification and trust</p>
@@ -520,13 +537,13 @@ function PropertyForm({
               name="commissionTerms"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Commission Terms</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Commission Terms</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="2% of sale value"
                       {...field}
                       autoComplete="off"
-                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="input-modern"
                     />
                   </FormControl>
                   <FormMessage />
@@ -535,12 +552,12 @@ function PropertyForm({
             />
 
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">Scope of Work</label>
+              <label className="text-sm font-medium text-muted-foreground block mb-3">Scope of Work</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {scopeOfWorkOptions.map((option) => {
                   const checked = form.watch("scopeOfWork")?.includes(option);
                   return (
-                    <div key={option} className="flex items-center space-x-2 p-2 border border-gray-200 rounded-md bg-white">
+                    <div key={option} className="flex items-center space-x-2 p-3 bento-card cursor-pointer hover:border-primary">
                       <Checkbox
                         id={option}
                         checked={!!checked}
@@ -556,7 +573,7 @@ function PropertyForm({
                           }
                         }}
                       />
-                      <label htmlFor={option} className="text-sm text-gray-700 cursor-pointer">
+                      <label htmlFor={option} className="text-sm text-foreground cursor-pointer font-medium">
                         {option}
                       </label>
                     </div>
@@ -566,9 +583,9 @@ function PropertyForm({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">Agreement Document (Optional)</label>
+              <label className="text-sm font-medium text-muted-foreground block mb-2">Agreement Document (Optional)</label>
               <FileUpload onFilesChange={setAgreementFiles} maxFiles={1} />
-              <p className="text-xs text-gray-500 mt-1">Upload agent agreement or authorization letter</p>
+              <p className="text-xs text-muted-foreground mt-1">Upload agent agreement or authorization letter</p>
             </div>
           </CardContent>
         </Card>
@@ -581,14 +598,14 @@ function PropertyForm({
               form.reset();
               window.history.length > 1 ? window.history.back() : null;
             }}
-            className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="flex-1 btn-secondary"
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
             disabled={isPending}
-            className="flex-1 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+            className="flex-1 btn-primary relative overflow-hidden group"
           >
             {isPending ? (
               <div className="flex items-center gap-2">
@@ -596,7 +613,10 @@ function PropertyForm({
                 Creating...
               </div>
             ) : (
-              "Create Listing"
+              <>
+                <CheckCircle2 className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                Create Listing
+              </>
             )}
           </Button>
         </div>
@@ -710,32 +730,30 @@ export default function AddPropertyPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header (unchanged) */}
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center">
-            <button className="text-primary mr-4 hover:opacity-80" onClick={handleBack} type="button" aria-label="Go back">
-              <ArrowLeft size={24} />
-            </button>
-            <h2 className="text-lg font-semibold text-neutral-900">
-              Add Property
-            </h2>
+    <AppLayout>
+      <div className="max-w-5xl mx-auto w-full">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Add Property</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Create a new property listing with owner consent
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/bulk-upload")}
+              className="flex items-center gap-2 btn-secondary"
+            >
+              <Upload size={16} />
+              <span>Bulk Upload</span>
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/bulk-upload")}
-            className="flex items-center space-x-2"
-          >
-            <Upload size={16} />
-            <span>Bulk Upload</span>
-          </Button>
         </div>
-      </div>
 
-      {/* Body (same UI/content as my-listings form) */}
-      <div className="flex-1 px-6 py-6 pb-20">
+        {/* Form */}
         <PropertyForm
           form={form}
           onSubmit={handleSubmit}
@@ -746,6 +764,6 @@ export default function AddPropertyPage() {
           isPending={createPropertyMutation.isPending}
         />
       </div>
-    </div>
+    </AppLayout>
   );
 }

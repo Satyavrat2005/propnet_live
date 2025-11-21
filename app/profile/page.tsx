@@ -19,7 +19,7 @@ import {
   Building2,
   Calendar,
 } from "lucide-react";
-import MobileNavigation from "@/components/layout/mobile-navigation";
+import { AppLayout } from "@/components/layout/app-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -225,18 +225,15 @@ export default function ProfilePage() {
   const topRequests = colistingRequests.slice(0, 3);
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
-        <div className="flex items-center px-6 py-4">
-          <button className="text-primary mr-4" onClick={() => router.push("/dashboard")}>
-            <ArrowLeft size={24} />
-          </button>
-          <h2 className="text-lg font-semibold text-neutral-900">Profile</h2>
+    <AppLayout>
+      <div className="max-w-5xl mx-auto w-full space-y-6">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Profile</h1>
+          <p className="text-sm text-muted-foreground">Manage your professional profile</p>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className="px-6 py-6 space-y-6">
+        <div className="space-y-6">
           <ProfileHeaderCard profile={normalizedProfile} pendingListings={pendingListings} ownersCount={owners.count} ownerNames={owners.names} listings={properties.length} />
 
           <SectionCard
@@ -298,7 +295,7 @@ export default function ProfilePage() {
       </div>
 
       <MobileNavigation />
-    </div>
+    </AppLayout>
   );
 }
 
@@ -513,4 +510,8 @@ function ContactDetails({ profile }: { profile: NormalizedProfile }) {
       ))}
     </div>
   );
+}
+
+function MobileNavigation() {
+  return null;
 }

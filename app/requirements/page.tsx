@@ -24,7 +24,7 @@ import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { safeFetch } from "@/lib/safeFetch";
-import MobileNavigation from "@/components/layout/mobile-navigation";
+import { AppLayout } from "@/components/layout/app-layout";
 
 const requirementSchema = z.object({
   propertyType: z.string().min(1, "Property type is required"),
@@ -240,22 +240,14 @@ export default function RequirementsPage() {
   const formatPriceDisplay = (txt?: string | null) => (txt ? txt : "");
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl pb-20">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => window.history.length > 1 ? window.history.back() : null} 
-            className="text-primary hover:opacity-80"
-            type="button"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={24} />
-          </button>
+    <AppLayout>
+      <div className="max-w-5xl mx-auto w-full space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Property Requirements</h1>
-            <p className="text-gray-600">Manage your property search requirements</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Property Requirements</h1>
+            <p className="text-sm text-muted-foreground">Manage your property search requirements</p>
           </div>
-        </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -665,7 +657,7 @@ export default function RequirementsPage() {
         )}
       </div>
 
-      <MobileNavigation />
-    </div>
+      </div>
+    </AppLayout>
   );
 }

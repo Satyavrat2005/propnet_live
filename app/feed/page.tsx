@@ -17,7 +17,8 @@ import { Slider } from "@/components/ui/slider";
 import { Plus, Search, Filter, X, Sparkles, Home, MessageCircle, ArrowLeft } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import CompactPropertyCard, { FeedProperty } from "@/components/ui/compact-property-card";
-import MobileNavigation from "@/components/layout/mobile-navigation";
+import { PropertyDetailsData } from "@/components/ui/property-details-panel"; // Ensure this path is correct
+import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { safeFetch } from "@/lib/safeFetch";
 import {
@@ -119,63 +120,34 @@ export default function PropertyFeedPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="loading-spinner" />
-      </div>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="loading-spinner" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen pb-20 bg-gray-50">
-      {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => router.push('/dashboard')} 
-                className="text-primary hover:opacity-80"
-                type="button"
-                aria-label="Go back"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <div>
-                <h1 className="text-xl font-bold text-neutral-900">Properties</h1>
-                <p className="text-sm text-neutral-500">{filteredProperties.length} listings available</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/quickpost")}
-                className="flex items-center space-x-1 text-primary border-primary hover:bg-primary/5"
-              >
-                <Sparkles size={16} />
-                <span className="hidden sm:inline">QuickPost</span>
-              </Button>
-              <button
-                className="p-2 text-neutral-400"
-                onClick={() => router.push("/profile")}
-                type="button"
-                aria-label="Profile"
-              >
-                <Avatar className="h-10 w-10">
-                  {user?.profilePhoto ? (
-                    <AvatarImage src={user.profilePhoto} alt={user.name ?? "Profile"} />
-                  ) : (
-                    <AvatarFallback className="text-xs font-semibold">
-                      {user?.name?.charAt(0) ?? user?.phone?.charAt(0) ?? "U"}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-              </button>
-            </div>
+    <AppLayout>
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Property Feed</h1>
+            <p className="text-sm text-muted-foreground">{filteredProperties.length} listings available</p>
           </div>
+          <Button
+            onClick={() => router.push("/quickpost")}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Sparkles size={16} />
+            QuickPost
+          </Button>
+        </div>
 
-          {/* Search & Filter */}
-          <div className="flex items-center gap-3 mb-4">
+        {/* Search & Filter */}
+        <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -207,31 +179,30 @@ export default function PropertyFeedPage() {
             </Button>
           </div>
 
-          {/* Tabs */}
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setSelectedTab("sale")}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
-                selectedTab === "sale"
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-              type="button"
-            >
-              For Sale
-            </button>
-            <button
-              onClick={() => setSelectedTab("rent")}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
-                selectedTab === "rent"
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-              type="button"
-            >
-              For Rent
-            </button>
-          </div>
+        {/* Tabs */}
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setSelectedTab("sale")}
+            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
+              selectedTab === "sale"
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+            type="button"
+          >
+            For Sale
+          </button>
+          <button
+            onClick={() => setSelectedTab("rent")}
+            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
+              selectedTab === "rent"
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+            type="button"
+          >
+            For Rent
+          </button>
         </div>
 
         {/* Filters */}
@@ -398,68 +369,72 @@ export default function PropertyFeedPage() {
       </div>
 
       {/* Floating Add Button */}
-      <button
-        className="fixed bottom-20 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center z-20 touch-target"
-        onClick={() => router.push("/add-property")}
-        type="button"
-        aria-label="Add property"
-      >
-        <Plus size={24} />
-      </button>
+      <>
+        <button
+          className="fixed bottom-20 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center z-20 touch-target"
+          onClick={() => router.push("/add-property")}
+          type="button"
+          aria-label="Add property"
+        >
+          <Plus size={24} />
+        </button>
 
-      <Dialog open={isDetailModalOpen} onOpenChange={(open) => (open ? setIsDetailModalOpen(true) : handleCloseDetails())}>
-        <DialogContent className="max-w-xl lg:max-w-2xl rounded-[28px] border border-neutral-200 bg-white p-6 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Home size={20} />
-              Property Details
-            </DialogTitle>
-          </DialogHeader>
-          {selectedProperty && (
-            <PropertyDetailsPanel
-              property={selectedProperty}
-              onCall={() => {
-                const phone = selectedProperty.broker?.phone ?? selectedProperty.owner?.phone;
-                if (phone) {
-                  window.open(`tel:${phone}`, "_self");
+        <Dialog open={isDetailModalOpen} onOpenChange={(open) => (open ? setIsDetailModalOpen(true) : handleCloseDetails())}>
+          <DialogContent className="max-w-xl lg:max-w-2xl rounded-[28px] border border-neutral-200 bg-white p-6 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Home size={20} />
+                Property Details
+              </DialogTitle>
+            </DialogHeader>
+            {selectedProperty && (
+              <PropertyDetailsPanel
+                property={selectedProperty as PropertyDetailsData}
+                onCall={() => {
+                  const phone = selectedProperty?.broker?.phone ?? selectedProperty?.owner?.phone;
+                  if (phone) {
+                    window.open(`tel:${phone}`, "_self");
+                  }
+                }}
+                actions={
+                  <div className="pt-4 space-y-2">
+                    <Button
+                      className="w-full flex items-center justify-center space-x-2"
+                      onClick={() => {
+                        if (selectedProperty) {
+                          handleMessageBroker(selectedProperty.ownerId, selectedProperty.id);
+                          handleCloseDetails();
+                        }
+                      }}
+                    >
+                      <MessageCircle size={16} />
+                      <span>Message Broker</span>
+                    </Button>
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        if (selectedProperty) {
+                          router.push(`/property/${selectedProperty.id}`);
+                          handleCloseDetails();
+                        }
+                      }}
+                    >
+                      View Full Listing
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition-all duration-200" 
+                      onClick={handleCloseDetails}
+                    >
+                      Close
+                    </Button>
+                  </div>
                 }
-              }}
-              actions={
-                <div className="pt-4 space-y-2">
-                  <Button
-                    className="w-full flex items-center justify-center space-x-2"
-                    onClick={() => {
-                      handleMessageBroker(selectedProperty.ownerId, selectedProperty.id);
-                      handleCloseDetails();
-                    }}
-                  >
-                    <MessageCircle size={16} />
-                    <span>Message Broker</span>
-                  </Button>
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      router.push(`/property/${selectedProperty.id}`);
-                      handleCloseDetails();
-                    }}
-                  >
-                    View Full Listing
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition-all duration-200" 
-                    onClick={handleCloseDetails}
-                  >
-                    Close
-                  </Button>
-                </div>
-              }
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <MobileNavigation />
-    </div>
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
+    </AppLayout>
   );
 }

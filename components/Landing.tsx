@@ -141,7 +141,7 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-emerald-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -245,28 +245,28 @@ export default function Page() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            <div className="relative bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
+            <div className="relative bg-linear-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
               <div className="absolute -top-3 -left-3 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">1</div>
               <p className="text-gray-800 text-lg font-medium mt-2">
                 You show clients properties, but someone else closes the deal and gets the commission.
               </p>
             </div>
 
-            <div className="relative bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
+            <div className="relative bg-linear-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
               <div className="absolute -top-3 -left-3 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">2</div>
               <p className="text-gray-800 text-lg font-medium mt-2">
                 Your exclusive listings get shared everywhere without credit or consent.
               </p>
             </div>
 
-            <div className="relative bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
+            <div className="relative bg-linear-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
               <div className="absolute -top-3 -left-3 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">3</div>
               <p className="text-gray-800 text-lg font-medium mt-2">
                 No proof of your efforts when commission disputes arise.
               </p>
             </div>
 
-            <div className="relative bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
+            <div className="relative bg-linear-to-br from-red-50 to-orange-50 p-6 rounded-2xl shadow-lg border-2 border-red-200 hover:shadow-xl transition-shadow">
               <div className="absolute -top-3 -left-3 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold">4</div>
               <p className="text-gray-800 text-lg font-medium mt-2">
                 WhatsApp chaos with no organized system for leads and listings.
@@ -438,7 +438,7 @@ export default function Page() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Search className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2 text-gray-900">AI Buyer Matching</h3>
@@ -446,7 +446,7 @@ export default function Page() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-linear-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <FileCheck className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2 text-gray-900">Preference Reports</h3>
@@ -454,7 +454,7 @@ export default function Page() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
-              <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-linear-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Star className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2 text-gray-900">Reputation System</h3>
@@ -462,7 +462,7 @@ export default function Page() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-linear-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2 text-gray-900">Builder Module</h3>
@@ -470,7 +470,7 @@ export default function Page() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
-              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-linear-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Clock className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2 text-gray-900">Smart Documents</h3>
@@ -478,7 +478,7 @@ export default function Page() {
             </div>
 
             <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-linear-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-bold mb-2 text-gray-900">Analytics Dashboard</h3>

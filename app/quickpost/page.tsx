@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import MobileNavigation from "@/components/layout/mobile-navigation";
+import { AppLayout } from "@/components/layout/app-layout";
 import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import { z } from "zod";
@@ -437,40 +437,21 @@ export default function QuickPostPage() {
     createAllMutation.mutate(extractedProperties);
   };
 
-  const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) router.back();
-    else router.push("/dashboard");
-  };
-
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center">
-            <button
-              className="text-primary mr-4 hover:opacity-80"
-              onClick={handleBack}
-              type="button"
-              aria-label="Go back"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-900">
-                QuickPost
-              </h2>
-              <p className="text-xs text-neutral-500">
-                AI-powered property extraction
-              </p>
-            </div>
+    <AppLayout>
+      <div className="max-w-5xl mx-auto w-full space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-primary" />
+              QuickPost
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              AI-powered property extraction
+            </p>
           </div>
-          <Sparkles size={20} className="text-primary" />
         </div>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 px-6 py-6 space-y-6">
         {/* Input */}
         <Card>
           <CardHeader>
@@ -1223,8 +1204,6 @@ export default function QuickPostPage() {
           </DialogContent>
         </Dialog>
       </div>
-
-      <MobileNavigation />
-    </div>
+    </AppLayout>
   );
 }

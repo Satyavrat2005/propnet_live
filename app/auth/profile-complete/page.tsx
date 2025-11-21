@@ -110,7 +110,7 @@ export default function ProfileCompletePage() {
   };
 
   return (
-    <main className="relative min-h-[100svh] overflow-hidden bg-gradient-to-br from-slate-50 via-white to-slate-100">
+    <main className="relative min-h-svh overflow-hidden bg-linear-to-br from-slate-50 via-white to-slate-100">
       {/* Soft vignette + pattern */}
       <div
         aria-hidden
@@ -136,11 +136,11 @@ export default function ProfileCompletePage() {
         <div className="mx-auto w-full max-w-xl">
           <div className="rounded-3xl border border-slate-200/70 bg-white/90 shadow-xl backdrop-blur-md">
             {/* Top accent bar */}
-            <div className="h-1.5 w-full rounded-t-3xl bg-gradient-to-r from-emerald-500 via-blue-500 to-cyan-500" />
+            <div className="h-1.5 w-full rounded-t-3xl bg-linear-to-r from-emerald-500 via-blue-500 to-cyan-500" />
 
             <div className="p-8 sm:p-10">
               {/* Illustration */}
-              <div className="mx-auto mb-8 flex h-40 w-40 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-blue-50 shadow-inner">
+              <div className="mx-auto mb-8 flex h-40 w-40 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-50 to-blue-50 shadow-inner">
                 <span className="sr-only">Profile completed</span>
                 <svg
                   className="h-28 w-28"
@@ -244,7 +244,7 @@ export default function ProfileCompletePage() {
                   disabled={loading}
                   className="group relative inline-flex items-center justify-center rounded-xl border border-emerald-600/20 bg-emerald-600 px-6 py-3 text-base font-medium text-white shadow-lg shadow-emerald-600/20 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-emerald-300 active:translate-y-0 disabled:opacity-70"
                 >
-                  <span className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-emerald-500 via-blue-500 to-cyan-500 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-60" />
+                  <span className="absolute inset-0 -z-10 rounded-xl bg-linear-to-r from-emerald-500 via-blue-500 to-cyan-500 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-60" />
                   {loading ? "Checking..." : "Get Started"}
                   <svg
                     className="ml-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5"

@@ -50,7 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 import { safeFetch } from "@/lib/safeFetch";
 import { insertPropertySchema } from "@/lib/schema";
 import FileUpload from "@/components/ui/file-upload";
-import MobileNavigation from "@/components/layout/mobile-navigation";
+import { AppLayout } from "@/components/layout/app-layout";
 import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { z } from "zod";
 
@@ -835,16 +835,20 @@ export default function MyListings() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!user) return null;
+
+  const totalProperties = Array.isArray(myProperties) ? myProperties.length : 0;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -873,15 +877,15 @@ export default function MyListings() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-20 bg-gray-50">
-      <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center">
-          <button className="text-primary mr-4 hover:opacity-80" onClick={handleBack} type="button" aria-label="Go back">
-              <ArrowLeft size={24} />
-            </button>
-            <h2 className="text-lg font-semibold text-gray-900">My Listings</h2>
+    <AppLayout>
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">My Listings</h1>
+            <p className="text-sm text-muted-foreground">{totalProperties} properties</p>
           </div>
+          <div className="flex items-center space-x-2 w-full sm:w-auto">
 
           <Dialog
             open={isAddDialogOpen}
@@ -1136,7 +1140,7 @@ export default function MyListings() {
         )}
       </div>
 
-      <MobileNavigation />
-    </div>
+      </div>
+    </AppLayout>
   );
 }

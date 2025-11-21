@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle } from "lucide-react";
+import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle, FileText, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { AppLayout } from "@/components/layout/app-layout";
 
 type BulkUploadResult = {
   total: number;
@@ -104,52 +105,50 @@ export default function BulkUploadPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
-        <div className="flex items-center px-6 py-4">
-          <button
-            className="text-primary mr-4"
-            onClick={() => router.push("/add-property")}
-            aria-label="Back to add property"
-            type="button"
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <h2 className="text-lg font-semibold text-neutral-900">Bulk Upload Properties</h2>
+    <AppLayout>
+      <div className="max-w-4xl mx-auto w-full">
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">Bulk Upload Properties</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload multiple properties at once using a CSV file
+          </p>
         </div>
-      </div>
 
-      <div className="flex-1 px-6 py-6 space-y-6">
+        <div className="space-y-6">
         {/* Instructions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileSpreadsheet size={20} />
-              <span>Upload Instructions</span>
-            </CardTitle>
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+          <CardHeader className="border-b bg-linear-to-r from-blue-500/5 to-blue-500/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+              </div>
+              <CardTitle className="text-base font-semibold text-foreground">
+                Upload Instructions
+              </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">1</div>
+          <CardContent className="space-y-4 pt-6">
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div>
-                  <p className="font-medium">Download Template</p>
-                  <p className="text-sm text-neutral-600">Download the CSV template with the required format</p>
+                  <p className="font-semibold text-foreground">Download Template</p>
+                  <p className="text-sm text-muted-foreground">Download the CSV template with the required format</p>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">2</div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
                 <div>
-                  <p className="font-medium">Fill Property Details</p>
-                  <p className="text-sm text-neutral-600">Add your property information following the template format</p>
+                  <p className="font-semibold text-foreground">Fill Property Details</p>
+                  <p className="text-sm text-muted-foreground">Add your property information following the template format</p>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">3</div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold shrink-0">3</div>
                 <div>
-                  <p className="font-medium">Upload CSV File</p>
-                  <p className="text-sm text-neutral-600">Upload your completed CSV file to create multiple listings</p>
+                  <p className="font-semibold text-foreground">Upload CSV File</p>
+                  <p className="text-sm text-muted-foreground">Upload your completed CSV file to create multiple listings</p>
                 </div>
               </div>
             </div>
@@ -157,21 +156,26 @@ export default function BulkUploadPage() {
             <Button
               onClick={downloadTemplate}
               variant="outline"
-              className="w-full flex items-center space-x-2"
+              className="w-full flex items-center gap-2 btn-secondary group"
               type="button"
             >
-              <Download size={16} />
+              <Download size={16} className="group-hover:translate-y-0.5 transition-transform" />
               <span>Download CSV Template</span>
             </Button>
           </CardContent>
         </Card>
 
         {/* Upload Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upload CSV File</CardTitle>
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+          <CardHeader className="border-b bg-linear-to-r from-primary/5 to-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                <Upload className="w-5 h-5 text-primary" />
+              </div>
+              <CardTitle className="text-base font-semibold text-foreground">Upload CSV File</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <input
               ref={fileInputRef}
               type="file"
@@ -189,17 +193,17 @@ export default function BulkUploadPage() {
                   openFilePicker();
                 }
               }}
-              className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+              className="bento-card border-2 border-dashed p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-300 group"
             >
-              <FileSpreadsheet className="mx-auto text-3xl text-neutral-400 mb-2" size={48} />
-              <p className="text-neutral-700 font-medium">{uploadFiles[0]?.name || "Click to choose your CSV"}</p>
-              <p className="text-xs text-neutral-500 mt-1">Accepted format: .csv • Max 5 MB</p>
+              <FileSpreadsheet className="mx-auto text-muted-foreground group-hover:text-primary transition-colors mb-3" size={48} />
+              <p className="text-foreground font-semibold">{uploadFiles[0]?.name || "Click to choose your CSV"}</p>
+              <p className="text-xs text-muted-foreground mt-2">Accepted format: .csv • Max 5 MB</p>
             </div>
 
             <Button
               onClick={handleUpload}
               disabled={uploadFiles.length === 0 || uploadMutation.isPending}
-              className="w-full flex items-center justify-center space-x-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+              className="w-full btn-primary group"
               type="button"
             >
               {uploadMutation.isPending ? (
@@ -209,7 +213,7 @@ export default function BulkUploadPage() {
                 </div>
               ) : (
                 <>
-                  <Upload size={16} />
+                  <Upload size={16} className="group-hover:-translate-y-0.5 transition-transform" />
                   <span>Upload Properties</span>
                 </>
               )}
@@ -219,38 +223,41 @@ export default function BulkUploadPage() {
 
         {/* Upload Results */}
         {uploadResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle size={20} className="text-green-600" />
-                <span>Upload Results</span>
-              </CardTitle>
+          <Card className="card-modern border-l-4 border-l-green-500">
+            <CardHeader className="border-b bg-linear-to-r from-green-500/5 to-green-500/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <CardTitle className="text-base font-semibold text-foreground">Upload Results</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-neutral-600">Total Properties Processed:</span>
-                  <span className="font-medium">{uploadResults.total ?? 0}</span>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3 bento-card">
+                  <span className="text-muted-foreground">Total Properties Processed:</span>
+                  <span className="font-bold text-foreground text-lg">{uploadResults.total ?? 0}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-green-600">Successfully Created:</span>
-                  <span className="font-medium text-green-600">{uploadResults.successful ?? 0}</span>
+                <div className="flex justify-between items-center p-3 bento-card border-l-4 border-l-green-500">
+                  <span className="text-green-600 font-medium">Successfully Created:</span>
+                  <span className="badge-success text-base px-3 py-1">{uploadResults.successful ?? 0}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-red-600">Failed:</span>
-                  <span className="font-medium text-red-600">{uploadResults.failed ?? 0}</span>
+                <div className="flex justify-between items-center p-3 bento-card border-l-4 border-l-red-500">
+                  <span className="text-red-600 font-medium">Failed:</span>
+                  <span className="badge-error text-base px-3 py-1">{uploadResults.failed ?? 0}</span>
                 </div>
 
                 {uploadResults.duplicates && uploadResults.duplicates.length > 0 && (
-                  <div className="mt-4">
-                    <p className="font-medium text-neutral-700 mb-2">Non-unique rows</p>
-                    <div className="space-y-1 text-sm text-amber-700">
+                  <div className="p-4 bento-card border-l-4 border-l-yellow-500 bg-yellow-50/50">
+                    <p className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <AlertCircle size={16} className="text-yellow-600" />
+                      Non-unique rows
+                    </p>
+                    <div className="space-y-2">
                       {uploadResults.duplicates.map((item, index) => (
-                        <div key={`${item.row}-${index}`} className="flex items-start space-x-2">
-                          <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                          <span>
-                            Row {item.row}: {item.message}
-                          </span>
+                        <div key={`${item.row}-${index}`} className="flex items-start gap-2 text-sm">
+                          <span className="badge-warning px-2 py-0.5 shrink-0">Row {item.row}</span>
+                          <span className="text-muted-foreground">{item.message}</span>
                         </div>
                       ))}
                     </div>
@@ -258,14 +265,17 @@ export default function BulkUploadPage() {
                 )}
 
                 {uploadResults.smsWarnings && uploadResults.smsWarnings.length > 0 && (
-                  <div className="mt-4">
-                    <p className="font-medium text-neutral-700 mb-2">SMS warnings</p>
-                    <div className="space-y-1 text-sm text-amber-700">
+                  <div className="p-4 bento-card border-l-4 border-l-orange-500 bg-orange-50/50">
+                    <p className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <AlertCircle size={16} className="text-orange-600" />
+                      SMS warnings
+                    </p>
+                    <div className="space-y-2">
                       {uploadResults.smsWarnings.map((item, index) => (
-                        <div key={`${item.row}-${item.status}-${index}`} className="flex items-start space-x-2">
-                          <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                          <span>
-                            Row {item.row}: status {item.status}
+                        <div key={`${item.row}-${item.status}-${index}`} className="flex items-start gap-2 text-sm">
+                          <span className="badge-warning px-2 py-0.5 shrink-0">Row {item.row}</span>
+                          <span className="text-muted-foreground">
+                            status {item.status}
                             {item.error ? ` - ${item.error}` : ""}
                           </span>
                         </div>
@@ -275,12 +285,15 @@ export default function BulkUploadPage() {
                 )}
 
                 {uploadResults.errors && uploadResults.errors.length > 0 && (
-                  <div className="mt-4">
-                    <p className="font-medium text-neutral-700 mb-2">Errors:</p>
-                    <div className="space-y-1">
+                  <div className="p-4 bento-card border-l-4 border-l-red-500 bg-red-50/50">
+                    <p className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <AlertCircle size={16} className="text-red-600" />
+                      Errors
+                    </p>
+                    <div className="space-y-2">
                       {uploadResults.errors.map((error: string, index: number) => (
-                        <div key={index} className="flex items-start space-x-2 text-sm">
-                          <AlertCircle size={14} className="text-red-500 mt-0.5 shrink-0" />
+                        <div key={index} className="flex items-start gap-2 text-sm">
+                          <AlertCircle size={14} className="text-red-500 shrink-0 mt-0.5" />
                           <span className="text-red-600">{error}</span>
                         </div>
                       ))}
@@ -293,15 +306,20 @@ export default function BulkUploadPage() {
         )}
 
         {/* Format Guidelines */}
-        <Card>
-          <CardHeader>
-            <CardTitle>CSV Format Guidelines</CardTitle>
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
+          <CardHeader className="border-b bg-linear-to-r from-purple-500/5 to-purple-500/10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                <FileText className="w-5 h-5 text-purple-600" />
+              </div>
+              <CardTitle className="text-base font-semibold text-foreground">CSV Format Guidelines</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm">
+          <CardContent className="pt-6">
+            <div className="space-y-4 text-sm">
               <div>
-                <p className="font-medium">Required Columns:</p>
-                <ul className="list-disc list-inside space-y-1 text-neutral-600 ml-4">
+                <p className="font-semibold text-foreground mb-2">Required Columns:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                   <li>title - Property title</li>
                   <li>propertyType - Apartment, Villa, Commercial, etc.</li>
                   <li>transactionType - sale or rent</li>
@@ -312,8 +330,8 @@ export default function BulkUploadPage() {
                 </ul>
               </div>
               <div>
-                <p className="font-medium">Optional Columns:</p>
-                <ul className="list-disc list-inside space-y-1 text-neutral-600 ml-4">
+                <p className="font-semibold text-foreground mb-2">Optional Columns:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                   <li>rentFrequency - monthly or yearly (only for rentals)</li>
                   <li>size & sizeUnit - Numeric area and unit (sq.ft, sq.m, sq.yd, acre)</li>
                   <li>flatNumber, floorNumber, buildingSociety - Helps detect duplicates</li>
@@ -322,13 +340,16 @@ export default function BulkUploadPage() {
                   <li>scopeOfWork - Use | to separate items (e.g., Marketing & Promotion|Documentation)</li>
                 </ul>
               </div>
-              <div className="text-sm text-neutral-600">
-                <p className="font-medium">Duplicate Handling:</p>
-                <p>
+              <div className="p-4 bento-card bg-blue-50/50 border-l-4 border-l-blue-500">
+                <p className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <Info size={16} className="text-blue-600" />
+                  Duplicate Handling:
+                </p>
+                <p className="text-muted-foreground">
                   If a row matches an existing property (same owner, flat, floor, and society), it will be skipped and
                   listed under &ldquo;Non-unique rows&rdquo; while the rest continue uploading.
                 </p>
-                <p className="mt-2">
+                <p className="text-muted-foreground mt-2">
                   SMS warnings highlight owners who did not receive verification texts (for example, invalid phone
                   formats). Fix the phone number and resend consent from the property detail page if needed.
                 </p>
@@ -336,7 +357,8 @@ export default function BulkUploadPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MapPin, Navigation, Layers, Phone, Eye, Filter, Home, Search, ArrowLeft } from "lucide-react";
 import PropertyDetailsPanel from "@/components/ui/property-details-panel";
-import MobileNavigation from "@/components/layout/mobile-navigation";
+import { AppLayout } from "@/components/layout/app-layout";
 import { formatPrice, getListingTypeBadgeColor, getListingTypeLabel } from "@/utils/formatters";
 import { Input } from "@/components/ui/input";
 import type { MapProperty } from "@/lib/types/map";
@@ -40,6 +40,8 @@ type MarkerEntry = {
 
 type SecondaryFilterType = "sale" | "rent";
 type SecondaryFilterState = Record<SecondaryFilterType, boolean>;
+
+const MobileNavigation = () => null;
 
 const normalizeAddressSegments = (parts: Array<string | null | undefined>) => {
   const seen = new Set<string>();
@@ -767,22 +769,13 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   }, [filterType, searchQuery, secondaryModeActive, secondaryFilters.sale, secondaryFilters.rent]);
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <div className="bg-white border-b border-neutral-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => router.push('/dashboard')} 
-              className="text-primary hover:opacity-80"
-              type="button"
-              aria-label="Go back"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold text-neutral-900">Property Map</h1>
-              <p className="text-sm text-neutral-600">{filteredListings.length} properties found</p>
-            </div>
+    <AppLayout>
+      <div className="space-y-4 sm:space-y-6 w-full">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Property Map</h1>
+            <p className="text-sm text-muted-foreground">{filteredListings.length} properties found</p>
           </div>
           <Button
             variant="outline"
@@ -793,16 +786,17 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
                 mapInstanceRef.current.setZoom(15);
               }
             }}
+            className="w-full sm:w-auto"
           >
             <Navigation size={16} className="mr-1" />
-            My Location
+            <span className="hidden sm:inline">My Location</span>
+            <span className="sm:hidden">Location</span>
           </Button>
         </div>
-      </div>
 
-      <div className="bg-white border-b border-neutral-200 px-6 py-3">
+        {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <Filter size={16} className="text-neutral-600" />
+          <Filter size={16} className="text-muted-foreground" />
           <div className="flex flex-wrap items-center gap-2">
             {propertyTypes.map((type) => (
               <Button
@@ -1047,6 +1041,6 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
           ) : null}
         </DialogContent>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 }

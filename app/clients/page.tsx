@@ -7,8 +7,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import MobileNavigation from "@/components/layout/mobile-navigation";
-import { Users, TrendingUp, Clock, Target, Plus, ChevronRight, ArrowLeft } from "lucide-react";
+import {AppLayout} from "@/components/layout/app-layout";
+import { Users, TrendingUp, Clock, Target, Plus, ChevronRight, Building2, CheckCircle2, Search, Filter } from "lucide-react";
 
 /**
  * Clients page — images-only photo rendering (no URL text).
@@ -367,82 +367,100 @@ export default function ClientsPage() {
 
   // === UI ===
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f4f7fb_0%,#eef6ff_100%)]">
-      <div className="px-8 pt-8 pb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
-            <button 
-              onClick={() => router.back()} 
-              className="text-primary hover:opacity-80 mt-1"
-              type="button"
-              aria-label="Go back"
-            >
-              <ArrowLeft size={24} />
-            </button>
-            <div className="rounded-2xl p-3 bg-linear-to-br from-[#6b5cff] to-[#a84dff] shadow-md">
-              <Users className="w-6 h-6 text-white" />
-            </div>
+    <AppLayout>
+      <div className="max-w-7xl mx-auto w-full">
+        {/* Page Header */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-900">Client Management</h1>
-              <p className="mt-1 text-sm text-slate-500">Relationship & deals</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Clients</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage relationships and deals
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="rounded-xl p-6 bg-linear-to-br from-[#2b74ff] to-[#2a5bff] shadow-md text-white">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bento-card p-6 cursor-pointer hover:border-primary group" onClick={() => setActiveTab("clients")}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90">Clients</p>
-                <p className="text-3xl font-extrabold mt-2">{totalClients}</p>
+                <p className="text-sm text-muted-foreground">Total Clients</p>
+                <p className="text-3xl font-bold text-foreground mt-2">{totalClients}</p>
               </div>
-              <Users className="w-8 h-8 opacity-80" />
+              <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
             </div>
           </div>
 
-          <div className="rounded-xl p-6 bg-linear-to-br from-[#02b875] to-[#00a56a] shadow-md text-white">
+          <div className="bento-card p-6 cursor-pointer hover:border-green-500 group" onClick={() => setActiveTab("deals")}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90">Deals</p>
-                <p className="text-3xl font-extrabold mt-2">{totalDeals}</p>
+                <p className="text-sm text-muted-foreground">Total Deals</p>
+                <p className="text-3xl font-bold text-foreground mt-2">{totalDeals}</p>
               </div>
-              <TrendingUp className="w-8 h-8 opacity-80" />
+              <div className="p-3 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
             </div>
           </div>
 
-          <div className="rounded-xl p-6 bg-linear-to-br from-[#ff9100] to-[#ff6d00] shadow-md text-white">
+          <div className="bento-card p-6 cursor-pointer hover:border-orange-500 group" onClick={() => setActiveTab("tasks")}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90">Tasks</p>
-                <p className="text-3xl font-extrabold mt-2">{pendingTasks}</p>
+                <p className="text-sm text-muted-foreground">Pending Tasks</p>
+                <p className="text-3xl font-bold text-foreground mt-2">{pendingTasks}</p>
               </div>
-              <Clock className="w-8 h-8 opacity-80" />
+              <div className="p-3 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+                <Clock className="w-6 h-6 text-orange-600" />
+              </div>
             </div>
           </div>
 
-          <div className="rounded-xl p-6 bg-linear-to-br from-[#9b5cff] to-[#7b38ff] shadow-md text-white">
+          <div className="bento-card p-6 cursor-pointer hover:border-purple-500 group">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90">Month</p>
-                <p className="text-3xl font-extrabold mt-2">{monthlyDeals}</p>
+                <p className="text-sm text-muted-foreground">This Month</p>
+                <p className="text-3xl font-bold text-foreground mt-2">{monthlyDeals}</p>
               </div>
-              <Target className="w-8 h-8 opacity-80" />
+              <div className="p-3 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                <Target className="w-6 h-6 text-purple-600" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="px-8 pt-6">
-        <div className="bg-white rounded-2xl p-2 shadow-sm">
-          <div className="flex items-center gap-4 px-4">
-            <button onClick={() => setActiveTab("overview")} className={`rounded-lg px-5 py-3 ${activeTab === "overview" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Overview</button>
-            <button onClick={() => setActiveTab("clients")} className={`rounded-lg px-5 py-3 ${activeTab === "clients" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Clients</button>
-            <button onClick={() => setActiveTab("deals")} className={`rounded-lg px-5 py-3 ${activeTab === "deals" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Deals</button>
-            <button onClick={() => setActiveTab("tasks")} className={`rounded-lg px-5 py-3 ${activeTab === "tasks" ? "bg-linear-to-r from-[#6b5cff] to-[#a84dff] text-white shadow-sm" : "text-slate-700 hover:bg-slate-50"}`}>Tasks</button>
+        {/* Tabs */}
+        <div className="card-modern p-2 mb-6">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setActiveTab("overview")} 
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "overview" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              Overview
+            </button>
+            <button 
+              onClick={() => setActiveTab("clients")} 
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "clients" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              Clients
+            </button>
+            <button 
+              onClick={() => setActiveTab("deals")} 
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "deals" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              Deals
+            </button>
+            <button 
+              onClick={() => setActiveTab("tasks")} 
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "tasks" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              Tasks
+            </button>
           </div>
         </div>
-      </div>
 
       <div className="px-8 py-8">
         {activeTab === "overview" && (
@@ -611,14 +629,13 @@ export default function ClientsPage() {
         )}
       </div>
 
-      <div className="h-24" />
-      <MobileNavigation />
+    </div>
 
-      {/* Client modal */}
+    {/* Client modal */}
       {clientModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-12">
           <div className="absolute inset-0 bg-black/30" onClick={() => setClientModalOpen(false)} />
-          <div className="relative z-10 w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl overflow-auto max-h-[80vh]">
+          <div className="relative z-10 w-[95vw] sm:w-full max-w-4xl rounded-2xl bg-white p-4 sm:p-6 shadow-2xl overflow-auto max-h-[90vh]">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-xl font-semibold">{clientModalData?.owner_name || "Owner details"}</h3>
@@ -746,7 +763,7 @@ export default function ClientsPage() {
       {dealModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-12">
           <div className="absolute inset-0 bg-black/30" onClick={() => setDealModalOpen(false)} />
-          <div className="relative z-10 w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl overflow-auto max-h-[80vh]">
+          <div className="relative z-10 w-[95vw] sm:w-full max-w-3xl rounded-2xl bg-white p-4 sm:p-6 shadow-2xl overflow-auto max-h-[90vh]">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-xl font-semibold">{dealDetail?.property_title || "Property details"}</h3>
@@ -843,17 +860,17 @@ export default function ClientsPage() {
       {showAddTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowAddTask(false)} />
-          <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          <div className="relative z-10 w-[95vw] sm:w-full max-w-md rounded-2xl bg-white p-4 sm:p-6 shadow-2xl">
             <h3 className="text-lg font-semibold mb-3">Add Task</h3>
             <form onSubmit={handleAddTask}>
               <label className="block text-sm text-slate-600 mb-2">Task</label>
               <textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="E.g., Call client to confirm documents" className="w-full h-28 p-3 border rounded-md mb-4" />
               <div className="flex items-center justify-end gap-3">
-                <Button variant="ghost" onClick={() => setShowAddTask(false)}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setShowAddTask(false)} className="btn-secondary">Cancel</Button>
                 <Button 
                   type="submit" 
                   disabled={createTaskMutation.isPending}
-                  className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                  className="btn-primary"
                 >
                   {createTaskMutation.isPending ? (
                     <div className="flex items-center gap-2">
@@ -869,6 +886,6 @@ export default function ClientsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppLayout>
   );
 }

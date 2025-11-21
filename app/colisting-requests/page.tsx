@@ -5,9 +5,11 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { CheckCircle2, XCircle, Users, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import {AppLayout} from "@/components/layout/app-layout";
 
 export default function ColistingRequestsPage() {
   const router = useRouter();
@@ -62,78 +64,88 @@ export default function ColistingRequestsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
-        <div className="flex items-center px-6 py-4">
-          <button
-            className="text-primary mr-4"
-            onClick={() => router.push("/profile")}
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <h2 className="text-lg font-semibold text-neutral-900">Co-listing Requests</h2>
+    <AppLayout>
+      <div className="max-w-4xl mx-auto w-full">
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">Co-listing Requests</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage incoming co-listing requests from your network
+          </p>
         </div>
-      </div>
 
-      <div className="flex-1 px-6 py-6">
         {requests.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-              <ArrowLeft className="text-neutral-400" size={24} />
-            </div>
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">No Requests</h3>
-            <p className="text-neutral-500">You don't have any pending co-listing requests</p>
-          </div>
+          <Card className="card-modern">
+            <CardContent className="py-16 text-center">
+              <div className="flex items-center justify-center mb-6">
+                <div className="p-4 bg-muted rounded-full">
+                  <Users className="w-12 h-12 text-muted-foreground" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No Requests</h3>
+              <p className="text-muted-foreground">You don't have any pending co-listing requests</p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-4">
             {requests.map((request: any) => (
-              <div key={request.id} className="bg-white border border-neutral-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-12 h-12 bg-neutral-200 rounded-full flex items-center justify-center">
-                    <span className="text-neutral-500 font-medium">
-                      {request.requester.name?.charAt(0) || "A"}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="font-medium text-neutral-900">{request.requester.name}</div>
-                        <div className="text-sm text-neutral-500">{request.requester.agencyName}</div>
+              <Card key={request.id} className="bento-card group hover:border-primary">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-primary/10 rounded-full shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <Users className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="font-semibold text-foreground">{request.requester.name}</div>
+                          <div className="text-sm text-muted-foreground">{request.requester.agencyName}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{formatTimeAgo(request.createdAt)}</span>
+                        </div>
                       </div>
-                      <span className="text-xs text-neutral-400">{formatTimeAgo(request.createdAt)}</span>
-                    </div>
 
-                    <p className="text-sm text-neutral-600 mb-3">
-                      Wants to co-list: <span className="font-medium">{request.property.title}</span>
-                    </p>
+                      <p className="text-sm text-foreground mb-4">
+                        Wants to co-list: <span className="font-semibold text-primary">{request.property.title}</span>
+                      </p>
 
-                    <div className="flex space-x-3">
-                      <Button
-                        size="sm"
-                        onClick={() => updateRequestMutation.mutate({ id: request.id, status: "approved" })}
-                        disabled={updateRequestMutation.isPending}
-                        className="bg-accent text-white hover:bg-accent/90"
-                      >
-                        {updateRequestMutation.isPending ? <div className="loading-spinner" /> : "Approve"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateRequestMutation.mutate({ id: request.id, status: "declined" })}
-                        disabled={updateRequestMutation.isPending}
-                        className="bg-neutral-100 text-neutral-600 border-none"
-                      >
-                        Decline
-                      </Button>
+                      <div className="flex gap-3">
+                        <Button
+                          size="sm"
+                          onClick={() => updateRequestMutation.mutate({ id: request.id, status: "approved" })}
+                          disabled={updateRequestMutation.isPending}
+                          className="btn-primary flex items-center gap-2"
+                        >
+                          {updateRequestMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              Approve
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateRequestMutation.mutate({ id: request.id, status: "declined" })}
+                          disabled={updateRequestMutation.isPending}
+                          className="btn-secondary flex items-center gap-2"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Decline
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }

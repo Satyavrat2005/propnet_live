@@ -71,9 +71,9 @@ function EnterPinContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg py-8">
+        <CardHeader className="text-center bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg py-8">
           <div className="flex items-center justify-center mb-3">
             <div className="bg-white/20 p-3 rounded-full">
               <Key className="h-10 w-10" />

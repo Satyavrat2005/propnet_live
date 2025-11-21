@@ -22,8 +22,8 @@ import {
   Send,
   Building2,
   Plus,
-  ArrowLeft,
 } from "lucide-react";
+import { AppLayout } from "@/components/layout/app-layout";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabaseClient";
@@ -540,44 +540,43 @@ export default function MessagesClient() {
   // --- Chat view ---
   if (activeConversation) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col">
-        {/* Header */}
-        <div className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedConversationId(null)}
-            >
-            </Button>
-            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <User size={20} className="text-primary" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-neutral-900">
-                {activeConversation.otherParticipant?.name || "Unknown user"}
-              </h2>
-              <p className="text-sm text-neutral-600">
-                {activeConversation.property?.title || "General Chat"}
-              </p>
+      <AppLayout>
+        <div className="flex flex-col h-[calc(100vh-4rem)]">
+          {/* Chat Header */}
+          <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedConversationId(null)}
+                className="hover:bg-muted"
+              >
+                Back
+              </Button>
+              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <User size={20} className="text-primary" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground">
+                  {activeConversation.otherParticipant?.name || "Unknown user"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {activeConversation.property?.title || "General Chat"}
+                </p>
+              </div>
             </div>
           </div>
-          {/* <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm"><Phone size={16} /></Button>
-            <Button variant="ghost" size="sm"><MoreVertical size={16} /></Button>
-          </div> */}
-        </div>
 
-        {/* Messages */}
-        <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
-          {messagesQuery.isLoading ? (
-            <p className="text-sm text-neutral-500">Loading messages...</p>
-          ) : messagesQueryError ? (
-            <p className="text-sm text-red-500">{messagesQueryError.message}</p>
-          ) : messages.length === 0 ? (
-            <p className="text-sm text-neutral-500">
-              No messages yet. Say hello!
-            </p>
+          {/* Messages */}
+          <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto bg-muted/30">
+            {messagesQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading messages...</p>
+            ) : messagesQueryError ? (
+              <p className="text-sm text-destructive">{messagesQueryError.message}</p>
+            ) : messages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No messages yet. Say hello!
+              </p>
           ) : (
             <>
               {messages.map((msg: ChatMessage) => (
@@ -592,8 +591,8 @@ export default function MessagesClient() {
                   <div
                     className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
                       msg.senderId === currentUserId
-                        ? "bg-neutral-900 text-white"
-                        : "bg-white border border-neutral-200 text-neutral-900"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card border border-border text-foreground"
                     }`}
                   >
                     <p className="text-sm leading-relaxed break-normal wrap-break-word">
@@ -602,8 +601,8 @@ export default function MessagesClient() {
                     <p
                       className={`text-xs mt-1 ${
                         msg.senderId === currentUserId
-                          ? "text-white/70"
-                          : "text-neutral-500"
+                          ? "text-primary-foreground/70"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {new Date(msg.createdAt).toLocaleTimeString()}
@@ -616,122 +615,113 @@ export default function MessagesClient() {
           )}
         </div>
 
-        {/* Input */}
-        <div className="bg-white border-t border-neutral-200 px-6 py-4">
-          <div className="flex flex-col gap-2">
-            {chatError ? (
-              <p className="text-xs text-red-500">{chatError}</p>
-            ) : null}
-            <div className="flex items-center space-x-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  if (chatError) {
-                    setChatError(null);
-                  }
-                }}
-                placeholder="Type a message..."
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                disabled={sendMessage.isPending}
-              />
-              <Button
-                onClick={handleSend}
-                disabled={!newMessage.trim() || sendMessage.isPending}
-                className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
-              >
-                {sendMessage.isPending ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Send size={16} />
-                )}
-              </Button>
+          {/* Input */}
+          <div className="bg-card border-t border-border px-6 py-4">
+            <div className="flex flex-col gap-2">
+              {chatError ? (
+                <p className="text-xs text-destructive">{chatError}</p>
+              ) : null}
+              <div className="flex items-center space-x-2">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    if (chatError) {
+                      setChatError(null);
+                    }
+                  }}
+                  placeholder="Type a message..."
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                  disabled={sendMessage.isPending}
+                  className="input-modern"
+                />
+                <Button
+                  onClick={handleSend}
+                  disabled={!newMessage.trim() || sendMessage.isPending}
+                  className="btn-primary"
+                >
+                  {sendMessage.isPending ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Send size={16} />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   // --- Conversations List ---
   return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Header */}
-      <div className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => router.push('/dashboard')} 
-            className="text-primary hover:opacity-80"
-            type="button"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={20} />
-          </button>
+    <AppLayout>
+      <div className="max-w-5xl mx-auto w-full space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-neutral-900">Messages</h1>
-            <p className="text-sm text-neutral-600">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Messages</h1>
+            <p className="text-sm text-muted-foreground">
               {filteredConversations.length} conversations
             </p>
           </div>
-        </div>
-        <Dialog
-          open={showNewChatDialog}
-          onOpenChange={(o) => {
-            setShowNewChatDialog(o);
-            setUserSearchQuery("");
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition-all duration-200"
-            >
-              <Plus size={16} className="mr-1" /> New Chat
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto bg-white">
-            <DialogHeader>
-              <DialogTitle>Start New Conversation</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                  <Search size={16} className="text-neutral-400" />
-                </span>
-                <Input
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  placeholder="Search network users..."
-                  className="pl-9"
-                />
+          <Dialog
+            open={showNewChatDialog}
+            onOpenChange={(o) => {
+              setShowNewChatDialog(o);
+              setUserSearchQuery("");
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button 
+                className="btn-primary"
+              >
+                <Plus size={16} className="mr-1" /> New Chat
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Start New Conversation</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                    <Search size={16} className="text-muted-foreground" />
+                  </span>
+                  <Input
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    placeholder="Search network users..."
+                    className="pl-9 input-modern"
+                  />
               </div>
 
-              <div className="max-h-64 overflow-y-auto space-y-2">
-                {filteredNetworkUsers.map((u: NetworkUser) => (
-                  <Card
-                    key={u.id}
-                    className="p-3 cursor-pointer hover:bg-neutral-50"
-                    onClick={() => startConversation(u.id)}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User size={18} className="text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-neutral-900">
-                          {u.name}
-                        </p>
-                        <p className="text-xs text-neutral-600">
-                          {u.agencyName}
-                        </p>
-                        {u.phone && (
-                          <p className="text-xs text-neutral-500">{u.phone}</p>
-                        )}
-                      </div>
-                      <div className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                        Verified
-                      </div>
+                <div className="max-h-64 overflow-y-auto space-y-2">
+                  {filteredNetworkUsers.map((u: NetworkUser) => (
+                    <Card
+                      key={u.id}
+                      className="bento-card cursor-pointer"
+                      onClick={() => startConversation(u.id)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <User size={18} className="text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm text-foreground">
+                            {u.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {u.agencyName}
+                          </p>
+                          {u.phone && (
+                            <p className="text-xs text-muted-foreground">{u.phone}</p>
+                          )}
+                        </div>
+                        <div className="badge-success">
+                          Verified
+                        </div>
                     </div>
                   </Card>
                 ))}
@@ -741,36 +731,32 @@ export default function MessagesClient() {
         </Dialog>
       </div>
 
-      {/* Search bar */}
-      <div className="bg-white border-b border-neutral-200 px-6 py-3">
+        {/* Search bar */}
         <div className="relative">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-            <Search size={16} className="text-neutral-400" />
+            <Search size={16} className="text-muted-foreground" />
           </span>
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search conversations..."
-            className="pl-9" // slightly less padding so text isnΓÇÖt too far from the icon
+            className="pl-9 input-modern"
           />
         </div>
-      </div>
 
-      {/* Conversation list */}
-      <div className="px-6 py-4">
+        {/* Conversation list */}
         {filteredConversations.length === 0 ? (
-          <Card className="p-8 text-center">
-            <MessageCircle
-              className="mx-auto text-neutral-400 mb-4"
-              size={48}
-            />
-            <h3 className="font-semibold text-neutral-900 mb-2">
+          <Card className="bento-card p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-2xl flex items-center justify-center">
+              <MessageCircle className="text-muted-foreground" size={32} />
+            </div>
+            <h3 className="font-semibold text-foreground mb-2">
               No messages yet
             </h3>
-            <p className="text-neutral-600 text-sm mb-4">
+            <p className="text-muted-foreground text-sm mb-4">
               Start conversations with property inquiries
             </p>
-            <Button variant="outline">
+            <Button className="btn-secondary">
               <Building2 size={16} className="mr-2" />
               Browse Properties
             </Button>
@@ -780,7 +766,7 @@ export default function MessagesClient() {
             {filteredConversations.map((c) => (
               <Card
                 key={c.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="bento-card cursor-pointer"
                 onClick={() => handleSelectConversation(c.id)}
               >
                 <CardContent className="p-4">
@@ -790,7 +776,7 @@ export default function MessagesClient() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-neutral-900 text-sm truncate">
+                        <h3 className="font-semibold text-foreground text-sm truncate">
                           {c.otherParticipant?.name || "Unknown User"}
                         </h3>
                         <div className="flex items-center space-x-2">
@@ -804,13 +790,13 @@ export default function MessagesClient() {
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-xs text-neutral-600 mb-2">
+                      <p className="text-xs text-muted-foreground mb-2">
                         {c.property?.title || "General Chat"}
                       </p>
-                      <p className="text-sm text-neutral-700 truncate mb-1">
+                      <p className="text-sm text-foreground truncate mb-1">
                         {c.lastMessage?.content || "Start a conversation..."}
                       </p>
-                      <div className="flex items-center text-xs text-neutral-500">
+                      <div className="flex items-center text-xs text-muted-foreground">
                         <Clock size={12} className="mr-1" />
                         {c.lastMessageAt
                           ? new Date(c.lastMessageAt).toLocaleDateString()
@@ -824,7 +810,7 @@ export default function MessagesClient() {
           </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
 

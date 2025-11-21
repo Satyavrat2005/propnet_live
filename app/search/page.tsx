@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Search, X, Building, ArrowLeft } from "lucide-react";
 import EnhancedPropertyCard from "@/components/ui/enhanced-property-card";
+import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { formatPrice } from "@/utils/formatters";
 import { safeFetch } from "@/lib/safeFetch";
@@ -142,22 +143,13 @@ export default function PropertySearchPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-7xl">
-      {/* Search Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-2">
-          <button 
-            onClick={() => router.back()} 
-            className="text-primary hover:opacity-80"
-            type="button"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={24} />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">Find Your Perfect Property</h1>
+    <AppLayout>
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Find Your Perfect Property</h1>
+          <p className="text-sm text-muted-foreground">Search through verified listings from trusted agents</p>
         </div>
-        <p className="text-gray-600 ml-12">Search through verified listings from trusted agents</p>
-      </div>
 
       {/* Search Bar */}
       <div className="relative mb-6">
@@ -360,6 +352,7 @@ export default function PropertySearchPage() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </AppLayout>
   );
 }
