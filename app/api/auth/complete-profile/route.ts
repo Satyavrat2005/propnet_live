@@ -175,7 +175,7 @@ export async function POST(req: Request) {
     // Check existing profile status to avoid overwriting approved status
     const { data: existingProfile } = await supabase
       .from("profiles")
-      .select("status, password")
+      .select("status, password, profile_photo_url")
       .eq("id", userId)
       .maybeSingle();
     
@@ -201,7 +201,7 @@ export async function POST(req: Request) {
       website: website ?? null,
       area_of_expertise: areaOfExpertise.length ? areaOfExpertise : null,
       working_regions: workingRegions.length ? workingRegions : null,
-      profile_photo_url: profilePhotoUrl || existingProfile.profile_photo_url,
+      profile_photo_url: profilePhotoUrl || existingProfile.profile_photo_url || null,
       profile_complete: true,
       status: existingStatus,
       updated_at: new Date().toISOString(),
