@@ -1,7 +1,7 @@
 // app/quickpost/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -122,6 +122,52 @@ export default function QuickPostPage() {
   const [selectedProperty, setSelectedProperty] =
     useState<ExtractedProperty | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const preventEnterKey = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+    }
+  }, []);
+
+  const [activeInlineFields, setActiveInlineFields] = useState<Record<number, Record<string, boolean>>>({});
+
+  const setInlineFieldActive = useCallback(
+    (propertyIndex: number, field: keyof ExtractedProperty, isActive: boolean) => {
+      setActiveInlineFields((prev) => {
+        const next = { ...prev };
+        const existing = { ...(next[propertyIndex] || {}) };
+
+        if (isActive) {
+          existing[field] = true;
+          next[propertyIndex] = existing;
+          return next;
+        }
+
+        delete existing[field];
+        if (Object.keys(existing).length === 0) {
+          delete next[propertyIndex];
+        } else {
+          next[propertyIndex] = existing;
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const isInlineFieldActive = useCallback(
+    (propertyIndex: number, field: keyof ExtractedProperty) =>
+      Boolean(activeInlineFields[propertyIndex]?.[field]),
+    [activeInlineFields]
+  );
+
+  const hasActiveInlineFields = useCallback(
+    (propertyIndex: number) =>
+      Boolean(
+        activeInlineFields[propertyIndex] &&
+          Object.keys(activeInlineFields[propertyIndex]).length > 0
+      ),
+    [activeInlineFields]
+  );
 
   // Stable options (prevents re-renders that cause input "zapping")
   const scopeOfWorkOptions = useMemo(
@@ -474,7 +520,8 @@ export default function QuickPostPage() {
 
         {/* Extracted Properties */}
         {extractedProperties.length > 0 && (
-          <Card>
+          <>
+            <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">
@@ -501,6 +548,13 @@ export default function QuickPostPage() {
             <CardContent className="space-y-4">
               {extractedProperties.map((property, index) => {
                 const validation = getValidationStatus(property);
+                const hasActiveFields = hasActiveInlineFields(index);
+                const showQuickFixes =
+                  validation.missingFields.length > 0 || hasActiveFields;
+                const buildingFieldActive = isInlineFieldActive(index, "buildingSociety");
+                const shouldShowBuildingFix =
+                  validation.missingFields.includes("buildingSociety") ||
+                  buildingFieldActive;
                 return (
                   <Card
                     key={index}
@@ -557,7 +611,7 @@ export default function QuickPostPage() {
                       </div>
 
                       {/* Quick inline fixes for missing fields */}
-                      {validation.missingFields.length > 0 && (
+                      {showQuickFixes && (
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           {validation.missingFields.includes("title") && (
                             <div className="col-span-2">
@@ -572,6 +626,7 @@ export default function QuickPostPage() {
                                     title: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -635,6 +690,7 @@ export default function QuickPostPage() {
                                     price: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -648,6 +704,7 @@ export default function QuickPostPage() {
                                 onBlur={(e) =>
                                   handleEditInline(property, { size: e.target.value })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -665,6 +722,7 @@ export default function QuickPostPage() {
                                     location: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -685,6 +743,7 @@ export default function QuickPostPage() {
                                     bhk: parseInt(e.target.value) || 0,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -702,11 +761,12 @@ export default function QuickPostPage() {
                                     flatNumber: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
 
-                          {validation.missingFields.includes("buildingSociety") && (
+                          {shouldShowBuildingFix && (
                             <div className="col-span-2">
                               <label className="text-xs text-neutral-600">
                                 Building/Society
@@ -720,6 +780,21 @@ export default function QuickPostPage() {
                                 }
                                 placeholder="Search building..."
                                 types={["establishment"]}
+                                onKeyDown={preventEnterKey}
+                                onFocus={() =>
+                                  setInlineFieldActive(index, "buildingSociety", true)
+                                }
+                                onBlur={() => {
+                                  setTimeout(
+                                    () =>
+                                      setInlineFieldActive(
+                                        index,
+                                        "buildingSociety",
+                                        false
+                                      ),
+                                    200
+                                  );
+                                }}
                                 className="text-xs"
                               />
                             </div>
@@ -738,6 +813,7 @@ export default function QuickPostPage() {
                                     fullAddress: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -755,6 +831,7 @@ export default function QuickPostPage() {
                                     ownerName: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -772,6 +849,7 @@ export default function QuickPostPage() {
                                     ownerPhone: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
@@ -789,17 +867,51 @@ export default function QuickPostPage() {
                                     commissionTerms: e.target.value,
                                   })
                                 }
+                                onKeyDown={preventEnterKey}
                               />
                             </div>
                           )}
                         </div>
                       )}
+                      <div className="mt-3 border-t border-dashed border-neutral-200 pt-3 text-xs text-neutral-600">
+                        <p className="font-semibold text-neutral-800 mb-1">Extracted Data</p>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          {[
+                            ["Title", property.title],
+                            ["Type", property.propertyType],
+                            ["Transaction", property.transactionType],
+                            ["Price", property.price],
+                            ["Rent Frequency", property.rentFrequency],
+                            ["Size", property.size],
+                            ["Location", property.location],
+                            ["Building", property.buildingSociety],
+                            ["Full Address", property.fullAddress],
+                            ["BHK", property.bhk],
+                            ["Flat/Unit", property.flatNumber],
+                            ["Owner", property.ownerName],
+                            ["Owner Phone", property.ownerPhone],
+                            ["Commission", property.commissionTerms],
+                          ].map(([label, value]) =>
+                            value ? (
+                              <div key={label} className="flex flex-col">
+                                <span className="text-[10px] uppercase tracking-wide text-neutral-400">
+                                  {label}
+                                </span>
+                                <span className="text-[12px] text-neutral-800">
+                                  {value}
+                                </span>
+                              </div>
+                            ) : null
+                          )}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 );
               })}
             </CardContent>
-          </Card>
+            </Card>
+          </>
         )}
 
         {/* Edit Dialog (full form) */}
