@@ -55,7 +55,7 @@ export default function LandingNew() {
             </div>
             <Button
               onClick={() => router.push("/auth/login")}
-              className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-sm sm:text-base px-4 sm:px-6 h-9 sm:h-10"
+              className="bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-sm sm:text-base px-4 sm:px-6 h-9 sm:h-10"
             >
               Get Started
             </Button>
@@ -64,9 +64,9 @@ export default function LandingNew() {
       </header>
 
       {/* Hero Section with Bento Grid */}
-      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/30 overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 bg-linear-to-br from-emerald-50 via-white to-emerald-50/30 overflow-hidden">
         <div className="absolute inset-0 bg-grid-emerald-100/[0.2] bg-[size:30px_30px] sm:bg-[size:40px_40px]"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-white via-transparent to-transparent"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Hero Content */}
@@ -79,7 +79,7 @@ export default function LandingNew() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight px-4">
               Your Real Estate Network,
               <br />
-              <span className="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
                 Built for Success
               </span>
             </h1>
@@ -102,7 +102,7 @@ export default function LandingNew() {
 
           {/* Bento Grid Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-6xl mx-auto">
-            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card className="bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-4 sm:p-6">
                 <Trophy className="w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 opacity-90" />
                 <div className="text-2xl sm:text-3xl font-bold mb-1">500+</div>
@@ -110,7 +110,7 @@ export default function LandingNew() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card className="bg-linear-to-br from-blue-500 to-blue-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-4 sm:p-6">
                 <Building2 className="w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 opacity-90" />
                 <div className="text-2xl sm:text-3xl font-bold mb-1">2,500+</div>
@@ -118,7 +118,7 @@ export default function LandingNew() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card className="bg-linear-to-br from-purple-500 to-purple-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-4 sm:p-6">
                 <Handshake className="w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 opacity-90" />
                 <div className="text-2xl sm:text-3xl font-bold mb-1">1,200+</div>
@@ -126,7 +126,7 @@ export default function LandingNew() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card className="bg-linear-to-br from-yellow-500 to-yellow-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-4 sm:p-6">
                 <IndianRupee className="w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 opacity-90" />
                 <div className="text-2xl sm:text-3xl font-bold mb-1">₹120Cr+</div>
@@ -254,7 +254,7 @@ export default function LandingNew() {
             <div className="hidden lg:block overflow-hidden rounded-2xl border-2 border-gray-200 shadow-xl">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr className="bg-linear-to-r from-gray-50 to-gray-100">
                     <th className="px-6 py-4 text-left">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
@@ -347,7 +347,7 @@ export default function LandingNew() {
       </section>
 
       {/* Features Bento Grid */}
-      <section className="py-12 sm:py-16 md:py-20 bg-gradient-to-b from-emerald-50/50 via-white to-white">
+      <section className="py-12 sm:py-16 md:py-20 bg-linear-to-b from-emerald-50/50 via-white to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
             <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 mb-3 sm:mb-4 text-xs sm:text-sm">
@@ -365,7 +365,7 @@ export default function LandingNew() {
           {/* Bento Grid Layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
             {/* Large Feature Card - Spans 2 columns on desktop */}
-            <Card className="sm:col-span-2 lg:col-span-2 bg-gradient-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group overflow-hidden relative">
+            <Card className="sm:col-span-2 lg:col-span-2 bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group overflow-hidden relative">
               <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]"></div>
               <CardContent className="p-6 sm:p-8 relative z-10">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
@@ -397,7 +397,7 @@ export default function LandingNew() {
             </Card>
 
             {/* Vertical Feature Card */}
-            <Card className="sm:row-span-2 bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
+            <Card className="sm:row-span-2 bg-linear-to-br from-blue-500 to-blue-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
               <CardContent className="p-6 sm:p-8 h-full flex flex-col">
                 <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <FileCheck className="h-7 w-7 sm:h-8 sm:w-8" />
@@ -449,7 +449,7 @@ export default function LandingNew() {
             </Card>
 
             {/* Wide Feature Card */}
-            <Card className="sm:col-span-2 bg-gradient-to-br from-red-500 to-red-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
+            <Card className="sm:col-span-2 bg-linear-to-br from-red-500 to-red-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
               <CardContent className="p-6 sm:p-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
@@ -524,7 +524,7 @@ export default function LandingNew() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
-            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
+            <Card className="bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
               <CardContent className="p-6 sm:p-8 text-center">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
                   <Target className="w-8 h-8 sm:w-10 sm:h-10" />
@@ -536,7 +536,7 @@ export default function LandingNew() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
+            <Card className="bg-linear-to-br from-blue-500 to-blue-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
               <CardContent className="p-6 sm:p-8 text-center">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
                   <Lock className="w-8 h-8 sm:w-10 sm:h-10" />
@@ -548,7 +548,7 @@ export default function LandingNew() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-yellow-500 to-yellow-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
+            <Card className="bg-linear-to-br from-yellow-500 to-yellow-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
               <CardContent className="p-6 sm:p-8 text-center">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
                   <Trophy className="w-8 h-8 sm:w-10 sm:h-10" />
@@ -605,15 +605,15 @@ export default function LandingNew() {
 
 
       {/* Final CTA */}
-      <section className="py-16 sm:py-20 md:py-28 relative overflow-hidden bg-gradient-to-br from-emerald-600 via-blue-600 to-indigo-700">
+      <section className="py-16 sm:py-20 md:py-28 relative overflow-hidden bg-linear-to-br from-emerald-600 via-blue-600 to-indigo-700">
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:40px_40px] sm:bg-[size:60px_60px]"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 text-white leading-tight px-4">
             Ready to Transform Your
             <br />
-            <span className="bg-gradient-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-yellow-300 to-yellow-400 bg-clip-text text-transparent">
               Real Estate Business?
             </span>
           </h2>
