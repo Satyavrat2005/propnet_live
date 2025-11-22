@@ -26,6 +26,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow consent pages (public access for property owners)
+  if (pathname.startsWith("/consent/")) {
+    return NextResponse.next();
+  }
+
   // Allow static files and API routes
   if (
     pathname.startsWith("/_next") ||
