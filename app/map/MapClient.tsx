@@ -145,8 +145,6 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [secondaryFilters, setSecondaryFilters] = useState<SecondaryFilterState>({ sale: true, rent: true });
-  const [isSecondaryMenuOpen, setIsSecondaryMenuOpen] = useState(false);
-  const [secondaryModeActive, setSecondaryModeActive] = useState(false);
 
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInitializedRef = useRef(false);
@@ -157,7 +155,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   const markersMapRef = useRef<Record<string, MarkerEntry>>({});
   const activeInfoWindowRef = useRef<any>(null);
   const highlightCircleRef = useRef<any>(null);
-  const secondaryMenuRef = useRef<HTMLDivElement | null>(null);
+  const markerRenderVersionRef = useRef(0);
 
   const toggleSecondaryFilter = useCallback((type: SecondaryFilterType) => {
     setSecondaryFilters((prev) => ({
@@ -166,18 +164,6 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
     }));
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!secondaryMenuRef.current) return;
-      if (secondaryMenuRef.current.contains(event.target as Node)) return;
-      setIsSecondaryMenuOpen(false);
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   const normalizedPrimary = useMemo(
     () =>
@@ -209,23 +195,25 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
   );
 
   const filteredListings = useMemo(() => {
-    if (secondaryModeActive) {
-      return allListings.filter((property) => {
-        if (property.listingSource !== "property") return false;
-        const type = (property.transactionType || "").toLowerCase();
-        if (type === "sale" && secondaryFilters.sale) return true;
-        if (type === "rent" && secondaryFilters.rent) return true;
-        return false;
-      });
+    if (filterType === "primary") {
+      return allListings.filter(
+        (property) => property.listingSource === "primary" || (property.transactionType || "").toLowerCase() === "primary"
+      );
     }
 
-    const baseListings =
-      filterType === "all"
-        ? allListings
-        : allListings.filter((property) => (property.transactionType || "").toLowerCase() === filterType);
+    if (filterType === "secondary") {
+      const secondaryPool = allListings.filter((property) => property.listingSource !== "primary");
+      const activeTypes = Object.entries(secondaryFilters)
+        .filter(([, active]) => active)
+        .map(([type]) => type);
+      if (activeTypes.length === 0) {
+        return [];
+      }
+      return secondaryPool.filter((property) => activeTypes.includes((property.transactionType || "").toLowerCase()));
+    }
 
-    return baseListings;
-  }, [allListings, filterType, secondaryModeActive, secondaryFilters]);
+    return allListings;
+  }, [allListings, filterType, secondaryFilters]);
 
   const searchFilteredListings = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -537,6 +525,9 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       const mapInstance = mapInstanceRef.current;
       if (!mapInstance || !(mapInstance instanceof window.google.maps.Map)) return;
 
+      markerRenderVersionRef.current += 1;
+      const requestVersion = markerRenderVersionRef.current;
+
       markersRef.current.forEach((marker) => {
         try {
           marker.setMap(null);
@@ -580,8 +571,14 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       };
 
       for (const property of listings) {
+        if (markerRenderVersionRef.current !== requestVersion) {
+          break;
+        }
         try {
           const coords = await geocodeProperty(property);
+          if (markerRenderVersionRef.current !== requestVersion) {
+            break;
+          }
           const normalizedType = (property.transactionType || "").toLowerCase();
           const markerIcon = normalizedType === "rent" ? rentIcon : normalizedType === "primary" ? primaryIcon : saleIcon;
 
@@ -641,6 +638,24 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
         }
       }
 
+      if (markerRenderVersionRef.current !== requestVersion) {
+        newMarkers.forEach((marker) => {
+          try {
+            marker.setMap(null);
+          } catch {
+            /* empty */
+          }
+        });
+        Object.values(newMarkersMap).forEach((entry) => {
+          try {
+            entry.infoWindow.close();
+          } catch {
+            /* empty */
+          }
+        });
+        return;
+      }
+
       if (userLocation) {
         try {
           const userMarker = new window.google.maps.Marker({
@@ -669,9 +684,11 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
     [geocodeProperty, persistMarkerDetailsButton, userLocation, highlightPropertyOnMap, closeActiveInfoWindow]
   );
 
+  const listingsForMap = searchFilteredListings;
+
   useEffect(() => {
-    if (!isMapLoaded || filteredListings.length === 0) {
-      if (filteredListings.length === 0) {
+    if (!isMapLoaded || listingsForMap.length === 0) {
+      if (listingsForMap.length === 0) {
         markersRef.current.forEach((marker) => {
           try {
             marker.setMap(null);
@@ -685,8 +702,8 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
       return;
     }
 
-    addMarkersToMap(filteredListings);
-  }, [addMarkersToMap, filteredListings, isMapLoaded]);
+    addMarkersToMap(listingsForMap);
+  }, [addMarkersToMap, listingsForMap, isMapLoaded]);
 
   const centerOnProperty = useCallback(
     async (property: Property) => {
@@ -761,12 +778,23 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
     };
   }, [allListings, centerOnProperty]);
 
-  const propertyTypes = ["all", "sale", "rent", "primary"];
-  const getFilterLabel = (type: string) => (type === "all" ? "All" : getListingTypeLabel(type));
+  const propertyTypes = ["all", "primary", "secondary"] as const;
+  const getFilterLabel = (type: string) => {
+    switch (type) {
+      case "all":
+        return "All Listings";
+      case "primary":
+        return "Primary Listing";
+      case "secondary":
+        return "Secondary Listing";
+      default:
+        return getListingTypeLabel(type);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterType, searchQuery, secondaryModeActive, secondaryFilters.sale, secondaryFilters.rent]);
+  }, [filterType, searchQuery, secondaryFilters.sale, secondaryFilters.rent]);
 
   return (
     <AppLayout>
@@ -775,7 +803,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Property Map</h1>
-            <p className="text-sm text-muted-foreground">{filteredListings.length} properties found</p>
+            <p className="text-sm text-muted-foreground">{searchFilteredListings.length} properties found</p>
           </div>
           <Button
             variant="outline"
@@ -804,8 +832,6 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
                 variant={filterType === type ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
-                  setIsSecondaryMenuOpen(false);
-                  setSecondaryModeActive(false);
                   setFilterType(type);
                   setCurrentPage(1);
                 }}
@@ -813,35 +839,24 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
                 {getFilterLabel(type)}
               </Button>
             ))}
-            <div className="relative" ref={secondaryMenuRef}>
-              <Button
-                variant={secondaryModeActive ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setIsSecondaryMenuOpen((prev) => !prev);
-                  setSecondaryModeActive(true);
-                }}
-              >
-                Secondary Listing
-              </Button>
-              {isSecondaryMenuOpen ? (
-                <div className="absolute left-0 z-50 mt-2 w-48 rounded-2xl border border-neutral-200 bg-white p-4 text-xs shadow-xl">
-                  <p className="mb-2 font-semibold text-neutral-700">Filter Secondary</p>
-                  <div className="space-y-2">
-                    {secondaryFilterOptions.map(({ label, type }) => (
-                      <label key={type} className="flex items-center gap-2 text-neutral-700">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-neutral-300 text-primary focus:ring-0"
-                          checked={secondaryFilters[type]}
-                          onChange={() => toggleSecondaryFilter(type)}
-                        />
-                        <span>{label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              {secondaryFilterOptions.map(({ label, type }) => (
+                <Button
+                  key={type}
+                  variant={secondaryFilters[type] ? "default" : "outline"}
+                  size="sm"
+                  disabled={filterType !== "secondary"}
+                  onClick={() => {
+                    if (filterType !== "secondary") {
+                      setFilterType("secondary");
+                    }
+                    toggleSecondaryFilter(type);
+                  }}
+                  className={filterType === "secondary" ? "" : "opacity-60"}
+                >
+                  {label}
+                </Button>
+              ))}
             </div>
           </div>
         </div>

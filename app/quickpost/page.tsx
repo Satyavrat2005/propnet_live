@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -33,21 +34,22 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowLeft,
   Wand2,
   FileText,
-  Edit3,
   Trash2,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/app-layout";
 import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
+import { buildQuickPostScope } from "@/lib/quickpost";
 import { z } from "zod";
 
 type ExtractedProperty = {
+  tempId?: string;
   title?: string;
   propertyType?: string;
   transactionType?: "sale" | "rent";
@@ -69,6 +71,18 @@ type ExtractedProperty = {
   listingType?: "exclusive" | "shared" | "co-listing";
   isPubliclyVisible?: boolean;
   scopeOfWork?: string[];
+};
+
+const generateTempId = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const isSameProperty = (a: ExtractedProperty, b: ExtractedProperty) => {
+  if (a.tempId && b.tempId) {
+    return a.tempId === b.tempId;
+  }
+  return a === b;
 };
 
 const propertyFormSchema = z
@@ -128,46 +142,11 @@ export default function QuickPostPage() {
     }
   }, []);
 
-  const [activeInlineFields, setActiveInlineFields] = useState<Record<number, Record<string, boolean>>>({});
-
-  const setInlineFieldActive = useCallback(
-    (propertyIndex: number, field: keyof ExtractedProperty, isActive: boolean) => {
-      setActiveInlineFields((prev) => {
-        const next = { ...prev };
-        const existing = { ...(next[propertyIndex] || {}) };
-
-        if (isActive) {
-          existing[field] = true;
-          next[propertyIndex] = existing;
-          return next;
-        }
-
-        delete existing[field];
-        if (Object.keys(existing).length === 0) {
-          delete next[propertyIndex];
-        } else {
-          next[propertyIndex] = existing;
-        }
-        return next;
-      });
-    },
-    []
-  );
-
-  const isInlineFieldActive = useCallback(
-    (propertyIndex: number, field: keyof ExtractedProperty) =>
-      Boolean(activeInlineFields[propertyIndex]?.[field]),
-    [activeInlineFields]
-  );
-
-  const hasActiveInlineFields = useCallback(
-    (propertyIndex: number) =>
-      Boolean(
-        activeInlineFields[propertyIndex] &&
-          Object.keys(activeInlineFields[propertyIndex]).length > 0
-      ),
-    [activeInlineFields]
-  );
+  const [expandedEditors, setExpandedEditors] = useState<Record<number, boolean>>({});
+  const setEditorOpen = useCallback((propertyIndex: number, isOpen: boolean) => {
+    setExpandedEditors((prev) => ({ ...prev, [propertyIndex]: isOpen }));
+  }, []);
+  const [activeCreateIndex, setActiveCreateIndex] = useState<number | null>(null);
 
   // Stable options (prevents re-renders that cause input "zapping")
   const scopeOfWorkOptions = useMemo(
@@ -221,7 +200,11 @@ export default function QuickPostPage() {
       return json as { properties: ExtractedProperty[]; count: number };
     },
     onSuccess: (data) => {
-      setExtractedProperties(data.properties || []);
+      const propertiesWithIds = (data.properties || []).map((property) => ({
+        ...property,
+        tempId: property.tempId || generateTempId(),
+      }));
+      setExtractedProperties(propertiesWithIds);
       toast({
         title: "Properties Extracted",
         description: `Found ${data.count ?? (data.properties || []).length} properties from your text.`,
@@ -248,42 +231,7 @@ export default function QuickPostPage() {
       for (let i = 0; i < props.length; i++) {
         const p = props[i];
         try {
-          const fd = new FormData();
-          // map fields to server field names expected by /api/my-properties
-          if (p.title) fd.append("title", p.title);
-          if (p.propertyType) fd.append("propertyType", p.propertyType);
-          if (p.transactionType) fd.append("transactionType", p.transactionType);
-          if (p.price) fd.append("price", p.price);
-          if (p.rentFrequency) fd.append("rentFrequency", p.rentFrequency);
-          if (p.size) fd.append("size", p.size);
-          if (p.sizeUnit) fd.append("sizeUnit", p.sizeUnit);
-          if (p.location) fd.append("location", p.location);
-          if (p.fullAddress) fd.append("fullAddress", p.fullAddress);
-          if (p.flatNumber) fd.append("flatNumber", p.flatNumber);
-          if (p.floorNumber) fd.append("floorNumber", p.floorNumber);
-          if (p.buildingSociety) fd.append("buildingSociety", p.buildingSociety);
-          if (p.description) fd.append("description", p.description);
-          if (typeof p.bhk === "number") fd.append("bhk", String(p.bhk));
-          if (p.listingType) fd.append("listingType", p.listingType);
-          fd.append(
-            "isPubliclyVisible",
-            String(p.isPubliclyVisible ?? p.listingType !== "exclusive")
-          );
-          if (p.ownerName) fd.append("ownerName", p.ownerName);
-          if (p.ownerPhone) fd.append("ownerPhone", p.ownerPhone);
-          if (p.commissionTerms) fd.append("commissionTerms", p.commissionTerms);
-          if (p.scopeOfWork?.length)
-            fd.append("scopeOfWork", JSON.stringify(p.scopeOfWork));
-
-          const res = await fetch("/api/my-properties", {
-            method: "POST",
-            body: fd,
-            credentials: "same-origin",
-          });
-          const json = await res.json();
-          if (!res.ok) {
-            throw new Error(json?.message || "Insert failed");
-          }
+          await createPropertyRequest(p);
           created++;
         } catch (e: any) {
           failed.push({ index: i, error: e?.message || "Unknown error" });
@@ -324,6 +272,30 @@ export default function QuickPostPage() {
     },
   });
 
+  const createSingleMutation = useMutation({
+    mutationFn: async ({ property }: { property: ExtractedProperty }) => {
+      return createPropertyRequest(property);
+    },
+    onSuccess: (_, { property }) => {
+      toast({
+        title: "Listing Created",
+        description: `${property.title || "Listing"} created successfully.`,
+      });
+      setExtractedProperties((prev) =>
+        prev.filter((item) => !isSameProperty(item, property))
+      );
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Creation Failed",
+        description:
+          error?.message || "Failed to create this property listing. Please try again.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => setActiveCreateIndex(null),
+  });
+
   const handleExtract = () => {
     if (!inputText.trim()) {
       toast({
@@ -336,14 +308,73 @@ export default function QuickPostPage() {
     extractMutation.mutate(inputText);
   };
 
+  const buildFormDataFromProperty = (p: ExtractedProperty) => {
+    const fd = new FormData();
+    if (p.title) fd.append("title", p.title);
+    if (p.propertyType) fd.append("propertyType", p.propertyType);
+    if (p.transactionType) fd.append("transactionType", p.transactionType);
+    if (p.price) fd.append("price", p.price);
+    if (p.rentFrequency) fd.append("rentFrequency", p.rentFrequency);
+    if (p.size) fd.append("size", p.size);
+    if (p.sizeUnit) fd.append("sizeUnit", p.sizeUnit);
+    if (p.location) fd.append("location", p.location);
+    if (p.fullAddress) fd.append("fullAddress", p.fullAddress);
+    if (p.flatNumber) fd.append("flatNumber", p.flatNumber);
+    if (p.floorNumber) fd.append("floorNumber", p.floorNumber);
+    if (p.buildingSociety) fd.append("buildingSociety", p.buildingSociety);
+    if (p.description) fd.append("description", p.description);
+    if (typeof p.bhk === "number") fd.append("bhk", String(p.bhk));
+    if (p.listingType) fd.append("listingType", p.listingType);
+    fd.append(
+      "isPubliclyVisible",
+      String(p.isPubliclyVisible ?? p.listingType !== "exclusive")
+    );
+    if (p.ownerName) fd.append("ownerName", p.ownerName);
+    if (p.ownerPhone) fd.append("ownerPhone", p.ownerPhone);
+    if (p.commissionTerms) fd.append("commissionTerms", p.commissionTerms);
+    const scopeValues = buildQuickPostScope(p.scopeOfWork);
+    if (scopeValues.length)
+      fd.append("scopeOfWork", JSON.stringify(scopeValues));
+    return fd;
+  };
+
+  const createPropertyRequest = async (property: ExtractedProperty) => {
+    const fd = buildFormDataFromProperty(property);
+    const res = await fetch("/api/my-properties", {
+      method: "POST",
+      body: fd,
+      credentials: "same-origin",
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.message || "Insert failed");
+    }
+    return json;
+  };
+
   const handleEditInline = (
     property: ExtractedProperty,
     patch: Partial<ExtractedProperty>
   ) => {
     const updated = { ...property, ...patch };
     setExtractedProperties((prev) =>
-      prev.map((p) => (p === property ? updated : p))
+      prev.map((p) => (isSameProperty(p, property) ? updated : p))
     );
+  };
+
+  const handleCreateSingle = (property: ExtractedProperty, index: number) => {
+    const validation = getValidationStatus(property);
+    if (!validation.isValid) {
+      toast({
+        title: "Missing Details",
+        description: "Please fill the required fields before creating this listing.",
+        variant: "destructive",
+      });
+      setEditorOpen(index, true);
+      return;
+    }
+    setActiveCreateIndex(index);
+    createSingleMutation.mutate({ property });
   };
 
   const handleEditDialog = (property: ExtractedProperty) => {
@@ -386,7 +417,7 @@ export default function QuickPostPage() {
   };
 
   const handleRemove = (property: ExtractedProperty) => {
-    setExtractedProperties((prev) => prev.filter((p) => p !== property));
+    setExtractedProperties((prev) => prev.filter((p) => !isSameProperty(p, property)));
     toast({ title: "Removed", description: "Property removed from the list." });
   };
 
@@ -529,16 +560,14 @@ export default function QuickPostPage() {
             <CardContent className="space-y-4">
               {extractedProperties.map((property, index) => {
                 const validation = getValidationStatus(property);
-                const hasActiveFields = hasActiveInlineFields(index);
-                const showQuickFixes =
-                  validation.missingFields.length > 0 || hasActiveFields;
-                const buildingFieldActive = isInlineFieldActive(index, "buildingSociety");
-                const shouldShowBuildingFix =
-                  validation.missingFields.includes("buildingSociety") ||
-                  buildingFieldActive;
+                const isEditorOpen =
+                  expandedEditors[index] ?? !validation.isValid;
+                const isCreatingThisProperty =
+                  createSingleMutation.isPending &&
+                  activeCreateIndex === index;
                 return (
                   <Card
-                    key={index}
+                    key={property.tempId || index}
                     className={`border ${
                       validation.isValid
                         ? "border-green-200 bg-green-50"
@@ -575,285 +604,37 @@ export default function QuickPostPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditDialog(property)}
-                            type="button"
-                          >
-                            <Edit3 size={14} />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
                             onClick={() => handleRemove(property)}
+                            disabled={isCreatingThisProperty}
                             type="button"
                           >
                             <Trash2 size={14} />
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center space-x-1"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleCreateSingle(property, index);
+                            }}
+                            disabled={!validation.isValid || isCreatingThisProperty}
+                            type="button"
+                          >
+                            {isCreatingThisProperty ? (
+                              <div className="flex items-center gap-1 text-[11px]">
+                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Creating
+                              </div>
+                            ) : (
+                              <>
+                                <Sparkles size={12} />
+                                <span className="text-[11px]">Create</span>
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
-
-                      {/* Quick inline fixes for missing fields */}
-                      {showQuickFixes && (
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          {validation.missingFields.includes("title") && (
-                            <div className="col-span-2">
-                              <label className="text-xs text-neutral-600">
-                                Property Title
-                              </label>
-                              <Input
-                                defaultValue={property.title || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    title: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("propertyType") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">
-                                Property Type
-                              </label>
-                              <Select
-                                onValueChange={(v) =>
-                                  handleEditInline(property, {
-                                    propertyType: v as ExtractedProperty["propertyType"],
-                                  })
-                                }
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Apartment">Apartment</SelectItem>
-                                  <SelectItem value="Villa">Villa</SelectItem>
-                                  <SelectItem value="Commercial">Commercial</SelectItem>
-                                  <SelectItem value="Plot">Plot</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("transactionType") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">
-                                Transaction Type
-                              </label>
-                              <Select
-                                onValueChange={(v) =>
-                                  handleEditInline(property, {
-                                    transactionType: v as "sale" | "rent",
-                                  })
-                                }
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Select transaction" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="sale">Sale</SelectItem>
-                                  <SelectItem value="rent">Rent</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("price") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">Price</label>
-                              <Input
-                                defaultValue={property.price || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    price: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("size") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">Size</label>
-                              <Input
-                                defaultValue={property.size || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, { size: e.target.value })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("location") && (
-                            <div className="col-span-2">
-                              <label className="text-xs text-neutral-600">
-                                Location
-                              </label>
-                              <Input
-                                defaultValue={property.location || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    location: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("bhk") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">BHK</label>
-                              <Input
-                                type="number"
-                                defaultValue={
-                                  typeof property.bhk === "number"
-                                    ? String(property.bhk)
-                                    : ""
-                                }
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    bhk: parseInt(e.target.value) || 0,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("flatNumber") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">
-                                Flat/Unit Number
-                              </label>
-                              <Input
-                                defaultValue={property.flatNumber || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    flatNumber: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {shouldShowBuildingFix && (
-                            <div className="col-span-2">
-                              <label className="text-xs text-neutral-600">
-                                Building/Society
-                              </label>
-                              <GooglePlacesAutocomplete
-                                value={property.buildingSociety || ""}
-                                onChange={(v) =>
-                                  handleEditInline(property, {
-                                    buildingSociety: v,
-                                  })
-                                }
-                                placeholder="Search building..."
-                                types={["establishment"]}
-                                onKeyDown={preventEnterKey}
-                                onFocus={() =>
-                                  setInlineFieldActive(index, "buildingSociety", true)
-                                }
-                                onBlur={() => {
-                                  setTimeout(
-                                    () =>
-                                      setInlineFieldActive(
-                                        index,
-                                        "buildingSociety",
-                                        false
-                                      ),
-                                    200
-                                  );
-                                }}
-                                className="text-xs"
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("fullAddress") && (
-                            <div className="col-span-2">
-                              <label className="text-xs text-neutral-600">
-                                Full Address
-                              </label>
-                              <Input
-                                defaultValue={property.fullAddress || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    fullAddress: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("ownerName") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">
-                                Owner Name
-                              </label>
-                              <Input
-                                defaultValue={property.ownerName || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    ownerName: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("ownerPhone") && (
-                            <div>
-                              <label className="text-xs text-neutral-600">
-                                Owner Phone
-                              </label>
-                              <Input
-                                defaultValue={property.ownerPhone || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    ownerPhone: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-
-                          {validation.missingFields.includes("commissionTerms") && (
-                            <div className="col-span-2">
-                              <label className="text-xs text-neutral-600">
-                                Commission Terms
-                              </label>
-                              <Input
-                                defaultValue={property.commissionTerms || ""}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  handleEditInline(property, {
-                                    commissionTerms: e.target.value,
-                                  })
-                                }
-                                onKeyDown={preventEnterKey}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
                       <div className="mt-3 border-t border-dashed border-neutral-200 pt-3 text-xs text-neutral-600">
                         <p className="font-semibold text-neutral-800 mb-1">Extracted Data</p>
                         <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -886,6 +667,338 @@ export default function QuickPostPage() {
                           )}
                         </div>
                       </div>
+
+                      <Collapsible
+                        open={isEditorOpen}
+                        onOpenChange={(open) => setEditorOpen(index, open)}
+                      >
+                        <div className="mt-4 border-t border-neutral-200 pt-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
+                              Quick Edit
+                              {validation.isValid ? (
+                                <Badge className="text-xs bg-green-100 text-green-800">
+                                  Ready
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-xs">
+                                  {validation.missingCount} missing
+                                </Badge>
+                              )}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                              {validation.isValid
+                                ? "Update any field or create the listing."
+                                : "Fill the required fields below to continue."}
+                            </p>
+                          </div>
+                          <CollapsibleTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 transition-transform data-[state=open]:rotate-180"
+                              disabled={isCreatingThisProperty}
+                              type="button"
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </CollapsibleTrigger>
+                        </div>
+                        <CollapsibleContent className="pt-3 space-y-4">
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Property Title
+                              </label>
+                              <Input
+                                value={property.title || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    title: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Property Type
+                              </label>
+                              <Select
+                                value={property.propertyType || undefined}
+                                disabled={isCreatingThisProperty}
+                                onValueChange={(v) =>
+                                  handleEditInline(property, {
+                                    propertyType: v as ExtractedProperty["propertyType"],
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Apartment">Apartment</SelectItem>
+                                  <SelectItem value="Villa">Villa</SelectItem>
+                                  <SelectItem value="Commercial">Commercial</SelectItem>
+                                  <SelectItem value="Plot">Plot</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Transaction Type
+                              </label>
+                              <Select
+                                value={property.transactionType || undefined}
+                                disabled={isCreatingThisProperty}
+                                onValueChange={(v) =>
+                                  handleEditInline(property, {
+                                    transactionType: v as "sale" | "rent",
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Select transaction" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="sale">Sale</SelectItem>
+                                  <SelectItem value="rent">Rent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {property.transactionType === "rent" && (
+                              <div>
+                                <label className="text-xs text-neutral-600">
+                                  Rent Frequency
+                                </label>
+                                <Select
+                                  value={property.rentFrequency || "monthly"}
+                                  disabled={isCreatingThisProperty}
+                                  onValueChange={(v) =>
+                                    handleEditInline(property, {
+                                      rentFrequency: v as ExtractedProperty["rentFrequency"],
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Frequency" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="monthly">Monthly</SelectItem>
+                                    <SelectItem value="yearly">Yearly</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            <div>
+                              <label className="text-xs text-neutral-600">Price</label>
+                              <Input
+                                value={property.price || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    price: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">Size</label>
+                              <Input
+                                value={property.size || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, { size: e.target.value })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Location
+                              </label>
+                              <Input
+                                value={property.location || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    location: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">BHK</label>
+                              <Input
+                                type="number"
+                                value={
+                                  typeof property.bhk === "number"
+                                    ? String(property.bhk)
+                                    : ""
+                                }
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    bhk: parseInt(e.target.value, 10) || 0,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Flat/Unit Number
+                              </label>
+                              <Input
+                                value={property.flatNumber || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    flatNumber: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Floor Number
+                              </label>
+                              <Input
+                                value={property.floorNumber || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    floorNumber: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Building/Society
+                              </label>
+                              <GooglePlacesAutocomplete
+                                value={property.buildingSociety || ""}
+                                onChange={(v) => {
+                                  if (isCreatingThisProperty) return;
+                                  handleEditInline(property, {
+                                    buildingSociety: v,
+                                  });
+                                }}
+                                placeholder="Search building..."
+                                types={["establishment"]}
+                                className={`text-xs ${
+                                  isCreatingThisProperty
+                                    ? "opacity-60 pointer-events-none"
+                                    : ""
+                                }`}
+                              />
+                            </div>
+
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Full Address
+                              </label>
+                              <Input
+                                value={property.fullAddress || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    fullAddress: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Owner Name
+                              </label>
+                              <Input
+                                value={property.ownerName || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    ownerName: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-neutral-600">
+                                Owner Phone
+                              </label>
+                              <Input
+                                value={property.ownerPhone || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    ownerPhone: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+
+                            <div className="col-span-2">
+                              <label className="text-xs text-neutral-600">
+                                Commission Terms
+                              </label>
+                              <Input
+                                value={property.commissionTerms || ""}
+                                className="h-8 text-xs"
+                                disabled={isCreatingThisProperty}
+                                onChange={(e) =>
+                                  handleEditInline(property, {
+                                    commissionTerms: e.target.value,
+                                  })
+                                }
+                                onKeyDown={preventEnterKey}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              disabled={isCreatingThisProperty}
+                              onClick={() => handleEditDialog(property)}
+                            >
+                              Open full editor
+                            </Button>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
                     </CardContent>
                   </Card>
                 );
