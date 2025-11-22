@@ -77,19 +77,19 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="absolute inset-0 opacity-20"></div>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-grid-emerald-100/[0.2] bg-[size:40px_40px]"></div>
 
-      <Card className="w-full max-w-md shadow-2xl border-slate-700 bg-slate-800/90 backdrop-blur-sm">
+      <Card className="w-full max-w-md shadow-2xl border-gray-200 bg-white/95 backdrop-blur-sm relative z-10">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto p-3 bg-blue-600/20 rounded-full w-fit">
-            <Shield className="h-8 w-8 text-blue-400" />
+          <div className="mx-auto p-3 bg-emerald-100 rounded-full w-fit">
+            <Shield className="h-8 w-8 text-emerald-600" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-white">
+            <CardTitle className="text-2xl font-bold text-gray-900">
               Secure Portal Access
             </CardTitle>
-            <CardDescription className="text-slate-400 mt-2">
+            <CardDescription className="text-gray-600 mt-2">
               Authorized personnel only. Please authenticate to continue.
             </CardDescription>
           </div>
@@ -97,8 +97,8 @@ export default function AdminLogin() {
 
         <CardContent className="space-y-6">
           {error && (
-            <Alert className="border-red-500/50 bg-red-500/10">
-              <AlertDescription className="text-red-400">
+            <Alert className="border-red-300 bg-red-50">
+              <AlertDescription className="text-red-700">
                 {error}
               </AlertDescription>
             </Alert>
@@ -106,7 +106,7 @@ export default function AdminLogin() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-slate-300">
+              <Label htmlFor="username" className="text-gray-700 font-medium">
                 Username
               </Label>
               <Input
@@ -114,14 +114,14 @@ export default function AdminLogin() {
                 type="text"
                 value={formData.username}
                 onChange={(e) => handleInputChange("username", e.target.value)}
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-blue-500"
+                className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:ring-emerald-500"
                 placeholder="Enter your username"
                 disabled={loginMutation.isPending}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">
+              <Label htmlFor="password" className="text-gray-700 font-medium">
                 Password
               </Label>
               <div className="relative">
@@ -130,7 +130,7 @@ export default function AdminLogin() {
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
-                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400 focus:border-blue-500 pr-10"
+                  className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:ring-emerald-500 pr-10"
                   placeholder="Enter your password"
                   disabled={loginMutation.isPending}
                 />
@@ -138,7 +138,7 @@ export default function AdminLogin() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 text-slate-400 hover:text-white"
+                  className="absolute right-0 top-0 h-full px-3 text-gray-400 hover:text-gray-700 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
@@ -152,7 +152,7 @@ export default function AdminLogin() {
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30"
               disabled={loginMutation.isPending}
             >
               {loginMutation.isPending ? (
@@ -169,8 +169,8 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          <div className="pt-4 border-t border-slate-700">
-            <p className="text-xs text-slate-500 text-center">
+          <div className="pt-4 border-t border-gray-200">
+            <p className="text-xs text-gray-500 text-center">
               This portal uses advanced security measures including device
               fingerprinting and encrypted sessions. Unauthorized access
               attempts are monitored and logged.

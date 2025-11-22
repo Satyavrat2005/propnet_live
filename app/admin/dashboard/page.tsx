@@ -133,9 +133,9 @@ export default function AdminPortal() {
 
   if (authLoading || !adminData) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-white">
-          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-700">
+          <div className="w-6 h-6 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
           Verifying authentication...
         </div>
       </div>
@@ -151,27 +151,27 @@ export default function AdminPortal() {
   const getStatusBadge = (status?: string | null) => {
     switch ((status || "pending").toLowerCase()) {
       case "approved":
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/50">Approved</Badge>;
+        return <Badge className="bg-green-100 text-green-700 border-green-300">Approved</Badge>;
       case "rejected":
-        return <Badge className="bg-red-500/20 text-red-400 border-red-500/50">Rejected</Badge>;
+        return <Badge className="bg-red-100 text-red-700 border-red-300">Rejected</Badge>;
       default:
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50">Pending</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300">Pending</Badge>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700">
+      <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-600/20 rounded-lg">
-                <Shield className="h-6 w-6 text-blue-400" />
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Shield className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Admin Portal</h1>
-                <p className="text-sm text-slate-400">Welcome, {adminData?.admin?.username}</p>
+                <h1 className="text-xl font-bold text-gray-900">Admin Portal</h1>
+                <p className="text-sm text-gray-600">Welcome, {adminData?.admin?.username}</p>
               </div>
             </div>
 
@@ -180,15 +180,14 @@ export default function AdminPortal() {
               <Button
                 onClick={goToManageProperty}
                 variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
               >
                 Manage Property
               </Button>
 
               <Button
                 onClick={handleLogout}
-                variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
@@ -202,50 +201,58 @@ export default function AdminPortal() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-400">Total Signups</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Total Signups</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-400" />
-                <span className="text-2xl font-bold text-white">{total}</span>
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <Users className="h-5 w-5 text-emerald-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{total}</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-400">Pending Review</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Pending Review</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-yellow-400" />
-                <span className="text-2xl font-bold text-white">{pending.length}</span>
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{pending.length}</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-400">Approved</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Approved</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-green-400" />
-                <span className="text-2xl font-bold text-white">{approved.length}</span>
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-green-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{approved.length}</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-400">Rejected</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Rejected</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <UserX className="h-5 w-5 text-red-400" />
-                <span className="text-2xl font-bold text-white">{rejected.length}</span>
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <UserX className="h-5 w-5 text-red-600" />
+                </div>
+                <span className="text-2xl font-bold text-gray-900">{rejected.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -253,47 +260,47 @@ export default function AdminPortal() {
 
         {/* Tabs */}
         <Tabs defaultValue="pending">
-          <TabsList className="bg-slate-800 border-slate-700">
-            <TabsTrigger value="pending" className="data-[state=active]:bg-slate-700">
+          <TabsList className="bg-white border border-gray-200">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">
               Pending Users
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-slate-700">
+            <TabsTrigger value="settings" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">
               Settings
             </TabsTrigger>
           </TabsList>
 
           {/* Pending list */}
           <TabsContent value="pending" className="mt-6">
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-white border-gray-200">
               <CardHeader>
-                <CardTitle className="text-white">Pending User Approvals</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardTitle className="text-gray-900">Pending User Approvals</CardTitle>
+                <CardDescription className="text-gray-600">
                   Review and manage brokers who signed up
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-6 h-6 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
                   </div>
                 ) : pending.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400">No pending users</div>
+                  <div className="text-center py-8 text-gray-500">No pending users</div>
                 ) : (
                   <div className="space-y-4">
                     {pending.map((u) => (
-                      <div key={u.id} className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                      <div key={u.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h3 className="font-semibold text-white">
+                            <h3 className="font-semibold text-gray-900">
                               {u.name || "Unnamed Broker"}{" "}
                               {u.rera_id ? (
-                                <span className="inline-flex items-center ml-2 text-xs text-green-400">
+                                <span className="inline-flex items-center ml-2 text-xs text-emerald-600">
                                   <BadgeCheck className="h-4 w-4 mr-1" /> RERA: {u.rera_id}
                                 </span>
                               ) : null}
                             </h3>
                             {u.agency_name && (
-                              <p className="text-sm text-slate-400">{u.agency_name}</p>
+                              <p className="text-sm text-gray-600">{u.agency_name}</p>
                             )}
                           </div>
                           {getStatusBadge(u.status)}
@@ -302,44 +309,44 @@ export default function AdminPortal() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div className="space-y-1">
                             {u.phone && (
-                              <p className="text-slate-400 flex items-center">
+                              <p className="text-gray-600 flex items-center">
                                 <Phone className="h-4 w-4 mr-2" />
-                                <span className="text-white">{u.phone}</span>
+                                <span className="text-gray-900">{u.phone}</span>
                               </p>
                             )}
                             {u.email && (
-                              <p className="text-slate-400 flex items-center">
+                              <p className="text-gray-600 flex items-center">
                                 <Mail className="h-4 w-4 mr-2" />
-                                <span className="text-white">{u.email}</span>
+                                <span className="text-gray-900">{u.email}</span>
                               </p>
                             )}
                             {u.city && (
-                              <p className="text-slate-400 flex items-center">
+                              <p className="text-gray-600 flex items-center">
                                 <MapPin className="h-4 w-4 mr-2" />
-                                <span className="text-white">{u.city}</span>
+                                <span className="text-gray-900">{u.city}</span>
                               </p>
                             )}
                           </div>
 
                           <div className="space-y-1">
                             {u.experience && (
-                              <p className="text-slate-400 flex items-center">
+                              <p className="text-gray-600 flex items-center">
                                 <Building2 className="h-4 w-4 mr-2" />
-                                <span className="text-white">Experience: {u.experience}</span>
+                                <span className="text-gray-900">Experience: {u.experience}</span>
                               </p>
                             )}
                             {u.working_regions?.length ? (
-                              <p className="text-slate-400">
+                              <p className="text-gray-600">
                                 Regions:{" "}
-                                <span className="text-white">
+                                <span className="text-gray-900">
                                   {u.working_regions.join(", ")}
                                 </span>
                               </p>
                             ) : null}
                             {u.area_of_expertise?.length ? (
-                              <p className="text-slate-400">
+                              <p className="text-gray-600">
                                 Expertise:{" "}
-                                <span className="text-white">
+                                <span className="text-gray-900">
                                   {u.area_of_expertise.join(", ")}
                                 </span>
                               </p>
@@ -350,7 +357,7 @@ export default function AdminPortal() {
                         <div className="flex gap-2 mt-4">
                           <Button
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
                             onClick={() => updateStatus.mutate({ id: u.id, status: "approved" })}
                             disabled={updateStatus.isPending}
                             type="button"
@@ -362,7 +369,7 @@ export default function AdminPortal() {
                             size="sm"
                             variant="outline"
                             onClick={() => updateStatus.mutate({ id: u.id, status: "rejected" })}
-                            className="border-red-500 text-red-400 hover:bg-red-500/10"
+                            className="border-red-600 text-red-600 hover:bg-red-50"
                             disabled={updateStatus.isPending}
                             type="button"
                           >
@@ -380,37 +387,37 @@ export default function AdminPortal() {
 
           {/* Settings (unchanged) */}
           <TabsContent value="settings" className="mt-6">
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-white border-gray-200">
               <CardHeader>
-                <CardTitle className="text-white">Admin Settings</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardTitle className="text-gray-900">Admin Settings</CardTitle>
+                <CardDescription className="text-gray-600">
                   Manage admin account settings and security
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                     <div className="flex items-center gap-3 mb-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                      <h3 className="font-medium text-white">Security Notice</h3>
+                      <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                      <h3 className="font-medium text-gray-900">Security Notice</h3>
                     </div>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-gray-600">
                       Your admin session is secured with device fingerprinting and encrypted tokens.
                       Always logout when using shared devices.
                     </p>
                   </div>
 
-                  <div className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
-                    <h3 className="font-medium text-white mb-2">Session Information</h3>
-                    <div className="text-sm text-slate-400 space-y-1">
+                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <h3 className="font-medium text-gray-900 mb-2">Session Information</h3>
+                    <div className="text-sm text-gray-600 space-y-1">
                       <p>
-                        Username: <span className="text-white">{adminData?.admin?.username}</span>
+                        Username: <span className="text-gray-900 font-medium">{adminData?.admin?.username}</span>
                       </p>
                       <p>
-                        Email: <span className="text-white">{adminData?.admin?.email}</span>
+                        Email: <span className="text-gray-900 font-medium">{adminData?.admin?.email}</span>
                       </p>
                       <p>
-                        Device Status: <span className="text-green-400">Verified</span>
+                        Device Status: <span className="text-emerald-600 font-medium">Verified</span>
                       </p>
                     </div>
                   </div>

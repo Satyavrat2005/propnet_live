@@ -111,9 +111,9 @@ export default function AdminProperties() {
   // show verifying spinner while checking auth
   if (authLoading || !adminData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center gap-2 text-gray-700">
-          <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+          <div className="w-6 h-6 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin"></div>
           Verifying authentication...
         </div>
       </div>
@@ -143,66 +143,79 @@ export default function AdminProperties() {
     ) : null;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Button
-          onClick={() => router.push("/admin/dashboard")}
-          variant="outline"
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
-        </Button>
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Property Approval</h1>
+              <p className="text-gray-600 mt-1">Approve or reject property listings submitted by brokers</p>
+            </div>
+            <Button
+              onClick={() => router.push("/admin/dashboard")}
+              variant="outline"
+              className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Property Approval</h1>
-        <p className="text-gray-600">Approve or reject property listings submitted by brokers</p>
-      </div>
+      <div className="container mx-auto px-4 py-8">
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <Clock className="h-8 w-8 text-yellow-600 mr-3" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-yellow-100 rounded-lg">
+                <Clock className="h-6 w-6 text-yellow-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{pending.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{pending.length}</p>
                 <p className="text-sm text-gray-600">Pending</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-green-600 mr-3" />
+        <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{approved.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{approved.length}</p>
                 <p className="text-sm text-gray-600">Approved</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <XCircle className="h-8 w-8 text-red-600 mr-3" />
+        <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-100 rounded-lg">
+                <XCircle className="h-6 w-6 text-red-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{rejected.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{rejected.length}</p>
                 <p className="text-sm text-gray-600">Rejected</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-blue-600 mr-3" />
+        <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-100 rounded-lg">
+                <Users className="h-6 w-6 text-emerald-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{total}</p>
+                <p className="text-2xl font-bold text-gray-900">{total}</p>
                 <p className="text-sm text-gray-600">Total</p>
               </div>
             </div>
@@ -211,37 +224,37 @@ export default function AdminProperties() {
       </div>
 
       {/* Pending Properties */}
-      <Card className="mb-8">
+      <Card className="mb-8 bg-white border-gray-200">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900">
             <Clock className="h-5 w-5 text-yellow-600" />
             Pending Properties ({pending.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {pending.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No pending properties</p>
+            <p className="text-gray-500 text-center py-8">No pending properties</p>
           ) : (
             <div className="space-y-4">
               {pending.map((p) => (
-                <div key={p.property_id} className="border rounded-lg p-4 bg-yellow-50">
+                <div key={p.property_id} className="border border-yellow-200 rounded-lg p-4 bg-yellow-50 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start">
                     <div className="pr-4">
-                      <h3 className="font-semibold text-lg">{p.property_title}</h3>
+                      <h3 className="font-semibold text-lg text-gray-900">{p.property_title}</h3>
                       <div className="flex items-center gap-2 text-sm text-gray-700 mt-1">
-                        {p.property_type && <Badge variant="outline">{p.property_type}</Badge>}
+                        {p.property_type && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300">{p.property_type}</Badge>}
                         {p.transaction_type && (
-                          <Badge variant={p.transaction_type === "sale" ? "default" : "secondary"}>
+                          <Badge className={p.transaction_type === "sale" ? "bg-blue-100 text-blue-700 border-blue-300" : "bg-purple-100 text-purple-700 border-purple-300"}>
                             {p.transaction_type === "sale" ? "Sale" : "Rent"}
                           </Badge>
                         )}
                         {typeof p.bhk === "number" && p.bhk > 0 && (
-                          <Badge variant="outline">{p.bhk} BHK</Badge>
+                          <Badge className="bg-gray-100 text-gray-700 border-gray-300">{p.bhk} BHK</Badge>
                         )}
                       </div>
                       <div className="flex items-center text-gray-600 mt-2">
                         <MapPin className="h-4 w-4 mr-1" />
-                        <span className="text-sm">{p.location || p.full_address}</span>
+                        <span className="text-sm text-gray-900">{p.location || p.full_address}</span>
                       </div>
                       <div className="mt-1">
                         <Price value={p.sale_price} />
@@ -262,7 +275,7 @@ export default function AdminProperties() {
                     <div className="flex flex-col gap-2 min-w-[180px]">
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
                         onClick={() => handleStatusUpdate(p.property_id, "approved")}
                         disabled={updateStatusMutation.isPending}
                         type="button"
@@ -272,7 +285,7 @@ export default function AdminProperties() {
                       </Button>
                       <Button
                         size="sm"
-                        variant="destructive"
+                        className="bg-red-600 hover:bg-red-700 text-white shadow-md"
                         onClick={() => handleStatusUpdate(p.property_id, "rejected")}
                         disabled={updateStatusMutation.isPending}
                         type="button"
@@ -290,40 +303,40 @@ export default function AdminProperties() {
       </Card>
 
       {/* Approved Properties */}
-      <Card className="mb-8">
+      <Card className="mb-8 bg-white border-gray-200">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900">
             <CheckCircle className="h-5 w-5 text-green-600" />
             Approved Properties ({approved.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {approved.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No approved properties yet</p>
+            <p className="text-gray-500 text-center py-8">No approved properties yet</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {approved.map((p) => (
-                <div key={p.property_id} className="border rounded-lg p-4 bg-green-50">
-                  <h3 className="font-semibold">{p.property_title}</h3>
+                <div key={p.property_id} className="border border-green-200 rounded-lg p-4 bg-green-50 hover:shadow-md transition-shadow">
+                  <h3 className="font-semibold text-gray-900">{p.property_title}</h3>
                   <div className="flex items-center gap-2 text-sm text-gray-700 mt-1">
-                    {p.property_type && <Badge variant="outline">{p.property_type}</Badge>}
+                    {p.property_type && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300">{p.property_type}</Badge>}
                     {p.transaction_type && (
-                      <Badge variant={p.transaction_type === "sale" ? "default" : "secondary"}>
+                      <Badge className={p.transaction_type === "sale" ? "bg-blue-100 text-blue-700 border-blue-300" : "bg-purple-100 text-purple-700 border-purple-300"}>
                         {p.transaction_type === "sale" ? "Sale" : "Rent"}
                       </Badge>
                     )}
                     {typeof p.bhk === "number" && p.bhk > 0 && (
-                      <Badge variant="outline">{p.bhk} BHK</Badge>
+                      <Badge className="bg-gray-100 text-gray-700 border-gray-300">{p.bhk} BHK</Badge>
                     )}
                   </div>
                   <div className="flex items-center text-gray-600 mt-2">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span className="text-sm">{p.location || p.full_address}</span>
+                    <span className="text-sm text-gray-900">{p.location || p.full_address}</span>
                   </div>
                   <div className="mt-1">
                     <Price value={p.sale_price} />
                   </div>
-                  <Badge variant="secondary" className="mt-3 bg-green-100 text-green-800">
+                  <Badge className="mt-3 bg-green-100 text-green-800 border-green-300">
                     Approved
                   </Badge>
                 </div>
@@ -332,6 +345,7 @@ export default function AdminProperties() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
