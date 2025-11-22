@@ -160,7 +160,7 @@ export default function LandingNew() {
               <Card className="border-2 border-red-200 bg-red-50/50">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0">
                       <X className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -169,7 +169,7 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -183,7 +183,7 @@ export default function LandingNew() {
               <Card className="border-2 border-red-200 bg-red-50/50">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0">
                       <X className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -192,7 +192,7 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -206,7 +206,7 @@ export default function LandingNew() {
               <Card className="border-2 border-red-200 bg-red-50/50">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0">
                       <X className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -215,7 +215,7 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -229,7 +229,7 @@ export default function LandingNew() {
               <Card className="border-2 border-red-200 bg-red-50/50">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0">
                       <X className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -238,7 +238,7 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -277,13 +277,13 @@ export default function LandingNew() {
                   <tr className="border-t border-gray-200 hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                         <span className="text-gray-700">Commission theft - you show properties, someone else closes and gets paid</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 bg-emerald-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">Lead protection system with timestamped client interaction records</span>
                       </div>
                     </td>
@@ -291,13 +291,13 @@ export default function LandingNew() {
                   <tr className="border-t border-gray-200 hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                         <span className="text-gray-700">Exclusive listings get stolen and shared everywhere without credit or consent</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 bg-emerald-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">SMS-verified owner consent required for every listing - full transparency</span>
                       </div>
                     </td>
@@ -305,13 +305,13 @@ export default function LandingNew() {
                   <tr className="border-t border-gray-200 hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                         <span className="text-gray-700">No proof of your efforts when commission disputes arise</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 bg-emerald-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">Digital consent forms with clear commission terms and complete audit trail</span>
                       </div>
                     </td>
@@ -319,13 +319,13 @@ export default function LandingNew() {
                   <tr className="border-t border-gray-200 hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-5">
                       <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                         <span className="text-gray-700">WhatsApp chaos with no organized system for tracking leads and listings</span>
                       </div>
                     </td>
                     <td className="px-6 py-5 bg-emerald-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">Professional dashboard to organize everything - clients, listings, deals</span>
                       </div>
                     </td>
@@ -408,15 +408,15 @@ export default function LandingNew() {
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm sm:text-base">
-                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     <span>SMS verification required</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm sm:text-base">
-                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     <span>Owner details protected</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm sm:text-base">
-                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                     <span>Consent timestamp stored</span>
                   </div>
                 </div>
@@ -452,7 +452,7 @@ export default function LandingNew() {
             <Card className="sm:col-span-2 bg-linear-to-br from-red-500 to-red-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
               <CardContent className="p-6 sm:p-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
                     <Users className="h-6 w-6 sm:h-7 sm:w-7" />
                   </div>
                   <div className="flex-grow">
@@ -461,7 +461,7 @@ export default function LandingNew() {
                       Track every client interaction with timestamps. Get full credit for your hard work - never lose a commission again.
                     </p>
                   </div>
-                  <Button variant="secondary" className="w-full sm:w-auto bg-white text-red-600 hover:bg-red-50 flex-shrink-0">
+                  <Button variant="secondary" className="w-full sm:w-auto bg-white text-red-600 hover:bg-red-50 shrink-0">
                     Learn More
                   </Button>
                 </div>
@@ -672,15 +672,15 @@ export default function LandingNew() {
               <h3 className="text-base sm:text-lg font-semibold mb-4">Platform Features</h3>
               <div className="space-y-2">
                 <p className="text-gray-400 text-xs sm:text-sm flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 shrink-0" />
                   Verified Broker Network
                 </p>
                 <p className="text-gray-400 text-xs sm:text-sm flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 shrink-0" />
                   Lead Protection System
                 </p>
                 <p className="text-gray-400 text-xs sm:text-sm flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 shrink-0" />
                   Commission Transparency
                 </p>
               </div>

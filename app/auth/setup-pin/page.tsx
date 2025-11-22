@@ -103,15 +103,15 @@ function SetupPinContent() {
             </div>
             <ul className="space-y-2 text-sm text-blue-800 ml-7">
               <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>Your PIN is encrypted and stored securely</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>Use your PIN for quick login instead of OTP</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>Keep this PIN private and memorable</span>
               </li>
             </ul>
