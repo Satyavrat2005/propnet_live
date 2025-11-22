@@ -76,12 +76,12 @@ export function AppHeader({ className, sidebarCollapsed }: AppHeaderProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 lg:gap-2">
+        {/* <div className="flex items-center gap-1 lg:gap-2">
           <Button variant="ghost" size="icon" className="relative h-9 w-9 lg:h-10 lg:w-10">
             <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
           </Button>
-        </div>
+        </div> */}
       </div>
     </header>
   );

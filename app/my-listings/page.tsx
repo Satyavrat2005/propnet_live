@@ -623,7 +623,7 @@ export default function MyListings() {
   const { data: myProperties = [], isLoading } = useQuery({
     queryKey: ["/api/my-properties"],
     queryFn: () => safeFetch("/api/my-properties", []),
-    enabled: !!user,
+    enabled: !authLoading && !!user,
   });
 
   const form = useForm<PropertyFormValues>({
@@ -833,7 +833,7 @@ export default function MyListings() {
   };
 
 
-  if (authLoading) {
+  if (authLoading || (isLoading && !myProperties?.length)) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -846,7 +846,10 @@ export default function MyListings() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    router.push("/auth/login");
+    return null;
+  }
 
   const totalProperties = Array.isArray(myProperties) ? myProperties.length : 0;
 
