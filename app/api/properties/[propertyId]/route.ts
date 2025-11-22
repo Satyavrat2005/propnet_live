@@ -124,6 +124,17 @@ function normalizePhone(raw: string | null): string | null {
   return `+${digits}`;
 }
 
+function normalizePhoneList(raw: string | null): string[] {
+  if (!raw) return [];
+  const sanitized = String(raw).replace(/[\r\n;/|]+/g, ",");
+  const parts = sanitized
+    .split(",")
+    .map((part) => normalizePhone(part))
+    .filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(parts));
+}
+
 function getAppBaseUrl(req: NextRequest): string {
   const origin = req.headers.get("origin");
   if (origin) return origin;
@@ -350,7 +361,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
     let smsError: string | null = null;
 
     try {
-      const ownerPhoneE164 = normalizePhone(updated.owner_phone);
+      const ownerPhonesE164 = normalizePhoneList(updated.owner_phone);
       const ownerConsentUrl = `${getAppBaseUrl(req)}/consent/${newConsentToken}`;
 
       const envReady = Boolean(
@@ -359,7 +370,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
           (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_SMS_FROM)
       );
 
-      if (!ownerPhoneE164) {
+      if (!ownerPhonesE164.length) {
         smsStatus = "skipped";
         smsError = "Owner phone missing or invalid";
       } else if (!envReady) {
@@ -392,7 +403,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
         const smsBody = smsBodyLines.join("\n");
 
         try {
-          await sendSms({ to: ownerPhoneE164, body: smsBody });
+          await sendSms({ to: ownerPhonesE164, body: smsBody });
           smsStatus = "sent";
           console.log(`[PUT] SMS sent to owner for property ${propertyId}`);
         } catch (smsErr: any) {

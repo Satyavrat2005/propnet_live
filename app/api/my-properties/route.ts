@@ -44,6 +44,17 @@ function normalizePhone(raw: FormDataEntryValue | null): string | null {
   return `+${digits}`;
 }
 
+function normalizePhoneList(raw: FormDataEntryValue | null): string[] {
+  if (!raw) return [];
+  const sanitized = String(raw).replace(/[\r\n;/|]+/g, ",");
+  const parts = sanitized
+    .split(",")
+    .map((part) => normalizePhone(part))
+    .filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(parts));
+}
+
 function parseScopeOfWork(value: any): string[] | null {
   if (!value) return null;
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -241,7 +252,7 @@ export async function POST(req: NextRequest) {
     const scopeOfWorkRaw = form.get("scopeOfWork");
     const ownerPhoneInput = form.get("ownerPhone");
     const ownerPhoneStored = ownerPhoneInput ? String(ownerPhoneInput).trim() : null;
-    const ownerPhoneE164 = normalizePhone(ownerPhoneInput);
+    const ownerPhonesE164 = normalizePhoneList(ownerPhoneInput);
 
     const photoFiles: File[] = form.getAll("photos").filter(Boolean) as File[];
     if (photoFiles.length > 10) {
@@ -489,7 +500,7 @@ export async function POST(req: NextRequest) {
             (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_SMS_FROM)
         );
 
-        if (!ownerPhoneE164) {
+        if (!ownerPhonesE164.length) {
           smsStatus = "skipped";
           smsError = "Owner phone missing or invalid";
         } else if (!envReady) {
@@ -518,7 +529,7 @@ export async function POST(req: NextRequest) {
           });
 
           try {
-            await sendSms({ to: ownerPhoneE164, body: smsBody });
+            await sendSms({ to: ownerPhonesE164, body: smsBody });
             smsStatus = "sent";
           } catch (smsErr: any) {
             smsStatus = "failed";

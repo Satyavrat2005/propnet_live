@@ -18,7 +18,7 @@ function getClient(): Twilio {
   return client;
 }
 
-export async function sendSms(options: { to: string; body: string }) {
+export async function sendSms(options: { to: string | string[]; body: string }) {
   const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
   const fromNumber = process.env.TWILIO_SMS_FROM;
 
@@ -29,17 +29,23 @@ export async function sendSms(options: { to: string; body: string }) {
   }
 
   const smsClient = getClient();
+  const recipients = Array.isArray(options.to) ? options.to : [options.to];
+  const results = [];
 
-  const payload: MessageListInstanceCreateOptions = {
-    to: options.to,
-    body: options.body,
-  };
+  for (const recipient of recipients) {
+    const payload: MessageListInstanceCreateOptions = {
+      to: recipient,
+      body: options.body,
+    };
 
-  if (messagingServiceSid) {
-    payload.messagingServiceSid = messagingServiceSid;
-  } else if (fromNumber) {
-    payload.from = fromNumber;
+    if (messagingServiceSid) {
+      payload.messagingServiceSid = messagingServiceSid;
+    } else if (fromNumber) {
+      payload.from = fromNumber;
+    }
+
+    results.push(await smsClient.messages.create(payload));
   }
 
-  return smsClient.messages.create(payload);
+  return results;
 }
