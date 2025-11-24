@@ -54,6 +54,7 @@ import FileUpload from "@/components/ui/file-upload";
 import { AppLayout } from "@/components/layout/app-layout";
 import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { z } from "zod";
+import { QUICKPOST_SCOPE_LABEL } from "@/lib/quickpost";
 
 const propertyFormSchema = insertPropertySchema;
 type PropertyFormValues = z.infer<typeof propertyFormSchema>;
@@ -985,8 +986,12 @@ export default function MyListings() {
           </div>
         ) : (
           <div className="space-y-4">
-            {(myProperties as any[]).map((property: any) => (
-              <Card key={property.id} className="p-4 bg-white border-gray-200 hover:shadow-md transition-shadow">
+            {(myProperties as any[]).map((property: any) => {
+              const isQuickPostListing =
+                Array.isArray(property.scopeOfWork) &&
+                property.scopeOfWork.includes(QUICKPOST_SCOPE_LABEL);
+              return (
+                <Card key={property.id} className="p-4 bg-white border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-1">{property.title}</h3>
@@ -1160,7 +1165,8 @@ export default function MyListings() {
                   </div>
                 )}
               </Card>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

@@ -151,7 +151,7 @@ const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> 
     listingSource: "property",
     };
   });
-}, ["map-properties"], { revalidate: 300 });
+}, ["map-properties"], { revalidate: 10 });
 
 const fetchPrimaryListings = unstable_cache(async (): Promise<MapProperty[]> => {
   const { data, error } = await supabase
@@ -194,7 +194,7 @@ const fetchPrimaryListings = unstable_cache(async (): Promise<MapProperty[]> => 
     promoter: trimText(row.promoter, 80) || null,
     listingSource: "primary",
   }));
-}, ["map-primary"], { revalidate: 300 });
+}, ["map-primary"], { revalidate: 10 });
 
 export async function getMapPageData() {
   const [properties, primary] = await Promise.all([fetchApprovedProperties(), fetchPrimaryListings()]);
