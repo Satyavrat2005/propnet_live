@@ -69,58 +69,75 @@ export function AppSidebar({ className }: SidebarProps) {
           className
         )}
       >
-      {/* Logo Section */}
-      <div className="h-16 flex items-center justify-between px-6 border-b border-border">
-        {!collapsed && (
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-linear-to-br from-primary to-emerald-600 rounded-lg flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-linear-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
-              PropNet
-            </span>
-          </Link>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="h-9 w-9"
-        >
-          {collapsed ? (
-            <Menu className="h-5 w-5" />
-          ) : (
-            <X className="h-5 w-5" />
-          )}
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-primary/10 text-primary border-l-4 border-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted",
-                collapsed && "justify-center px-0"
-              )}
-              title={collapsed ? item.name : undefined}
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
+      {/* Content Container with flex-col */}
+      <div className="h-full flex flex-col">
+        {/* Logo Section */}
+        <div className="h-16 flex items-center justify-between px-6 border-b border-border shrink-0">
+          {!collapsed && (
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white p-1">
+                <img 
+                  src="/Propnet_icon.png" 
+                  alt="PropNet" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <span className="text-xl font-bold bg-linear-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
+                PropNet
+              </span>
             </Link>
-          );
-        })}
-      </nav>
+          )}
+          {collapsed && (
+            <Link href="/dashboard" className="flex items-center justify-center w-full">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white p-1">
+                <img 
+                  src="/Propnet_icon.png" 
+                  alt="PropNet" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </Link>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="h-9 w-9"
+          >
+            {collapsed ? (
+              <Menu className="h-5 w-5" />
+            ) : (
+              <X className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
 
-      {/* User Section */}
-      <div className="border-t border-border p-4">
+        {/* Navigation */}
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-primary/10 text-primary border-l-4 border-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                  collapsed && "justify-center px-0"
+                )}
+                title={collapsed ? item.name : undefined}
+              >
+                <item.icon className="h-5 w-5 shrink-0" />
+                {!collapsed && <span>{item.name}</span>}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* User Section - Now at bottom */}
+        <div className="border-t border-border p-4 shrink-0 mt-auto">
         <Link
           href="/profile"
           className={cn(
@@ -156,6 +173,7 @@ export function AppSidebar({ className }: SidebarProps) {
           <LogOut className="h-5 w-5 shrink-0" />
           {!collapsed && <span>Logout</span>}
         </Button>
+      </div>
       </div>
     </aside>
     </>

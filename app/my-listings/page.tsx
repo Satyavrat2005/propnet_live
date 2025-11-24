@@ -1004,11 +1004,21 @@ export default function MyListings() {
                         <Building2 size={12} className="mr-1" />
                         {property.propertyType}
                       </span>
-                      <span className="font-medium text-primary">{property.price}</span>
+                      <span className="font-medium text-primary">₹{property.price}</span>
+                      <span className="text-xs text-gray-400">
+                        {property.transactionType === "rent" ? "For Rent" : "For Sale"}
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2 flex-wrap">
                       {getStatusBadge(property.ownerApprovalStatus)}
-                      <Badge variant="outline" className="text-xs border-gray-300 text-gray-700">
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          property.listingType === "Deal Done" 
+                            ? "border-orange-400 text-orange-700 bg-orange-50" 
+                            : "border-gray-300 text-gray-700"
+                        }`}
+                      >
                         {property.listingType}
                       </Badge>
                       {property.expiresAt && (() => {

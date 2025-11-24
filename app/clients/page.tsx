@@ -31,6 +31,15 @@ export default function ClientsPage() {
   const [showAddTask, setShowAddTask] = useState(false);
   const [taskText, setTaskText] = useState("");
 
+  // Add client modal state
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [clientFormData, setClientFormData] = useState({
+    client_name: "",
+    client_phone: "",
+    client_type: "",
+    property_id: ""
+  });
+
   // === DATA FETCHERS ===
   const { data: rawClients = [] } = useQuery({
     queryKey: ["/api/clients"],
@@ -52,6 +61,17 @@ export default function ClientsPage() {
     staleTime: 30_000,
   });
 
+  // Fetch deals (properties with client associations)
+  const { data: dealsFromClients = [] } = useQuery({
+    queryKey: ["/api/clients", "deals"],
+    queryFn: async () => {
+      const r = await fetch("/api/clients/deals", { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+    staleTime: 30_000,
+  });
+
   const { data: tasks = [] } = useQuery({
     queryKey: ["/api/tasks"],
     queryFn: async () => {
@@ -62,24 +82,39 @@ export default function ClientsPage() {
     staleTime: 15_000,
   });
 
+  // Filtered properties based on client type
+  const filteredProperties = useMemo(() => {
+    if (!clientFormData.client_type) return rawProperties;
+    
+    if (clientFormData.client_type === "Tenant") {
+      return rawProperties.filter((p: any) => p.transactionType === "rent" || p.transaction_type === "rent");
+    }
+    
+    if (clientFormData.client_type === "Buyer") {
+      return rawProperties.filter((p: any) => p.transactionType === "sale" || p.transaction_type === "sale");
+    }
+    
+    return rawProperties;
+  }, [rawProperties, clientFormData.client_type]);
+
   // Derived metrics
   const totalClients = Array.isArray(rawClients) ? rawClients.length : 0;
-  const totalDeals = Array.isArray(rawProperties) ? rawProperties.length : 0;
+  const totalDeals = Array.isArray(dealsFromClients) ? dealsFromClients.length : 0;
   const pendingTasks = Array.isArray(tasks) ? tasks.filter((t: any) => !t.status).length : 0;
 
   const monthlyDeals = useMemo(() => {
-    if (!Array.isArray(rawProperties)) return 0;
+    if (!Array.isArray(dealsFromClients)) return 0;
     const now = new Date();
-    return rawProperties.filter((d: any) => {
+    return dealsFromClients.filter((d: any) => {
       const created = d.created_at ?? d.createdAt ?? d.created;
       if (!created) return false;
       const dt = new Date(created);
       return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
     }).length;
-  }, [rawProperties]);
+  }, [dealsFromClients]);
 
-  const activeDealsCount = Array.isArray(rawProperties)
-    ? rawProperties.filter((d: any) => (d.approval_status ?? d.ownerApprovalStatus ?? "pending") !== "pending").length
+  const activeDealsCount = Array.isArray(dealsFromClients)
+    ? dealsFromClients.filter((d: any) => (d.approval_status ?? d.ownerApprovalStatus ?? "pending") !== "pending").length
     : 0;
   const activeDealPct = totalDeals ? Math.round((activeDealsCount / totalDeals) * 100) : 0;
   const taskCompletionPct = tasks && tasks.length ? Math.round(((tasks.length - pendingTasks) / tasks.length) * 100) : 0;
@@ -257,7 +292,9 @@ export default function ClientsPage() {
 
   // normalized lists for UI
   const clients = Array.isArray(rawClients) ? rawClients.map(normalizeClientFields) : [];
-  const properties = Array.isArray(rawProperties) ? rawProperties.map(normalizePropertyFields) : [];
+  
+  // Only show deals from client table (properties with client associations)
+  const properties = Array.isArray(dealsFromClients) ? dealsFromClients.map(normalizePropertyFields) : [];
 
   // fetch single property endpoint (canonical detail)
   async function fetchPropertyById(propertyId: string | number) {
@@ -352,10 +389,43 @@ export default function ClientsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/tasks"] }),
   });
 
+  const createClientMutation = useMutation({
+    mutationFn: async (payload: { client_name: string; client_phone: string; client_type: string; property_id: string }) => {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error || body?.message || "Failed to create client");
+      return body;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", "deals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", "mine"] });
+      setShowAddClient(false);
+      setClientFormData({ client_name: "", client_phone: "", client_type: "", property_id: "" });
+      alert("Client added successfully and deal marked as complete!");
+    },
+  });
+
   const handleAddTask = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!taskText || taskText.trim().length === 0) return alert("Enter a task");
     await createTaskMutation.mutateAsync({ task_text: taskText.trim() });
+  };
+
+  const handleAddClient = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const { client_name, client_phone, client_type, property_id } = clientFormData;
+    
+    if (!client_name || !client_phone || !client_type || !property_id) {
+      return alert("Please fill all fields");
+    }
+    
+    await createClientMutation.mutateAsync(clientFormData);
   };
 
   // image onError helper: hide broken image
@@ -378,6 +448,13 @@ export default function ClientsPage() {
                 Manage relationships and deals
               </p>
             </div>
+            <Button 
+              onClick={() => setShowAddClient(true)} 
+              className="flex items-center gap-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white shadow-md transition-all duration-200"
+            >
+              <Plus className="w-4 h-4" />
+              Add Client
+            </Button>
           </div>
         </div>
 
@@ -714,8 +791,8 @@ export default function ClientsPage() {
 
                           <div className="mt-4 grid grid-cols-1 gap-3">
                             <div className="p-4 bg-slate-50 rounded">
-                              <p className="text-xs text-slate-400">Flat / Floor / Building</p>
-                              <p className="font-medium">{[p.flat_number ?? p.flatNumber ?? "—", p.floor ?? "—", p.building_society ?? p.buildingSociety ?? "—"].filter(Boolean).join(" • ")}</p>
+                              <p className="text-xs text-slate-400">Full Address</p>
+                              <p className="font-medium">{p.full_address || p.fullAddress || "—"}</p>
                             </div>
 
                             <div className="p-4 bg-slate-50 rounded">
@@ -819,8 +896,8 @@ export default function ClientsPage() {
 
                 <div className="mt-6 grid grid-cols-1 gap-3">
                   <div className="p-4 bg-slate-50 rounded">
-                    <p className="text-xs text-slate-400">Flat / Floor / Building</p>
-                    <p className="font-medium">{[dealDetail.flat_number ?? dealDetail.flatNumber ?? "—", dealDetail.floor ?? "—", dealDetail.building_society ?? dealDetail.buildingSociety ?? "—"].filter(Boolean).join(" • ")}</p>
+                    <p className="text-xs text-slate-400">Full Address</p>
+                    <p className="font-medium">{dealDetail.full_address || dealDetail.fullAddress || "—"}</p>
                   </div>
 
                   <div className="p-4 bg-slate-50 rounded">
@@ -879,6 +956,99 @@ export default function ClientsPage() {
                     </div>
                   ) : (
                     "Add Task"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Client Modal */}
+      {showAddClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowAddClient(false)} />
+          <div className="relative z-10 w-[95vw] sm:w-full max-w-md rounded-2xl bg-white p-4 sm:p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold mb-3">Add Client</h3>
+            <form onSubmit={handleAddClient}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">Client Name</label>
+                  <input 
+                    type="text"
+                    value={clientFormData.client_name}
+                    onChange={(e) => setClientFormData({...clientFormData, client_name: e.target.value})}
+                    placeholder="Enter client name"
+                    className="w-full p-3 border rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">Client Phone</label>
+                  <input 
+                    type="tel"
+                    value={clientFormData.client_phone}
+                    onChange={(e) => setClientFormData({...clientFormData, client_phone: e.target.value})}
+                    placeholder="Enter phone number"
+                    className="w-full p-3 border rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">Client Type</label>
+                  <select
+                    value={clientFormData.client_type}
+                    onChange={(e) => setClientFormData({...clientFormData, client_type: e.target.value})}
+                    className="w-full p-3 border rounded-md"
+                  >
+                    <option value="">Select type</option>
+                    <option value="Buyer">Buyer</option>
+                    <option value="Tenant">Tenant</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-600 mb-2">Associated Property</label>
+                  <select
+                    value={clientFormData.property_id}
+                    onChange={(e) => setClientFormData({...clientFormData, property_id: e.target.value})}
+                    className="w-full p-3 border rounded-md"
+                    disabled={!clientFormData.client_type}
+                  >
+                    <option value="">Select property</option>
+                    {filteredProperties.map((prop: any) => (
+                      <option key={prop.id} value={prop.id}>
+                        {prop.title || prop.property_title || "Untitled"} - {prop.location || "No location"}
+                      </option>
+                    ))}
+                  </select>
+                  {!clientFormData.client_type && (
+                    <p className="text-xs text-slate-400 mt-1">Please select client type first</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 mt-6">
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  onClick={() => setShowAddClient(false)} 
+                  className="btn-secondary"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createClientMutation.isPending}
+                  className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                >
+                  {createClientMutation.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Adding...
+                    </div>
+                  ) : (
+                    "Add Client"
                   )}
                 </Button>
               </div>

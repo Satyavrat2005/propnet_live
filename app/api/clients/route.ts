@@ -38,15 +38,45 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error;
 
+    // Fetch clients from client table for this broker
+    const { data: clientsFromTable, error: clientError } = await supabase
+      .from("client")
+      .select("client_id, client_name, client_phone, client_type, created_at")
+      .eq("broker_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (clientError) console.error("Error fetching clients:", clientError);
+
     // dedupe by owner_phone + owner_name to count unique clients and property count
     const map = new Map<string, any>();
     (props || []).forEach((p: any) => {
       const key = `${(p.owner_phone || "").trim()}||${(p.owner_name || "").trim()}`;
       if (!map.has(key)) {
-        map.set(key, { owner_name: p.owner_name || "Unknown", owner_phone: p.owner_phone || "", count: 1, first_seen: p.created_at });
+        map.set(key, { owner_name: p.owner_name || "Unknown", owner_phone: p.owner_phone || "", count: 1, first_seen: p.created_at, source: "properties" });
       } else {
         const existing = map.get(key);
         existing.count = (existing.count || 0) + 1;
+      }
+    });
+
+    // Add clients from client table
+    (clientsFromTable || []).forEach((c: any) => {
+      const key = `${(c.client_phone || "").trim()}||${(c.client_name || "").trim()}`;
+      if (!map.has(key)) {
+        map.set(key, { 
+          owner_name: c.client_name || "Unknown", 
+          owner_phone: c.client_phone || "", 
+          count: 1, 
+          first_seen: c.created_at,
+          source: "client_table",
+          client_type: c.client_type,
+          client_id: c.client_id
+        });
+      } else {
+        // Client exists in both sources, keep the existing one
+        const existing = map.get(key);
+        existing.client_type = c.client_type;
+        existing.client_id = c.client_id;
       }
     });
 
@@ -55,6 +85,57 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(clients);
   } catch (err: any) {
     console.error("GET /api/clients error:", err);
+    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    // Get logged-in user ID
+    const token = readSessionCookie(req);
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const payload = await verifySession(token);
+    const userId = (payload as any).sub || (payload as any).id;
+
+    const body = await req.json();
+    const { client_name, client_phone, client_type, property_id } = body;
+
+    if (!client_name || !client_phone || !client_type || !property_id) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Insert client
+    const { data: client, error: clientError } = await supabase
+      .from("client")
+      .insert({
+        client_name,
+        client_phone,
+        client_type,
+        property_id,
+        broker_id: userId
+      })
+      .select()
+      .single();
+
+    if (clientError) throw clientError;
+
+    // Update property: set public_property to false and listing_type to "Deal Done"
+    const { error: propertyError } = await supabase
+      .from("properties")
+      .update({
+        public_property: false,
+        listing_type: "Deal Done"
+      })
+      .eq("property_id", property_id);
+
+    if (propertyError) throw propertyError;
+
+    return NextResponse.json({ success: true, client });
+  } catch (err: any) {
+    console.error("POST /api/clients error:", err);
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }
 }

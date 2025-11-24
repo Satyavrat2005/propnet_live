@@ -36,14 +36,39 @@ export async function GET(req: Request, { params }: { params: any }) {
       return NextResponse.json({ error: "Database error", details: propErr.message }, { status: 500 });
     }
 
+    // Also fetch properties from client table where client_phone matches
+    const { data: clientRecords, error: clientErr } = await supabase
+      .from("client")
+      .select(`
+        client_id,
+        client_name,
+        client_phone,
+        client_type,
+        property_id,
+        created_at,
+        properties:property_id (*)
+      `)
+      .eq("client_phone", phone);
+
+    if (clientErr) {
+      console.error("Error fetching client records:", clientErr);
+    }
+
+    // Combine properties from both sources
+    const propertiesFromClients = (clientRecords || [])
+      .filter((c: any) => c.properties)
+      .map((c: any) => c.properties);
+
+    const allProperties = [...(properties || []), ...propertiesFromClients];
+
     // Basic owner info: if name provided use it, otherwise try to read from first property.owner_name
-    const ownerName = name || (properties && properties[0]?.owner_name) || null;
+    const ownerName = name || (allProperties && allProperties[0]?.owner_name) || null;
 
     const result = {
       owner_phone: phone,
       owner_name: ownerName,
-      properties: properties || [],
-      count: Array.isArray(properties) ? properties.length : 0,
+      properties: allProperties,
+      count: allProperties.length,
     };
 
     return NextResponse.json(result);

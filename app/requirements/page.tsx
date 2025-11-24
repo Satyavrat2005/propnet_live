@@ -17,7 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Edit, Trash2, MapPin, Building, DollarSign, Calendar, ArrowLeft } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Building, IndianRupee, Calendar, ArrowLeft, Filter } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -64,6 +64,14 @@ export default function RequirementsPage() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<Requirement | null>(null);
+  
+  // Filter states for matching properties
+  const [filterPropertyType, setFilterPropertyType] = useState<string>("all");
+  const [filterTransactionType, setFilterTransactionType] = useState<string>("all");
+  const [filterBhk, setFilterBhk] = useState<string>("all");
+  const [filterMinPrice, setFilterMinPrice] = useState<string>("");
+  const [filterMaxPrice, setFilterMaxPrice] = useState<string>("");
+  const [filterLocation, setFilterLocation] = useState<string>("");
 
   const form = useForm<RequirementFormData>({
     resolver: zodResolver(requirementSchema),
@@ -87,11 +95,93 @@ export default function RequirementsPage() {
     enabled: !!user,
   });
 
-  const { data: allRequirements = [] } = useQuery<Requirement[]>({
-    queryKey: ["/api/property-requirements"],
-    queryFn: async () => safeFetch<Requirement[]>("/api/property-requirements", []),
+  // Fetch properties from network
+  const { data: networkProperties = [] } = useQuery<any[]>({
+    queryKey: ["/api/properties"],
+    queryFn: async () => safeFetch<any[]>("/api/properties", []),
     enabled: !!user,
   });
+
+  // Filter network properties based on user's filter selections
+  const matchingProperties = useMemo(() => {
+    if (!networkProperties.length) return [];
+
+    let filtered = [...networkProperties];
+
+    // Check if any user filters are active
+    const hasActiveFilters = 
+      filterPropertyType !== "all" || 
+      filterTransactionType !== "all" || 
+      filterBhk !== "all" || 
+      filterLocation.trim() !== "" || 
+      filterMinPrice.trim() !== "" || 
+      filterMaxPrice.trim() !== "";
+
+    // If no user filters are active, use requirements locations as default filter
+    if (!hasActiveFilters && requirements.length > 0) {
+      filtered = filtered.filter(property => {
+        // Check if property location matches any requirement location
+        return requirements.some(req => {
+          const reqLocation = req.location?.toLowerCase() || "";
+          const propertyLocation = property.location?.toLowerCase() || "";
+          const propertyFullAddress = property.fullAddress?.toLowerCase() || "";
+          
+          // Split locations into words for matching
+          const reqLocationWords = reqLocation.split(/[\s,]+/).filter((w: string) => w.length > 3);
+          const propertyLocationWords = propertyLocation.split(/[\s,]+/).filter((w: string) => w.length > 3);
+          const propertyFullAddressWords = propertyFullAddress.split(/[\s,]+/).filter((w: string) => w.length > 3);
+          
+          // Check if any words match
+          return reqLocationWords.some((reqWord: string) => 
+            propertyLocationWords.some((propWord: string) => 
+              propWord.includes(reqWord) || reqWord.includes(propWord)
+            ) ||
+            propertyFullAddressWords.some((propWord: string) => 
+              propWord.includes(reqWord) || reqWord.includes(propWord)
+            )
+          );
+        });
+      });
+    } else {
+      // Apply user filters
+      if (filterPropertyType !== "all") {
+        filtered = filtered.filter(p => p.propertyType === filterPropertyType);
+      }
+      
+      if (filterTransactionType !== "all") {
+        filtered = filtered.filter(p => p.transactionType === filterTransactionType);
+      }
+      
+      if (filterBhk !== "all") {
+        filtered = filtered.filter(p => p.bhk === parseInt(filterBhk));
+      }
+      
+      if (filterLocation.trim()) {
+        const searchLocation = filterLocation.toLowerCase();
+        filtered = filtered.filter(p => 
+          p.location?.toLowerCase().includes(searchLocation) ||
+          p.fullAddress?.toLowerCase().includes(searchLocation)
+        );
+      }
+      
+      // Price filtering (basic string comparison - can be enhanced)
+      if (filterMinPrice.trim()) {
+        filtered = filtered.filter(p => {
+          const price = p.price || "";
+          return price >= filterMinPrice;
+        });
+      }
+      
+      if (filterMaxPrice.trim()) {
+        filtered = filtered.filter(p => {
+          const price = p.price || "";
+          return price <= filterMaxPrice;
+        });
+      }
+    }
+
+    return filtered;
+  }, [networkProperties, filterPropertyType, filterTransactionType, filterBhk, filterLocation, filterMinPrice, filterMaxPrice, requirements]);
 
   const createMutation = useMutation({
     mutationFn: async (data: RequirementFormData) => {
@@ -552,12 +642,12 @@ export default function RequirementsPage() {
 
                       {(r.minPrice || r.maxPrice) && (
                         <div className="flex items-center text-gray-600 mb-2">
-                          <DollarSign size={16} className="mr-1" />
+                          <IndianRupee size={16} className="mr-1" />
                           {r.minPrice && r.maxPrice
-                            ? `${formatPriceDisplay(r.minPrice)} - ${formatPriceDisplay(r.maxPrice)}`
+                            ? `₹${formatPriceDisplay(r.minPrice)} - ₹${formatPriceDisplay(r.maxPrice)}`
                             : r.minPrice
-                            ? `From ${formatPriceDisplay(r.minPrice)}`
-                            : `Up to ${formatPriceDisplay(r.maxPrice)}`}
+                            ? `From ₹${formatPriceDisplay(r.minPrice)}`
+                            : `Up to ₹${formatPriceDisplay(r.maxPrice)}`}
                         </div>
                       )}
 
@@ -601,54 +691,197 @@ export default function RequirementsPage() {
         )}
       </div>
 
-      {/* Network Requirements */}
+      {/* Matching Properties from Network */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Network Requirements ({allRequirements.length})</h2>
-        {allRequirements.length === 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Matching Properties ({matchingProperties.length})</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFilterPropertyType("all");
+              setFilterTransactionType("all");
+              setFilterBhk("all");
+              setFilterMinPrice("");
+              setFilterMaxPrice("");
+              setFilterLocation("");
+            }}
+            className="text-xs"
+          >
+            Clear Filters
+          </Button>
+        </div>
+
+        {/* Filter Section */}
+        <Card className="mb-6 bg-gray-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter size={18} className="text-emerald-600" />
+              <h3 className="font-semibold text-sm">Filter Properties</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Property Type Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Property Type</label>
+                <Select value={filterPropertyType} onValueChange={setFilterPropertyType}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectMenu>
+                    <SelectOpt value="all" label="All Types" />
+                    <SelectOpt value="Apartment" label="Apartment" />
+                    <SelectOpt value="Villa" label="Villa" />
+                    <SelectOpt value="House" label="House" />
+                    <SelectOpt value="Office" label="Office" />
+                    <SelectOpt value="Shop" label="Shop" />
+                    <SelectOpt value="Plot" label="Plot" />
+                  </SelectMenu>
+                </Select>
+              </div>
+
+              {/* Transaction Type Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Transaction Type</label>
+                <Select value={filterTransactionType} onValueChange={setFilterTransactionType}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectMenu>
+                    <SelectOpt value="all" label="All" />
+                    <SelectOpt value="sale" label="Buy" />
+                    <SelectOpt value="rent" label="Rent" />
+                  </SelectMenu>
+                </Select>
+              </div>
+
+              {/* BHK Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">BHK</label>
+                <Select value={filterBhk} onValueChange={setFilterBhk}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="All BHK" />
+                  </SelectTrigger>
+                  <SelectMenu>
+                    <SelectOpt value="all" label="All BHK" />
+                    <SelectOpt value="1" label="1 BHK" />
+                    <SelectOpt value="2" label="2 BHK" />
+                    <SelectOpt value="3" label="3 BHK" />
+                    <SelectOpt value="4" label="4 BHK" />
+                    <SelectOpt value="5" label="5+ BHK" />
+                  </SelectMenu>
+                </Select>
+              </div>
+
+              {/* Location Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Location</label>
+                <Input
+                  type="text"
+                  placeholder="Search location..."
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+
+              {/* Min Price Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Min Price (₹)</label>
+                <Input
+                  type="text"
+                  placeholder="e.g., 40 Lakh"
+                  value={filterMinPrice}
+                  onChange={(e) => setFilterMinPrice(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+
+              {/* Max Price Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Max Price (₹)</label>
+                <Input
+                  type="text"
+                  placeholder="e.g., 1 Cr"
+                  value={filterMaxPrice}
+                  onChange={(e) => setFilterMaxPrice(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {matchingProperties.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <Building className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No network requirements</h3>
-              <p className="text-gray-600">Requirements from other agents in your network will appear here.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No matching properties</h3>
+              <p className="text-gray-600">
+                No properties from other agents match your current filters.
+                {(filterPropertyType !== "all" || filterTransactionType !== "all" || filterBhk !== "all" || filterLocation || filterMinPrice || filterMaxPrice) && (
+                  <span className="block mt-2">Try clearing or adjusting your filters.</span>
+                )}
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {allRequirements.map((r: any) => (
-              <Card key={r.requirement_id}>
+            {matchingProperties.map((property: any) => (
+              <Card key={property.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = `/property/${property.id}`}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{r.propertyType}</Badge>
-                        <Badge variant={r.transactionType === "sale" ? "default" : "secondary"}>
-                          {r.transactionType === "sale" ? "Buy" : "Rent"}
+                      <h3 className="font-semibold text-lg mb-2">{property.title}</h3>
+                      
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="outline">{property.propertyType}</Badge>
+                        <Badge variant={property.transactionType === "sale" ? "default" : "secondary"}>
+                          {property.transactionType === "sale" ? "Buy" : "Rent"}
                         </Badge>
-                        {r.bhk && <Badge variant="outline">{r.bhk} BHK</Badge>}
+                        {property.bhk && <Badge variant="outline">{property.bhk} BHK</Badge>}
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                          {property.listingType}
+                        </Badge>
                       </div>
 
                       <div className="flex items-center text-gray-600 mb-2">
                         <MapPin size={16} className="mr-1" />
-                        {r.location}
+                        {property.location}
                       </div>
 
-                      {(r.minPrice || r.maxPrice) && (
+                      {property.price && (
                         <div className="flex items-center text-gray-600 mb-2">
-                          <DollarSign size={16} className="mr-1" />
-                          {r.minPrice && r.maxPrice
-                            ? `${formatPriceDisplay(r.minPrice)} - ${formatPriceDisplay(r.maxPrice)}`
-                            : r.minPrice
-                            ? `From ${formatPriceDisplay(r.minPrice)}`
-                            : `Up to ${formatPriceDisplay(r.maxPrice)}`}
+                          <IndianRupee size={16} className="mr-1" />
+                          <span className="font-semibold">₹{property.price}</span>
                         </div>
                       )}
 
-                      {r.description && <p className="text-gray-600 text-sm mt-2">{r.description}</p>}
+                      {property.size && (
+                        <div className="flex items-center text-gray-600 mb-2">
+                          <Building size={16} className="mr-1" />
+                          {property.size} {property.sizeUnit}
+                        </div>
+                      )}
+
+                      {property.description && (
+                        <p className="text-gray-600 text-sm mt-2 line-clamp-2">{property.description}</p>
+                      )}
 
                       <div className="text-xs text-gray-500 mt-3">
-                        {new Date(r.createdAt).toLocaleDateString()}
+                        Listed by: {property.broker?.name || property.owner?.name || "Unknown"}
                       </div>
                     </div>
+                    
+                    {property.photos && property.photos.length > 0 && (
+                      <div className="ml-4">
+                        <img 
+                          src={property.photos[0]} 
+                          alt={property.title}
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
