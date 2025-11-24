@@ -5,6 +5,7 @@ import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 import { Buffer } from "node:buffer";
 import { sendSms } from "@/lib/twilio";
 import { randomUUID } from "crypto";
+import { parseAddressWithGemini } from "@/lib/gemini-address-parser";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -311,6 +312,22 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
 
     const finalPhotos = [...currentPhotos, ...uploadedPhotos];
 
+    const fullAddress = (form.get("fullAddress") || "").toString().trim();
+
+    // Use Gemini to parse address components from fullAddress
+    let location: string | null = null;
+    let flatNumber: string | null = null;
+    let floorNumber: string | null = null;
+    let buildingSociety: string | null = null;
+
+    if (fullAddress) {
+      const parsedAddress = await parseAddressWithGemini(fullAddress);
+      location = parsedAddress.location;
+      flatNumber = parsedAddress.flatNumber;
+      floorNumber = parsedAddress.floorNumber;
+      buildingSociety = parsedAddress.buildingSociety;
+    }
+
     const normalizedPayload: Record<string, any> = {
       property_title: form.get("title") || null,
       property_type: form.get("propertyType") || null,
@@ -319,11 +336,11 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ propert
       area: form.get("size") ? Number(form.get("size")) || null : null,
       area_unit: form.get("sizeUnit") || null,
       sale_price: form.get("price") || null,
-      location: form.get("location") || null,
-      full_address: form.get("fullAddress") || null,
-      flat_number: form.get("flatNumber") || null,
-      floor: form.get("floorNumber") || null,
-      building_society: form.get("buildingSociety") || null,
+      location,
+      full_address: fullAddress || null,
+      flat_number: flatNumber,
+      floor: floorNumber,
+      building_society: buildingSociety,
       description: form.get("description") || null,
       listing_type: form.get("listingType") || null,
       public_property: String(form.get("isPubliclyVisible")) === "true",

@@ -224,7 +224,7 @@ export default function RequirementsPage() {
   const SelectMenu = ({ children }: { children: React.ReactNode }) => (
     <SelectContent className="bg-white border border-gray-200 shadow-lg">
       {/* Apply consistent white background + emerald hover to all options */}
-      <div className="[&>[data-state=open]]:bg-white">{children}</div>
+      <div className="*:data-[state=open]:bg-white">{children}</div>
     </SelectContent>
   );
 

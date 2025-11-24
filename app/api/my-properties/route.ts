@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 import { sendSms } from "@/lib/twilio";
 import { buildOwnerConsentSms } from "@/lib/ownerConsentSms";
+import { parseAddressWithGemini } from "@/lib/gemini-address-parser";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -198,9 +199,11 @@ export async function GET(req: NextRequest) {
         agreement_document,
         approval_status,
         created_at,
-        updated_at
+        updated_at,
+        expires_at
       `)
       .eq("id", userId)
+      .gte("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false });
 
     if (error) return NextResponse.json({ message: error.message }, { status: 500 });
@@ -234,6 +237,7 @@ export async function GET(req: NextRequest) {
       ownerApprovalStatus: r.approval_status,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
+      expiresAt: r.expires_at,
     }));
 
     return NextResponse.json(mapped, { status: 200 });
@@ -260,12 +264,23 @@ export async function POST(req: NextRequest) {
     }
 
     const fullAddress = (form.get("fullAddress") || "").toString().trim();
-    const buildingSociety = (form.get("buildingSociety") || "").toString().trim();
-    const location = (form.get("location") || "").toString().trim();
-    const flatNumber = (form.get("flatNumber") || "").toString().trim();
-    const floorNumber = (form.get("floorNumber") || "").toString().trim();
     const ownerName = (form.get("ownerName") || "").toString().trim();
     const listingTypeInput = (form.get("listingType") || "").toString().trim();
+
+    // Use Gemini to parse address components from fullAddress
+    let location: string | null = null;
+    let flatNumber: string | null = null;
+    let floorNumber: string | null = null;
+    let buildingSociety: string | null = null;
+
+    if (fullAddress) {
+      const parsedAddress = await parseAddressWithGemini(fullAddress);
+      location = parsedAddress.location;
+      flatNumber = parsedAddress.flatNumber;
+      floorNumber = parsedAddress.floorNumber;
+      buildingSociety = parsedAddress.buildingSociety;
+    }
+
     const addressForGeocode = fullAddress || [buildingSociety, location].filter(Boolean).join(", ");
 
     const hasDuplicateKeyValues = Boolean(
@@ -423,7 +438,8 @@ export async function POST(req: NextRequest) {
         agreement_document,
         approval_status,
         created_at,
-        updated_at
+        updated_at,
+        expires_at
       `)
       .single();
 
@@ -461,6 +477,7 @@ export async function POST(req: NextRequest) {
       ownerApprovalStatus: data.approval_status,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
+      expiresAt: data.expires_at,
     };
 
     let ownerConsentToken: string | null = null;

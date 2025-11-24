@@ -8,7 +8,7 @@ export const insertPropertySchema = z.object({
   rentFrequency: z.enum(["monthly", "yearly"]).optional(),
   size: z.string().optional(),
   sizeUnit: z.enum(["sq.ft", "sq.m", "sq.yd", "acre"]).optional(),
-  location: z.string().min(1, "Location is required"),
+  location: z.string().optional(),
   fullAddress: z.string().min(1, "Full address is required"),
   flatNumber: z.string().optional(),
   floorNumber: z.string().optional(),

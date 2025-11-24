@@ -77,8 +77,8 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-grid-emerald-100/[0.2] bg-[size:40px_40px]"></div>
+    <div className="min-h-screen bg-linear-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-grid-emerald-100/[0.2] bg-size-[40px_40px]"></div>
 
       <Card className="w-full max-w-md shadow-2xl border-gray-200 bg-white/95 backdrop-blur-sm relative z-10">
         <CardHeader className="text-center space-y-4">

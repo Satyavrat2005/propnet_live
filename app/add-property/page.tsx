@@ -75,9 +75,28 @@ function PropertyForm({
     []
   );
 
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("[FORM] Form submit triggered");
+    console.log("[FORM] Form values:", form.getValues());
+    console.log("[FORM] Form errors:", form.formState.errors);
+    console.log("[FORM] Form isValid:", form.formState.isValid);
+    
+    const result = await form.trigger(); // Manually trigger validation
+    console.log("[FORM] Validation result:", result);
+    console.log("[FORM] Errors after validation:", form.formState.errors);
+    
+    if (result) {
+      console.log("[FORM] Calling onSubmit...");
+      onSubmit(form.getValues());
+    } else {
+      console.log("[FORM] Validation failed, not submitting");
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
+      <form onSubmit={handleFormSubmit} className="space-y-6" autoComplete="off">
         {/* Property Details */}
         <Card className="card-modern group hover:shadow-lg transition-all duration-300">
           <CardHeader className="border-b bg-linear-to-r from-primary/5 to-primary/10">
@@ -273,101 +292,23 @@ function PropertyForm({
 
             <FormField
               control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium text-muted-foreground">Location (Area, City)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Bandra West, Mumbai"
-                      {...field}
-                      autoComplete="off"
-                      className="input-modern"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="fullAddress"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-muted-foreground">Full Address</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Complete address with landmarks..."
+                      placeholder="Enter complete address including Flat/Unit No., Floor, Building/Society Name, Area, City, and any landmarks...&#10;Example: Flat 301, 3rd Floor, Rustomjee Paramount, Khar West, Mumbai, Maharashtra"
                       className="resize-none input-modern"
-                      rows={3}
+                      rows={4}
                       {...field}
                     />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground mt-1">Our AI will automatically extract location, flat number, floor, and building details</p>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="flatNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-muted-foreground">Flat/Unit No.</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="A-101"
-                        {...field}
-                        autoComplete="off"
-                        className="input-modern"
-                      />
-                    </FormControl>
-                    <p className="text-xs text-gray-500 mt-1">Encrypted & used only for verification</p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="floorNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-muted-foreground">Floor No.</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="3rd Floor"
-                        {...field}
-                        autoComplete="off"
-                        className="input-modern"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="buildingSociety"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-muted-foreground">Building/Society</FormLabel>
-                    <FormControl>
-                      <GooglePlacesAutocomplete
-                        value={field.value || ""}
-                        onChange={(value) => field.onChange(value)}
-                        placeholder="Search building..."
-                        types={["establishment"]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}
@@ -417,32 +358,16 @@ function PropertyForm({
               <FormItem>
                 <FormControl>
                   <div className="space-y-3">
-                    <div className="flex items-start space-x-3 p-4 bento-card cursor-pointer group" onClick={() => field.onChange("exclusive")}>
-                      <input
-                        type="radio"
+                    <div className="flex items-start space-x-3 p-4 bento-card group">
+                      <Checkbox
                         id="exclusive"
-                        value="exclusive"
                         checked={field.value === "exclusive"}
-                        onChange={() => field.onChange("exclusive")}
-                        className="mt-1 text-primary"
+                        onCheckedChange={(checked) => field.onChange(checked ? "exclusive" : "shared")}
+                        className="mt-1"
                       />
                       <label htmlFor="exclusive" className="flex-1 cursor-pointer">
                         <div className="font-semibold text-foreground group-hover:text-primary transition-colors">Exclusive</div>
                         <div className="text-sm text-muted-foreground">Only I can list and share it</div>
-                      </label>
-                    </div>
-                    <div className="flex items-start space-x-3 p-4 bento-card cursor-pointer group" onClick={() => field.onChange("shared")}>
-                      <input
-                        type="radio"
-                        id="shared"
-                        value="shared"
-                        checked={field.value === "shared"}
-                        onChange={() => field.onChange("shared")}
-                        className="mt-1 text-primary"
-                      />
-                      <label htmlFor="shared" className="flex-1 cursor-pointer">
-                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors">Shared Within Network</div>
-                        <div className="text-sm text-muted-foreground">Platform-controlled visibility</div>
                       </label>
                     </div>
                   </div>
@@ -581,12 +506,6 @@ function PropertyForm({
                 })}
               </div>
             </div>
-
-            <div>
-              <label className="text-sm font-medium text-muted-foreground block mb-2">Agreement Document (Optional)</label>
-              <FileUpload onFilesChange={setAgreementFiles} maxFiles={1} />
-              <p className="text-xs text-muted-foreground mt-1">Upload agent agreement or authorization letter</p>
-            </div>
           </CardContent>
         </Card>
 
@@ -687,7 +606,7 @@ export default function AddPropertyPage() {
       toast({
         title: "Property Listed Successfully",
         description:
-          "Owner approval request has been sent. Property will go live after approval.",
+          "Owner approval request has been sent. Property will go live after approval. Note: Your listing will expire in 30 days and can be renewed for another 30 days period.",
       });
       router.push("/my-listings");
     },
@@ -700,7 +619,10 @@ export default function AddPropertyPage() {
   });
 
   const handleSubmit = (values: PropertyFormValues) => {
+    console.log("[ADD-PROPERTY] Form submitted with values:", values);
     const errors = form.formState.errors;
+    console.log("[ADD-PROPERTY] Form errors:", errors);
+    
     if (Object.keys(errors).length > 0) {
       const errorFields = Object.keys(errors).join(", ");
       toast({
@@ -711,7 +633,7 @@ export default function AddPropertyPage() {
       return;
     }
     
-    
+    console.log("[ADD-PROPERTY] Creating FormData...");
     const formData = new FormData();
 
     Object.entries(values).forEach(([key, value]) => {
@@ -726,6 +648,7 @@ export default function AddPropertyPage() {
     if (agreementFiles.length > 0)
       formData.append("agreementDocument", agreementFiles[0]);
 
+    console.log("[ADD-PROPERTY] Submitting mutation...");
     createPropertyMutation.mutate(formData);
   };
 

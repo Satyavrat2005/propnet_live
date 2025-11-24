@@ -35,6 +35,7 @@ type PropertyRow = {
   owner_phone: string | null;
   created_at: string | null;
   updated_at: string | null;
+  expires_at: string | null;
   profiles?:
     | Array<{
         name?: string | null;
@@ -156,9 +157,11 @@ export async function GET(req: NextRequest) {
         owner_phone,
         created_at,
         updated_at,
+        expires_at,
         profiles(name, agency_name, profile_photo_url, phone, email)
       `
       )
+      .gte("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .range(0, 4999);
 
@@ -205,6 +208,7 @@ export async function GET(req: NextRequest) {
       lng: row.longitude,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      expiresAt: row.expires_at,
     }));
 
     return NextResponse.json(mapped, { status: 200 });

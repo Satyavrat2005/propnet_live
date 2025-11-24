@@ -177,7 +177,7 @@ export default function Page() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-linear-to-br from-emerald-600 via-blue-600 to-indigo-700 text-white py-16 md:py-24">
-        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:60px_60px]"></div>
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-size-[60px_60px]"></div>
         <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

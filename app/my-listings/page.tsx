@@ -43,7 +43,8 @@ import {
   Download,
   Edit,
   Trash2,
-  MoreVertical
+  MoreVertical,
+  RefreshCw
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -94,9 +95,28 @@ function PropertyForm({
     []
   );
 
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("[FORM] Form submit triggered");
+    console.log("[FORM] Form values:", form.getValues());
+    console.log("[FORM] Form errors:", form.formState.errors);
+    console.log("[FORM] Form isValid:", form.formState.isValid);
+    
+    const result = await form.trigger(); // Manually trigger validation
+    console.log("[FORM] Validation result:", result);
+    console.log("[FORM] Errors after validation:", form.formState.errors);
+    
+    if (result) {
+      console.log("[FORM] Calling onSubmit...");
+      onSubmit(form.getValues());
+    } else {
+      console.log("[FORM] Validation failed, not submitting");
+    }
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
+      <form onSubmit={handleFormSubmit} className="space-y-6" autoComplete="off">
         <Card className="bg-white border-gray-200">
           <CardHeader className="bg-white border-b border-gray-100">
             <CardTitle className="text-base font-semibold text-gray-900">Property Details</CardTitle>
@@ -284,101 +304,23 @@ function PropertyForm({
 
             <FormField
               control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Location (Area, City)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Bandra West, Mumbai"
-                      {...field}
-                      autoComplete="off"
-                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="fullAddress"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-gray-700 font-medium">Full Address</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Complete address with landmarks..."
+                      placeholder="Enter complete address including Flat/Unit No., Floor, Building/Society Name, Area, City, and any landmarks...\nExample: Flat 301, 3rd Floor, Rustomjee Paramount, Khar West, Mumbai, Maharashtra"
                       className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
-                      rows={3}
+                      rows={4}
                       {...field}
                     />
                   </FormControl>
+                  <p className="text-xs text-gray-500 mt-1">Our AI will automatically extract location, flat number, floor, and building details</p>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="flatNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Flat/Unit No.</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="A-101"
-                        {...field}
-                        autoComplete="off"
-                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
-                      />
-                    </FormControl>
-                    <p className="text-xs text-gray-500 mt-1">Encrypted & used only for verification</p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="floorNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Floor No.</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="3rd Floor"
-                        {...field}
-                        autoComplete="off"
-                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="buildingSociety"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">Building/Society</FormLabel>
-                    <FormControl>
-                      <GooglePlacesAutocomplete
-                        value={field.value || ""}
-                        onChange={(value) => field.onChange(value)}
-                        placeholder="Search building..."
-                        types={["establishment"]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}
@@ -419,31 +361,15 @@ function PropertyForm({
                   <FormControl>
                     <div className="space-y-3">
                       <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
-                        <input
-                          type="radio"
+                        <Checkbox
                           id={editingProperty ? "exclusive-edit" : "exclusive"}
-                          value="exclusive"
                           checked={field.value === "exclusive"}
-                          onChange={() => field.onChange("exclusive")}
+                          onCheckedChange={(checked) => field.onChange(checked ? "exclusive" : "shared")}
                           className="mt-1"
                         />
                         <label htmlFor={editingProperty ? "exclusive-edit" : "exclusive"} className="flex-1 cursor-pointer">
                           <div className="font-medium text-gray-900">Exclusive</div>
                           <div className="text-sm text-gray-600">Only I can list and share it</div>
-                        </label>
-                      </div>
-                      <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
-                        <input
-                          type="radio"
-                          id={editingProperty ? "shared-edit" : "shared"}
-                          value="shared"
-                          checked={field.value === "shared"}
-                          onChange={() => field.onChange("shared")}
-                          className="mt-1"
-                        />
-                        <label htmlFor={editingProperty ? "shared-edit" : "shared"} className="flex-1 cursor-pointer">
-                          <div className="font-medium text-gray-900">Shared Within Network</div>
-                          <div className="text-sm text-gray-600">Platform-controlled visibility</div>
                         </label>
                       </div>
                     </div>
@@ -566,12 +492,6 @@ function PropertyForm({
                 ))}
               </div>
             </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">Agreement Document (Optional)</label>
-              <FileUpload onFilesChange={setAgreementFiles} maxFiles={1} />
-              <p className="text-xs text-gray-500 mt-1">Upload agent agreement or authorization letter</p>
-            </div>
           </CardContent>
         </Card>
 
@@ -683,7 +603,7 @@ export default function MyListings() {
       setAgreementFiles([]);
       toast({
         title: "Property Listed Successfully",
-        description: "Owner approval request has been sent. Property will go live after approval.",
+        description: "Owner approval request has been sent. Property will go live after approval. Note: Your listing will expire in 30 days and can be renewed for another 30 days period.",
       });
     },
     onError: (error: any) => {
@@ -712,7 +632,7 @@ export default function MyListings() {
       setAgreementFiles([]);
       toast({ 
         title: "Property Updated Successfully", 
-        description: "Owner approval request has been sent. Property will be updated after approval." 
+        description: "Owner approval request has been sent. Property will be updated after approval. Remember: Listings expire in 30 days and can be renewed." 
       });
     },
     onError: (error: any) => {
@@ -742,8 +662,31 @@ export default function MyListings() {
     },
   });
 
+  const renewPropertyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/properties/${id}/renew`, { method: "POST", credentials: "same-origin" });
+      const json = await res.json();
+      if (!res.ok) throw { response: { data: json } };
+      return json;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-properties"] });
+      toast({ 
+        title: "Property Renewed", 
+        description: "Your property listing has been renewed for another 30 days." 
+      });
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || "Failed to renew property listing. Please try again.";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
   const onSubmit = (values: PropertyFormValues) => {
+    console.log("[MY-LISTINGS] Form submitted with values:", values);
     const errors = form.formState.errors;
+    console.log("[MY-LISTINGS] Form errors:", errors);
+    
     if (Object.keys(errors).length > 0) {
       const errorFields = Object.keys(errors).join(", ");
       toast({
@@ -754,6 +697,7 @@ export default function MyListings() {
       return;
     }
 
+    console.log("[MY-LISTINGS] Creating FormData...");
     const formData = new FormData();
 
     Object.entries(values).forEach(([key, value]) => {
@@ -770,6 +714,7 @@ export default function MyListings() {
     }
     if (agreementFiles.length > 0) formData.append("agreementDocument", agreementFiles[0]);
 
+    console.log("[MY-LISTINGS] Submitting mutation...", editingProperty ? "UPDATE" : "CREATE");
     if (editingProperty) {
       updatePropertyMutation.mutate({ id: editingProperty.id, data: formData });
     } else {
@@ -907,6 +852,15 @@ export default function MyListings() {
           </Badge>
         );
     }
+  };
+
+  const getDaysUntilExpiry = (expiresAt: string | null) => {
+    if (!expiresAt) return null;
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
 
   return (
@@ -1047,15 +1001,53 @@ export default function MyListings() {
                       </span>
                       <span className="font-medium text-primary">{property.price}</span>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap">
                       {getStatusBadge(property.ownerApprovalStatus)}
                       <Badge variant="outline" className="text-xs border-gray-300 text-gray-700">
                         {property.listingType}
                       </Badge>
+                      {property.expiresAt && (() => {
+                        const days = getDaysUntilExpiry(property.expiresAt);
+                        if (days !== null) {
+                          return (
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                days <= 7 
+                                  ? 'border-red-300 text-red-700 bg-red-50' 
+                                  : days <= 15 
+                                  ? 'border-orange-300 text-orange-700 bg-orange-50'
+                                  : 'border-blue-300 text-blue-700 bg-blue-50'
+                              }`}
+                            >
+                              Expires in {days} {days === 1 ? 'day' : 'days'}
+                            </Badge>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-2">
+                    {property.expiresAt && (() => {
+                      const days = getDaysUntilExpiry(property.expiresAt);
+                      if (days !== null && days <= 5 && days >= 1) {
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => renewPropertyMutation.mutate(property.id)}
+                            disabled={renewPropertyMutation.isPending}
+                            className="h-8 px-3 border-emerald-300 text-emerald-700 hover:text-border-emerald-400 hover:bg-emerald-50 hover:border-emerald-400"
+                          >
+                            <RefreshCw size={14} className={`mr-1 ${renewPropertyMutation.isPending ? 'animate-spin' : ''}`} />
+                            {renewPropertyMutation.isPending ? 'Renewing...' : 'Renew'}
+                          </Button>
+                        );
+                      }
+                      return null;
+                    })()}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-8 w-8 p-0 border-gray-300">

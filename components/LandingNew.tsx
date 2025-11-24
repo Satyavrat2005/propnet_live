@@ -65,7 +65,7 @@ export default function LandingNew() {
 
       {/* Hero Section with Bento Grid */}
       <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 bg-linear-to-br from-emerald-50 via-white to-emerald-50/30 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-emerald-100/[0.2] bg-[size:30px_30px] sm:bg-[size:40px_40px]"></div>
+        <div className="absolute inset-0 bg-grid-emerald-100/[0.2] bg-size-[30px_30px] sm:bg-size-[40px_40px]"></div>
         <div className="absolute inset-0 bg-linear-to-t from-white via-transparent to-transparent"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -366,7 +366,7 @@ export default function LandingNew() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
             {/* Large Feature Card - Spans 2 columns on desktop */}
             <Card className="sm:col-span-2 lg:col-span-2 bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group overflow-hidden relative">
-              <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]"></div>
+              <div className="absolute inset-0 bg-grid-white/[0.05] bg-size-[20px_20px]"></div>
               <CardContent className="p-6 sm:p-8 relative z-10">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                   <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -403,7 +403,7 @@ export default function LandingNew() {
                   <FileCheck className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold mb-3">Owner Consent System</h3>
-                <p className="text-blue-100 mb-6 text-sm sm:text-base flex-grow">
+                <p className="text-blue-100 mb-6 text-sm sm:text-base grow">
                   Every listing verified with SMS-based owner approval. Real properties, real trust, zero fake listings.
                 </p>
                 <div className="space-y-3">
@@ -455,7 +455,7 @@ export default function LandingNew() {
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
                     <Users className="h-6 w-6 sm:h-7 sm:w-7" />
                   </div>
-                  <div className="flex-grow">
+                  <div className="grow">
                     <h3 className="text-lg sm:text-xl font-bold mb-2">Lead Protection System</h3>
                     <p className="text-red-100 text-sm sm:text-base">
                       Track every client interaction with timestamps. Get full credit for your hard work - never lose a commission again.
@@ -606,7 +606,7 @@ export default function LandingNew() {
 
       {/* Final CTA */}
       <section className="py-16 sm:py-20 md:py-28 relative overflow-hidden bg-linear-to-br from-emerald-600 via-blue-600 to-indigo-700">
-        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:40px_40px] sm:bg-[size:60px_60px]"></div>
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-size-[40px_40px] sm:bg-size-[60px_60px]"></div>
         <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
