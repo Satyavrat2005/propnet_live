@@ -106,7 +106,10 @@ export default function RequirementsPage() {
   const matchingProperties = useMemo(() => {
     if (!networkProperties.length) return [];
 
-    let filtered = [...networkProperties];
+    // First filter out "Deal Done" properties
+    let filtered = networkProperties.filter(property => 
+      property.listingType !== "Deal Done" && property.listing_type !== "Deal Done"
+    );
 
     // Check if any user filters are active
     const hasActiveFilters = 
@@ -346,7 +349,7 @@ export default function RequirementsPage() {
                 setEditingRequirement(null);
                 form.reset();
               }}
-              className="flex items-center gap-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+              className="flex items-center gap-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
               type="button"
             >
               <Plus size={16} />
@@ -574,7 +577,7 @@ export default function RequirementsPage() {
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
-                    className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                    className="border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
                   >
                     {createMutation.isPending || updateMutation.isPending ? (
                       <div className="flex items-center gap-2">
@@ -716,7 +719,7 @@ export default function RequirementsPage() {
         <Card className="mb-6 bg-gray-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
-              <Filter size={18} className="text-emerald-600" />
+              <Filter size={18} className="text-blue-600" />
               <h3 className="font-semibold text-sm">Filter Properties</h3>
             </div>
             
@@ -840,7 +843,7 @@ export default function RequirementsPage() {
                           {property.transactionType === "sale" ? "Buy" : "Rent"}
                         </Badge>
                         {property.bhk && <Badge variant="outline">{property.bhk} BHK</Badge>}
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">
                           {property.listingType}
                         </Badge>
                       </div>

@@ -283,20 +283,18 @@ export async function POST(req: NextRequest) {
 
     const addressForGeocode = fullAddress || [buildingSociety, location].filter(Boolean).join(", ");
 
-    const hasDuplicateKeyValues = Boolean(
+    if (
       flatNumber &&
-        floorNumber &&
-        buildingSociety &&
-        ownerName &&
-        ownerPhoneStored
-    );
-
-    if (hasDuplicateKeyValues) {
+      floorNumber &&
+      buildingSociety &&
+      ownerName &&
+      ownerPhoneStored
+    ) {
       const { data: duplicateCandidates, error: duplicateError } = await supabase
         .from("properties")
         .select("property_id")
         .eq("id", userId)
-        .eq("owner_phone", ownerPhoneStored!)
+        .eq("owner_phone", ownerPhoneStored)
         .ilike("flat_number", escapeForILike(flatNumber))
         .ilike("floor", escapeForILike(floorNumber))
         .ilike("building_society", escapeForILike(buildingSociety))

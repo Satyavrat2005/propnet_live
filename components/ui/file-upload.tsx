@@ -60,7 +60,7 @@ export default function FileUpload({ onFilesChange, maxFiles = 10 }: FileUploadP
       {files.length === 0 ? (
         <div 
           onClick={openFileDialog}
-          className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+          className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-600 transition-colors"
         >
           <Camera className="mx-auto text-3xl text-neutral-400 mb-2" size={48} />
           <p className="text-neutral-500 mb-2">Tap to add photos</p>

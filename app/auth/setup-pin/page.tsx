@@ -171,7 +171,7 @@ function SetupPinContent() {
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white py-6 text-lg transition-all duration-200"
+              className="w-full border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white py-6 text-lg transition-all duration-200"
               disabled={loading || pin.length < 4 || confirmPin.length < 4}
             >
               {loading ? (

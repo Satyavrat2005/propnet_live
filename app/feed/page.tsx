@@ -56,6 +56,12 @@ export default function PropertyFeedPage() {
   // ✅ Filter logic with price parsing
   const filteredProperties = Array.isArray(properties)
     ? properties.filter((property) => {
+        const listingType = property.listingType ?? (property as { listing_type?: string }).listing_type;
+
+        if (listingType === "Deal Done") {
+          return false;
+        }
+
         const matchesSearch =
           !searchQuery ||
           property.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -66,7 +72,7 @@ export default function PropertyFeedPage() {
         const matchesPropertyType = !filters.propertyType || filters.propertyType === 'all' || property.propertyType === filters.propertyType;
         const matchesBHK = !filters.bhk || filters.bhk === 'all' || property.bhk?.toString() === filters.bhk;
         const matchesLocation = !filters.location || property.location?.toLowerCase().includes(filters.location.toLowerCase());
-        const matchesListingType = !filters.listingType || filters.listingType === 'all' || property.listingType === filters.listingType;
+        const matchesListingType = !filters.listingType || filters.listingType === 'all' || listingType === filters.listingType;
 
         const propertyPrice = parsePriceToNumber(property.price);
         const matchesPriceRange = propertyPrice >= priceRange[0] && propertyPrice <= priceRange[1];
@@ -139,7 +145,7 @@ export default function PropertyFeedPage() {
           </div>
           <Button
             onClick={() => router.push("/quickpost")}
-            className="btn-primary flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
           >
             <Sparkles size={16} />
             QuickPost
@@ -157,7 +163,7 @@ export default function PropertyFeedPage() {
                 placeholder="Search by address, city, or ZIP code"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-3 border-gray-200 focus:border-primary bg-gray-50 focus:bg-white transition-colors rounded-lg"
+                className="pl-10 pr-4 py-3 border-gray-200 focus:border-blue-600 bg-gray-50 focus:bg-white transition-colors rounded-lg"
               />
             </div>
             <Button
@@ -316,7 +322,7 @@ export default function PropertyFeedPage() {
                   variant="outline"
                   onClick={clearFilters}
                   size="sm"
-                  className="text-sm flex-1 border border-gray-300 bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-500"
+                  className="text-sm flex-1 border border-gray-300 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-500/40"
                 >
                   <X size={14} className="mr-1" />
                   Reset Filters
@@ -324,7 +330,7 @@ export default function PropertyFeedPage() {
                 <Button
                   onClick={() => setShowFilters(false)}
                   size="sm"
-                  className="text-sm flex-1 border border-gray-300 bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-500"
+                  className="text-sm flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                 >
                   Apply Filters
                 </Button>
@@ -371,7 +377,7 @@ export default function PropertyFeedPage() {
       {/* Floating Add Button */}
       <>
         <button
-          className="fixed bottom-20 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center z-20 touch-target"
+          className="fixed bottom-20 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center z-20 touch-target transition-colors"
           onClick={() => router.push("/add-property")}
           type="button"
           aria-label="Add property"
@@ -399,7 +405,7 @@ export default function PropertyFeedPage() {
                 actions={
                   <div className="pt-4 space-y-2">
                     <Button
-                      className="w-full flex items-center justify-center space-x-2"
+                      className="w-full flex items-center justify-center space-x-2 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                       onClick={() => {
                         if (selectedProperty) {
                           handleMessageBroker(selectedProperty.ownerId, selectedProperty.id);
@@ -411,7 +417,7 @@ export default function PropertyFeedPage() {
                       <span>Message Broker</span>
                     </Button>
                     <Button
-                      className="w-full"
+                      className="w-full bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                       onClick={() => {
                         if (selectedProperty) {
                           router.push(`/property/${selectedProperty.id}`);
@@ -423,7 +429,7 @@ export default function PropertyFeedPage() {
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="w-full border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600 transition-all duration-200" 
+                      className="w-full border-2 border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 transition-all duration-200" 
                       onClick={handleCloseDetails}
                     >
                       Close

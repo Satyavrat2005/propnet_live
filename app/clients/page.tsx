@@ -450,7 +450,7 @@ export default function ClientsPage() {
             </div>
             <Button 
               onClick={() => setShowAddClient(true)} 
-              className="flex items-center gap-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white shadow-md transition-all duration-200"
+              className="flex items-center gap-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white shadow-md transition-all duration-200"
             >
               <Plus className="w-4 h-4" />
               Add Client
@@ -460,14 +460,14 @@ export default function ClientsPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bento-card p-6 cursor-pointer hover:border-primary group" onClick={() => setActiveTab("clients")}>
+          <div className="bento-card p-6 cursor-pointer hover:border-blue-600 group" onClick={() => setActiveTab("clients")}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Clients</p>
                 <p className="text-3xl font-bold text-foreground mt-2">{totalClients}</p>
               </div>
-              <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                <Users className="w-6 h-6 text-primary" />
+              <div className="p-3 bg-blue-600/10 rounded-lg group-hover:bg-blue-600/20 transition-colors">
+                <Users className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>
@@ -514,25 +514,25 @@ export default function ClientsPage() {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setActiveTab("overview")} 
-              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "overview" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "overview" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Overview
             </button>
             <button 
               onClick={() => setActiveTab("clients")} 
-              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "clients" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "clients" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Clients
             </button>
             <button 
               onClick={() => setActiveTab("deals")} 
-              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "deals" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "deals" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Deals
             </button>
             <button 
               onClick={() => setActiveTab("tasks")} 
-              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "tasks" ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+              className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "tasks" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Tasks
             </button>
@@ -606,7 +606,7 @@ export default function ClientsPage() {
                     <p className="text-sm mt-2 text-slate-500">Total Clients</p>
                   </div>
                   <div className="rounded-xl p-6 bg-linear-to-br from-[#eefde7] to-[#f0fff7] text-center">
-                    <p className="text-3xl font-bold text-emerald-600">{monthlyDeals}</p>
+                    <p className="text-3xl font-bold text-blue-600">{monthlyDeals}</p>
                     <p className="text-sm mt-2 text-slate-500">This Month</p>
                   </div>
                 </div>
@@ -627,7 +627,8 @@ export default function ClientsPage() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <Badge className="capitalize">{c.count || 1} Properties</Badge>
-                      <Button size="sm" variant="ghost" onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}>View</Button>
+                      <Button size="sm" variant="ghost" onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white">View</Button>
                     </div>
                   </div>
                 </CardContent>
@@ -652,7 +653,8 @@ export default function ClientsPage() {
                       <div className="flex flex-col items-end gap-2">
                         <Badge className="capitalize">{badgeText}</Badge>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => openDealModal(d.property_id ?? d.id)}>View</Button>
+                          <Button size="sm" variant="ghost" onClick={() => openDealModal(d.property_id ?? d.id)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white">View</Button>
                           <ChevronRight className="w-5 h-5 text-slate-300" />
                         </div>
                       </div>
@@ -669,7 +671,7 @@ export default function ClientsPage() {
             <div className="flex items-center justify-end">
               <Button 
                 onClick={() => setShowAddTask(true)} 
-                className="flex items-center gap-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white shadow-md transition-all duration-200"
+                className="flex items-center gap-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white shadow-md transition-all duration-200"
               >
                 <Plus className="w-4 h-4" />
                 Add Task
@@ -943,11 +945,11 @@ export default function ClientsPage() {
               <label className="block text-sm text-slate-600 mb-2">Task</label>
               <textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="E.g., Call client to confirm documents" className="w-full h-28 p-3 border rounded-md mb-4" />
               <div className="flex items-center justify-end gap-3">
-                <Button variant="ghost" onClick={() => setShowAddTask(false)} className="btn-secondary">Cancel</Button>
+                <Button variant="ghost" onClick={() => setShowAddTask(false)} className="border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all">Cancel</Button>
                 <Button 
                   type="submit" 
                   disabled={createTaskMutation.isPending}
-                  className="btn-primary"
+                  className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                 >
                   {createTaskMutation.isPending ? (
                     <div className="flex items-center gap-2">
@@ -1033,14 +1035,14 @@ export default function ClientsPage() {
                   type="button"
                   variant="ghost" 
                   onClick={() => setShowAddClient(false)} 
-                  className="btn-secondary"
+                  className="border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all"
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={createClientMutation.isPending}
-                  className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                  className="border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
                 >
                   {createClientMutation.isPending ? (
                     <div className="flex items-center gap-2">

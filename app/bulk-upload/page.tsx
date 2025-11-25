@@ -131,21 +131,21 @@ export default function BulkUploadPage() {
           <CardContent className="space-y-4 pt-6">
             <div className="space-y-4">
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div className="w-8 h-8 bg-blue-500/10 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div>
                   <p className="font-semibold text-foreground">Download Template</p>
                   <p className="text-sm text-muted-foreground">Download the CSV template with the required format</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <div className="w-8 h-8 bg-blue-500/10 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
                 <div>
                   <p className="font-semibold text-foreground">Fill Property Details</p>
                   <p className="text-sm text-muted-foreground">Add your property information following the template format</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-bold shrink-0">3</div>
+                <div className="w-8 h-8 bg-blue-500/10 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold shrink-0">3</div>
                 <div>
                   <p className="font-semibold text-foreground">Upload CSV File</p>
                   <p className="text-sm text-muted-foreground">Upload your completed CSV file to create multiple listings</p>
@@ -156,7 +156,7 @@ export default function BulkUploadPage() {
             <Button
               onClick={downloadTemplate}
               variant="outline"
-              className="w-full flex items-center gap-2 btn-secondary group"
+              className="w-full flex items-center gap-2 border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all group"
               type="button"
             >
               <Download size={16} className="group-hover:translate-y-0.5 transition-transform" />
@@ -166,11 +166,11 @@ export default function BulkUploadPage() {
         </Card>
 
         {/* Upload Section */}
-        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
-          <CardHeader className="border-b bg-linear-to-r from-primary/5 to-primary/10">
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300 hover:border-blue-500/40">
+          <CardHeader className="border-b bg-linear-to-r from-blue-500/5 to-blue-500/10">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                <Upload className="w-5 h-5 text-primary" />
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <Upload className="w-5 h-5 text-blue-600" />
               </div>
               <CardTitle className="text-base font-semibold text-foreground">Upload CSV File</CardTitle>
             </div>
@@ -193,9 +193,9 @@ export default function BulkUploadPage() {
                   openFilePicker();
                 }
               }}
-              className="bento-card border-2 border-dashed p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-300 group"
+              className="bento-card border-2 border-dashed p-8 text-center cursor-pointer hover:border-blue-500/40 hover:bg-blue-50/50 transition-all duration-300 group"
             >
-              <FileSpreadsheet className="mx-auto text-muted-foreground group-hover:text-primary transition-colors mb-3" size={48} />
+              <FileSpreadsheet className="mx-auto text-muted-foreground group-hover:text-blue-600 transition-colors mb-3" size={48} />
               <p className="text-foreground font-semibold">{uploadFiles[0]?.name || "Click to choose your CSV"}</p>
               <p className="text-xs text-muted-foreground mt-2">Accepted format: .csv • Max 5 MB</p>
             </div>
@@ -203,7 +203,7 @@ export default function BulkUploadPage() {
             <Button
               onClick={handleUpload}
               disabled={uploadFiles.length === 0 || uploadMutation.isPending}
-              className="w-full btn-primary group"
+              className="w-full bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white group"
               type="button"
             >
               {uploadMutation.isPending ? (
@@ -306,11 +306,11 @@ export default function BulkUploadPage() {
         )}
 
         {/* Format Guidelines */}
-        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
-          <CardHeader className="border-b bg-linear-to-r from-purple-500/5 to-purple-500/10">
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300 hover:border-blue-500/40">
+          <CardHeader className="border-b bg-linear-to-r from-blue-500/5 to-blue-500/10">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                <FileText className="w-5 h-5 text-purple-600" />
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <FileText className="w-5 h-5 text-blue-600" />
               </div>
               <CardTitle className="text-base font-semibold text-foreground">CSV Format Guidelines</CardTitle>
             </div>

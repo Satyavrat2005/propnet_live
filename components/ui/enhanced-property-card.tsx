@@ -176,7 +176,7 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
         </div>
         
         <div className="flex items-center justify-between mb-4">
-          <div className="text-2xl font-bold text-primary">
+          <div className="text-2xl font-bold text-blue-600">
             {formatPrice(Number(property.price) || 0, property.transactionType, property.rentFrequency)}
           </div>
           <div className="text-right">
@@ -204,8 +204,8 @@ export default function EnhancedPropertyCard({ property, currentUserId }: Enhanc
           {contactInfo && (
             <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                  <span className="text-primary font-semibold text-sm">
+                <div className="w-8 h-8 bg-blue-600/10 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 font-semibold text-sm">
                     {contactInfo.name?.charAt(0) || contactInfo.phone?.charAt(0) || 'B'}
                   </span>
                 </div>

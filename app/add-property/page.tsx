@@ -98,11 +98,11 @@ function PropertyForm({
     <Form {...form}>
       <form onSubmit={handleFormSubmit} className="space-y-6" autoComplete="off">
         {/* Property Details */}
-        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
-          <CardHeader className="border-b bg-linear-to-r from-primary/5 to-primary/10">
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300 hover:border-blue-500/40">
+          <CardHeader className="border-b bg-linear-to-r from-blue-500/5 to-blue-500/10">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                <Home className="w-5 h-5 text-primary" />
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <Home className="w-5 h-5 text-blue-600" />
               </div>
               <CardTitle className="text-base font-semibold text-foreground">
                 Property Details
@@ -339,11 +339,11 @@ function PropertyForm({
         </Card>
 
         {/* Listing Type */}
-        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
-          <CardHeader className="border-b bg-linear-to-r from-purple-500/5 to-purple-500/10">
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300 hover:border-blue-500/40">
+          <CardHeader className="border-b bg-linear-to-r from-blue-500/5 to-blue-500/10">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                <Building2 className="w-5 h-5 text-purple-600" />
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <Building2 className="w-5 h-5 text-blue-600" />
               </div>
               <CardTitle className="text-base font-semibold text-foreground">
                 Listing Type
@@ -358,7 +358,7 @@ function PropertyForm({
               <FormItem>
                 <FormControl>
                   <div className="space-y-3">
-                    <div className="flex items-start space-x-3 p-4 bento-card group">
+                    <div className="flex items-start space-x-3 p-4 bento-card group hover:border-blue-500/40">
                       <Checkbox
                         id="exclusive"
                         checked={field.value === "exclusive"}
@@ -366,7 +366,7 @@ function PropertyForm({
                         className="mt-1"
                       />
                       <label htmlFor="exclusive" className="flex-1 cursor-pointer">
-                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors">Exclusive</div>
+                        <div className="font-semibold text-foreground group-hover:text-blue-600 transition-colors">Exclusive</div>
                         <div className="text-sm text-muted-foreground">Only I can list and share it</div>
                       </label>
                     </div>
@@ -381,7 +381,7 @@ function PropertyForm({
             control={form.control}
             name="isPubliclyVisible"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 bento-card p-4 mt-4">
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 bento-card p-4 mt-4 hover:border-blue-500/40">
                 <FormControl>
                   <Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-1" />
                 </FormControl>
@@ -400,11 +400,11 @@ function PropertyForm({
         </Card>
 
         {/* Owner Details */}
-        <Card className="card-modern group hover:shadow-lg transition-all duration-300">
-          <CardHeader className="border-b bg-linear-to-r from-green-500/5 to-green-500/10">
+        <Card className="card-modern group hover:shadow-lg transition-all duration-300 hover:border-blue-500/40">
+          <CardHeader className="border-b bg-linear-to-r from-blue-500/5 to-blue-500/10">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                <Shield className="w-5 h-5 text-green-600" />
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <Shield className="w-5 h-5 text-blue-600" />
               </div>
               <div className="flex-1">
                 <CardTitle className="text-base font-semibold text-foreground flex items-center">
@@ -482,7 +482,7 @@ function PropertyForm({
                 {scopeOfWorkOptions.map((option) => {
                   const checked = form.watch("scopeOfWork")?.includes(option);
                   return (
-                    <div key={option} className="flex items-center space-x-2 p-3 bento-card cursor-pointer hover:border-primary">
+                    <div key={option} className="flex items-center space-x-2 p-3 bento-card cursor-pointer hover:border-blue-500/40">
                       <Checkbox
                         id={option}
                         checked={!!checked}
@@ -517,14 +517,14 @@ function PropertyForm({
               form.reset();
               window.history.length > 1 ? window.history.back() : null;
             }}
-            className="flex-1 btn-secondary"
+            className="flex-1 border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all"
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
             disabled={isPending}
-            className="flex-1 btn-primary relative overflow-hidden group"
+            className="flex-1 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white relative overflow-hidden group"
           >
             {isPending ? (
               <div className="flex items-center gap-2">
@@ -668,7 +668,7 @@ export default function AddPropertyPage() {
               variant="outline"
               size="sm"
               onClick={() => router.push("/bulk-upload")}
-              className="flex items-center gap-2 btn-secondary"
+              className="flex items-center gap-2 border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all"
             >
               <Upload size={16} />
               <span>Bulk Upload</span>

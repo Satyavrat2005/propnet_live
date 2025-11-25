@@ -47,7 +47,7 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
         <p className="text-neutral-600 text-sm mb-3">{property.location}</p>
         
         <div className="flex items-center justify-between mb-3">
-          <div className="text-2xl font-bold text-primary">{priceLabel}</div>
+          <div className="text-2xl font-bold text-blue-600">{priceLabel}</div>
           <div className="text-sm text-neutral-500">{sizeLabel}</div>
         </div>
         
@@ -61,7 +61,7 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
                       {ownerInitial}
                     </span>
                   </div>
-                  <div className="w-8 h-8 bg-primary rounded-full border-2 border-white flex items-center justify-center">
+                  <div className="w-8 h-8 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center">
                     <span className="text-xs text-white">
                       {property.coAgents[0].name?.charAt(0) || "A"}
                     </span>
@@ -86,7 +86,7 @@ export default function PropertyCard({ property, currentUserId }: PropertyCardPr
             variant="ghost"
             size="sm"
             onClick={() => setLocation(`/property/${property.id}`)}
-            className="text-primary font-medium text-sm"
+            className="text-blue-600 font-medium text-sm"
           >
             View Details
           </Button>

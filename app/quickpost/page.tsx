@@ -475,7 +475,7 @@ export default function QuickPostPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-primary" />
+              <Sparkles className="h-6 w-6 text-blue-600" />
               QuickPost
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -507,7 +507,7 @@ export default function QuickPostPage() {
               <Button
                 onClick={handleExtract}
                 disabled={extractMutation.isPending || !inputText.trim()}
-                className="flex-1 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                className="flex-1 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
                 type="button"
               >
                 {extractMutation.isPending ? (
@@ -544,7 +544,7 @@ export default function QuickPostPage() {
                   disabled={createAllMutation.isPending}
                   size="sm"
                   type="button"
-                  className="border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                  className="border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
                 >
                   {createAllMutation.isPending ? (
                     <div className="flex items-center gap-2">

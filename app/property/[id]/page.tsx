@@ -166,7 +166,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       {/* Header */}
       <div className="sticky top-0 bg-white border-b border-neutral-100 z-10">
         <div className="flex items-center justify-between px-6 py-4">
-          <button className="text-primary" onClick={() => router.back()} type="button" aria-label="Go back">
+          <button className="text-blue-600" onClick={() => router.back()} type="button" aria-label="Go back">
             <ArrowLeft size={24} />
           </button>
           {/* <div className="flex items-center space-x-3">
@@ -246,7 +246,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           {canShare && (
             <Button
               onClick={handleShareProperty}
-              className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-200"
+              className="w-full border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2 transition-all duration-200"
             >
               <Share size={20} />
               <span>Copy Property Details For Sharing</span>

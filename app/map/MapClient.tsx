@@ -870,7 +870,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
             <div className="text-center text-neutral-500">
               <MapPin size={48} className="mx-auto mb-2 text-neutral-400" />
               <p className="text-sm">Loading Interactive Map...</p>
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mx-auto mt-2" />
+              <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mt-2" />
             </div>
           </div>
         )}
@@ -960,7 +960,7 @@ export default function MapClient({ initialProperties, initialPrimaryListings }:
                       <p className="text-xs text-neutral-600 mb-1">{property.location}</p>
                       {property.description && <p className="text-xs text-neutral-500 mb-2">{property.description}</p>}
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-primary">{priceDisplay}</span>
+                        <span className="text-sm font-bold text-blue-600">{priceDisplay}</span>
                         <div className="flex items-center space-x-2">
                           <Button
                             variant="outline"

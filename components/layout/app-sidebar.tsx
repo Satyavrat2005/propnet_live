@@ -82,7 +82,7 @@ export function AppSidebar({ className }: SidebarProps) {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="text-xl font-bold bg-linear-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-linear-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
                 PropNet
               </span>
             </Link>
@@ -123,7 +123,7 @@ export function AppSidebar({ className }: SidebarProps) {
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-primary/10 text-primary border-l-4 border-primary"
+                    ? "bg-blue-600/10 text-blue-600 border-l-4 border-blue-600"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted",
                   collapsed && "justify-center px-0"
                 )}
@@ -146,7 +146,7 @@ export function AppSidebar({ className }: SidebarProps) {
           )}
           title={collapsed ? "Profile" : undefined}
         >
-          <div className="w-8 h-8 bg-linear-to-br from-primary to-emerald-600 rounded-full flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-blue-400 rounded-full flex items-center justify-center shrink-0">
             <User className="h-4 w-4 text-white" />
           </div>
           {!collapsed && (

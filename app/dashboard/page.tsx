@@ -275,7 +275,7 @@ export default function Dashboard() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
         </div>
       </AppLayout>
     );
@@ -294,7 +294,7 @@ export default function Dashboard() {
           </div>
           <Button 
             onClick={() => router.push('/add-property')}
-            className="bg-primary hover:bg-primary/90 text-white px-6 shadow-lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-lg"
           >
             <Plus className="w-5 h-5 mr-2" />
             Add Property
@@ -304,12 +304,12 @@ export default function Dashboard() {
 
       {/* Stats Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bento-card group cursor-pointer" onClick={() => router.push('/my-listings')}>
+        <div className="bento-card group cursor-pointer hover:border-blue-500/40" onClick={() => router.push('/my-listings')}>
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Building2 className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Building2 className="w-6 h-6 text-blue-600" />
             </div>
-            <Badge className="bg-primary/10 text-primary border-0">
+            <Badge className="bg-blue-100 text-blue-700 border-0">
               <TrendingUp className="w-3 h-3 mr-1" />
               Active
             </Badge>
@@ -318,7 +318,7 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground">Total Listings</p>
         </div>
 
-        <div className="bento-card group cursor-pointer" onClick={() => router.push('/my-listings')}>
+        <div className="bento-card group cursor-pointer hover:border-green-500/40" onClick={() => router.push('/my-listings')}>
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
               <CheckCircle className="w-6 h-6 text-green-600" />
@@ -329,7 +329,7 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground">Approved Properties</p>
         </div>
 
-        <div className="bento-card group cursor-pointer" onClick={() => router.push('/requirements')}>
+        <div className="bento-card group cursor-pointer hover:border-orange-500/40" onClick={() => router.push('/requirements')}>
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Target className="w-6 h-6 text-orange-600" />
@@ -340,7 +340,7 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground">Client Requirements</p>
         </div>
 
-        <div className="bento-card group cursor-pointer" onClick={() => router.push('/feed')}>
+        <div className="bento-card group cursor-pointer hover:border-purple-500/40" onClick={() => router.push('/feed')}>
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users className="w-6 h-6 text-purple-600" />
@@ -358,7 +358,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2 space-y-6">
           <div>
             <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
+              <Sparkles className="w-5 h-5 text-blue-600" />
               Quick Actions
             </h2>
             
@@ -380,18 +380,18 @@ export default function Dashboard() {
               </div>
 
               <div 
-                className="bento-card group cursor-pointer bg-linear-to-br from-primary/10 to-emerald-600/5 border-primary/20 hover:border-primary/40"
+                className="bento-card group cursor-pointer bg-linear-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 hover:border-emerald-500/40"
                 onClick={() => router.push("/add-property")}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <Plus className="w-6 h-6 text-white" />
                     </div>
                     <h3 className="font-semibold text-foreground mb-1">Add Property</h3>
                     <p className="text-sm text-muted-foreground">Create new listing manually</p>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
                 </div>
               </div>
 
@@ -433,10 +433,10 @@ export default function Dashboard() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary" />
+                <Activity className="w-5 h-5 text-blue-600" />
                 Recent Activities
               </h2>
-              <Button variant="ghost" size="sm" onClick={() => router.push("/my-listings")} className="text-primary hover:text-primary/80">
+              <Button variant="ghost" size="sm" onClick={() => router.push("/my-listings")} className="text-blue-600 hover:text-blue-700">
                 View All
                 <ArrowRight size={16} className="ml-1" />
               </Button>
@@ -455,7 +455,7 @@ export default function Dashboard() {
                 {recentActivities.map((activity) => {
                   const Icon = activity.icon;
                   return (
-                    <div key={activity.id} className="card-modern p-4 hover:border-primary/30 transition-all">
+                    <div key={activity.id} className="card-modern p-4 hover:border-blue-500/40 transition-all">
                       <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
                           <Icon className="w-5 h-5 text-foreground" />
@@ -509,13 +509,13 @@ export default function Dashboard() {
           )}
 
           {/* Network Stats */}
-          <div className="bento-card">
+          <div className="bento-card hover:border-blue-500/40">
             <h3 className="font-semibold text-foreground mb-4">Network Insights</h3>
-            <div className="space-y-4">
+              <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Building2 className="w-5 h-5 text-primary" />
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">Available</p>
@@ -541,7 +541,7 @@ export default function Dashboard() {
               <Button 
                 onClick={() => router.push('/feed')}
                 size="sm"
-                className="w-full bg-primary hover:bg-primary/90 mt-2"
+                className="w-full bg-blue-600 hover:bg-blue-700 mt-2"
               >
                 Browse Network
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -550,7 +550,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Links */}
-          <div className="bento-card">
+          <div className="bento-card hover:border-blue-500/40">
             <h3 className="font-semibold text-foreground mb-4">Quick Links</h3>
             <div className="space-y-2">
               {[
@@ -565,10 +565,10 @@ export default function Dashboard() {
                   className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted transition-colors text-left group"
                 >
                   <div className="flex items-center gap-3">
-                    <link.icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <link.icon className="w-4 h-4 text-muted-foreground group-hover:text-blue-600 transition-colors" />
                     <span className="text-sm font-medium text-foreground">{link.label}</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                 </button>
               ))}
             </div>

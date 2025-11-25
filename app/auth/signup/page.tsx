@@ -188,7 +188,7 @@ export default function Page() {
 
               <Button
                 type="submit"
-                className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                className="w-full border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
                 disabled={phone.replace(/\D/g, "").length !== 10 || loading}
               >
                 {loading ? (
@@ -225,7 +225,7 @@ export default function Page() {
               <div className="space-y-3">
                 <Button
                   type="submit"
-                  className="w-full border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+                  className="w-full border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
                   disabled={code.length !== 6 || loading}
                 >
                   {loading ? (

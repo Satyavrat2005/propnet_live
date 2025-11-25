@@ -180,7 +180,7 @@ export default function PropertyDetailsPanel({ property, className = "", onCall,
                 className="h-12 w-12 rounded-full object-cover"
               />
             ) : (
-              <div className="h-12 w-12 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-blue-600/10 text-blue-600 font-semibold flex items-center justify-center">
                 {contactName.charAt(0) || "B"}
               </div>
             )}

@@ -201,8 +201,8 @@ function buildFormData(data: ReturnType<typeof insertPropertySchema.parse>): For
   if (data.rentFrequency) formData.append("rentFrequency", data.rentFrequency);
   if (data.size) formData.append("size", data.size);
   if (data.sizeUnit) formData.append("sizeUnit", data.sizeUnit);
-  formData.append("location", data.location);
-  formData.append("fullAddress", data.fullAddress);
+  if (data.location) formData.append("location", data.location);
+  if (data.fullAddress) formData.append("fullAddress", data.fullAddress);
   if (data.flatNumber) formData.append("flatNumber", data.flatNumber);
   if (data.floorNumber) formData.append("floorNumber", data.floorNumber);
   if (data.buildingSociety) formData.append("buildingSociety", data.buildingSociety);

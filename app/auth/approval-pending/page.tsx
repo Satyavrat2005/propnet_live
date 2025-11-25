@@ -30,7 +30,7 @@ export default function NotApprovedPage() {
         <div className="mx-auto w-full max-w-xl">
           <div className="rounded-3xl border border-slate-200/70 bg-white/90 shadow-xl backdrop-blur-md">
             {/* Accent bar */}
-            <div className="h-1.5 w-full rounded-t-3xl bg-linear-to-r from-amber-500 via-blue-500 to-cyan-500" />
+            <div className="h-1.5 w-full rounded-t-3xl bg-linear-to-r from-amber-500 via-blue-500 to-blue-600" />
 
             <div className="p-8 sm:p-10">
               {/* Illustration */}

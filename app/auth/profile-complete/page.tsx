@@ -136,11 +136,11 @@ export default function ProfileCompletePage() {
         <div className="mx-auto w-full max-w-xl">
           <div className="rounded-3xl border border-slate-200/70 bg-white/90 shadow-xl backdrop-blur-md">
             {/* Top accent bar */}
-            <div className="h-1.5 w-full rounded-t-3xl bg-linear-to-r from-emerald-500 via-blue-500 to-cyan-500" />
+            <div className="h-1.5 w-full rounded-t-3xl bg-linear-to-r from-blue-400 via-blue-500 to-blue-600" />
 
             <div className="p-8 sm:p-10">
               {/* Illustration */}
-              <div className="mx-auto mb-8 flex h-40 w-40 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-50 to-blue-50 shadow-inner">
+              <div className="mx-auto mb-8 flex h-40 w-40 items-center justify-center rounded-2xl bg-linear-to-br from-blue-50 to-blue-100 shadow-inner">
                 <span className="sr-only">Profile completed</span>
                 <svg
                   className="h-28 w-28"
@@ -242,9 +242,9 @@ export default function ProfileCompletePage() {
                 <button
                   onClick={handleGetStarted}
                   disabled={loading}
-                  className="group relative inline-flex items-center justify-center rounded-xl border border-emerald-600/20 bg-emerald-600 px-6 py-3 text-base font-medium text-white shadow-lg shadow-emerald-600/20 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-emerald-300 active:translate-y-0 disabled:opacity-70"
+                  className="group relative inline-flex items-center justify-center rounded-xl border border-blue-600/20 bg-blue-600 px-6 py-3 text-base font-medium text-white shadow-lg shadow-blue-600/20 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-300 active:translate-y-0 disabled:opacity-70"
                 >
-                  <span className="absolute inset-0 -z-10 rounded-xl bg-linear-to-r from-emerald-500 via-blue-500 to-cyan-500 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-60" />
+                  <span className="absolute inset-0 -z-10 rounded-xl bg-linear-to-r from-blue-400 via-blue-500 to-blue-600 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-60" />
                   {loading ? "Checking..." : "Get Started"}
                   <svg
                     className="ml-2 h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -280,7 +280,7 @@ export default function ProfileCompletePage() {
           {/* Small trust strip (real-estate vibe) */}
           <div className="mx-auto mt-8 flex max-w-xl items-center justify-center gap-6 text-xs text-slate-500">
             <div className="flex items-center gap-2">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
               Verified Profiles
             </div>
             <div className="flex items-center gap-2">
@@ -288,7 +288,7 @@ export default function ProfileCompletePage() {
               Secure Login
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-block h-2 w-2 rounded-full bg-cyan-500" />
+              <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
               Property Insights
             </div>
           </div>

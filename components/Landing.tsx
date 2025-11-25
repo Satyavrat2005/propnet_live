@@ -164,7 +164,7 @@ export default function Page() {
             <div className="flex items-center space-x-3">
               <Button
                 size="sm"
-                className="bg-linear-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 border-0"
+                className="bg-linear-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 border-0"
                 onClick={() => router.push("/auth/login")}
               >
                 Get Started
@@ -302,9 +302,9 @@ export default function Page() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="group bg-white p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-emerald-500">
-                <div className="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Shield className="h-8 w-8 text-emerald-600" />
+              <div className="group bg-white p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-blue-600">
+                <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Shield className="h-8 w-8 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-gray-900">Verified Network</h3>
                 <p className="text-gray-600">
@@ -437,7 +437,7 @@ export default function Page() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-600 transition-all shadow-sm hover:shadow-lg group">
               <div className="w-12 h-12 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Search className="w-6 h-6 text-white" />
               </div>
@@ -445,7 +445,7 @@ export default function Page() {
               <p className="text-sm text-gray-600">Match properties to buyers automatically using smart algorithms</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-600 transition-all shadow-sm hover:shadow-lg group">
               <div className="w-12 h-12 bg-linear-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <FileCheck className="w-6 h-6 text-white" />
               </div>
@@ -453,7 +453,7 @@ export default function Page() {
               <p className="text-sm text-gray-600">Auto-generate detailed property requirement reports for clients</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-600 transition-all shadow-sm hover:shadow-lg group">
               <div className="w-12 h-12 bg-linear-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Star className="w-6 h-6 text-white" />
               </div>
@@ -461,7 +461,7 @@ export default function Page() {
               <p className="text-sm text-gray-600">Build your professional reputation with verified ratings and reviews</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-600 transition-all shadow-sm hover:shadow-lg group">
               <div className="w-12 h-12 bg-linear-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
@@ -469,7 +469,7 @@ export default function Page() {
               <p className="text-sm text-gray-600">Direct collaboration features with developers and builders</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-600 transition-all shadow-sm hover:shadow-lg group">
               <div className="w-12 h-12 bg-linear-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Clock className="w-6 h-6 text-white" />
               </div>
@@ -477,7 +477,7 @@ export default function Page() {
               <p className="text-sm text-gray-600">Automated document handling and digital signature integration</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-emerald-500 transition-all shadow-sm hover:shadow-lg group">
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-200 hover:border-blue-600 transition-all shadow-sm hover:shadow-lg group">
               <div className="w-12 h-12 bg-linear-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
@@ -605,14 +605,18 @@ export default function Page() {
 
             <div>
               <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-              <div className="space-y-2">
-                <Link href="/auth/login" className="block text-gray-400 hover:text-emerald-400 transition-colors">
-                  Login
-                </Link>
-                <Link href="/auth/signup" className="block text-gray-400 hover:text-emerald-400 transition-colors">
-                  Sign Up
-                </Link>
-              </div>
+              <ul className="space-y-3">
+                <li>
+                  <Link href="/auth/login" className="block text-gray-400 hover:text-blue-400 transition-colors">
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/auth/signup" className="block text-gray-400 hover:text-blue-400 transition-colors">
+                    Sign Up
+                  </Link>
+                </li>
+              </ul>
             </div>
 
             <div>
@@ -640,7 +644,7 @@ export default function Page() {
                 &copy; 2025 PropNet. All rights reserved. Building the future of real estate.
               </p>
               <div className="flex items-center space-x-4">
-                <Link href="/auth/login" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors">
+                <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
                   Access Platform →
                 </Link>
               </div>

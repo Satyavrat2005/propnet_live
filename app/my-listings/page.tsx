@@ -134,7 +134,7 @@ function PropertyForm({
                       placeholder="Beautiful 2 BHK Apartment..."
                       {...field}
                       autoComplete="off"
-                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="bg-white border-gray-300 focus:border-blue-600 focus:ring-blue-600"
                     />
                   </FormControl>
                   <FormMessage />
@@ -361,7 +361,7 @@ function PropertyForm({
                 <FormItem>
                   <FormControl>
                     <div className="space-y-3">
-                      <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+                      <div className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:border-blue-600 transition-colors">
                         <Checkbox
                           id={editingProperty ? "exclusive-edit" : "exclusive"}
                           checked={field.value === "exclusive"}
@@ -504,14 +504,14 @@ function PropertyForm({
               form.reset();
               onCancel();
             }}
-            className="flex-1 bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="flex-1 bg-white border-gray-300 text-gray-700 hover:text-gray-800 hover:bg-gray-50"
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
             disabled={isCreating || isUpdating}
-            className="flex-1 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200"
+            className="flex-1 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
           >
             {(isCreating || isUpdating) ? (
               <div className="flex items-center gap-2">
@@ -890,7 +890,7 @@ export default function MyListings() {
             <DialogTrigger asChild>
               <Button 
                 size="sm" 
-                className="flex items-center space-x-2 border-2 border-emerald-500 bg-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 text-white transition-all duration-200" 
+                className="flex items-center space-x-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200" 
                 onClick={() => setIsAddDialogOpen(true)}
               >
                 <Plus size={16} />
@@ -1004,7 +1004,7 @@ export default function MyListings() {
                         <Building2 size={12} className="mr-1" />
                         {property.propertyType}
                       </span>
-                      <span className="font-medium text-primary">₹{property.price}</span>
+                      <span className="font-medium text-blue-600">₹{property.price}</span>
                       <span className="text-xs text-gray-400">
                         {property.transactionType === "rent" ? "For Rent" : "For Sale"}
                       </span>
@@ -1054,7 +1054,7 @@ export default function MyListings() {
                             size="sm"
                             onClick={() => renewPropertyMutation.mutate(property.id)}
                             disabled={renewPropertyMutation.isPending}
-                            className="h-8 px-3 border-emerald-300 text-emerald-700 hover:text-border-emerald-400 hover:bg-emerald-50 hover:border-emerald-400"
+                            className="h-8 px-3 border-blue-300 text-blue-700 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-400"
                           >
                             <RefreshCw size={14} className={`mr-1 ${renewPropertyMutation.isPending ? 'animate-spin' : ''}`} />
                             {renewPropertyMutation.isPending ? 'Renewing...' : 'Renew'}
@@ -1133,7 +1133,7 @@ export default function MyListings() {
                           ? property.ownerPhone
                           : `${property.ownerPhone?.slice(0, 3)}****${property.ownerPhone?.slice(-2)}`}
                       </span>
-                      <button onClick={() => toggleOwnerPhone(property.id)} className="ml-2 text-primary hover:text-primary/80">
+                      <button onClick={() => toggleOwnerPhone(property.id)} className="ml-2 text-blue-600 hover:text-blue-700">
                         {showOwnerPhone[property.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                       </button>
                     </div>

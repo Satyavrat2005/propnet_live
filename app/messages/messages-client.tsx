@@ -519,7 +519,7 @@ export default function MessagesClient() {
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -553,8 +553,8 @@ export default function MessagesClient() {
               >
                 Back
               </Button>
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <User size={20} className="text-primary" />
+              <div className="w-10 h-10 bg-blue-600/10 rounded-full flex items-center justify-center">
+                <User size={20} className="text-blue-600" />
               </div>
               <div>
                 <h2 className="font-semibold text-foreground">
@@ -591,7 +591,7 @@ export default function MessagesClient() {
                   <div
                     className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
                       msg.senderId === currentUserId
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-linear-to-r from-blue-600 to-blue-700 text-white"
                         : "bg-card border border-border text-foreground"
                     }`}
                   >
@@ -601,7 +601,7 @@ export default function MessagesClient() {
                     <p
                       className={`text-xs mt-1 ${
                         msg.senderId === currentUserId
-                          ? "text-primary-foreground/70"
+                          ? "text-white/70"
                           : "text-muted-foreground"
                       }`}
                     >
@@ -638,7 +638,7 @@ export default function MessagesClient() {
                 <Button
                   onClick={handleSend}
                   disabled={!newMessage.trim() || sendMessage.isPending}
-                  className="btn-primary"
+                  className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                 >
                   {sendMessage.isPending ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -675,7 +675,7 @@ export default function MessagesClient() {
           >
             <DialogTrigger asChild>
               <Button 
-                className="btn-primary"
+                className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
               >
                 <Plus size={16} className="mr-1" /> New Chat
               </Button>
@@ -701,12 +701,12 @@ export default function MessagesClient() {
                   {filteredNetworkUsers.map((u: NetworkUser) => (
                     <Card
                       key={u.id}
-                      className="bento-card cursor-pointer"
+                      className="bento-card cursor-pointer hover:border-blue-500/40"
                       onClick={() => startConversation(u.id)}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                          <User size={18} className="text-primary" />
+                        <div className="w-10 h-10 bg-blue-600/10 rounded-full flex items-center justify-center">
+                          <User size={18} className="text-blue-600" />
                         </div>
                         <div className="flex-1">
                           <p className="font-medium text-sm text-foreground">
@@ -756,7 +756,7 @@ export default function MessagesClient() {
             <p className="text-muted-foreground text-sm mb-4">
               Start conversations with property inquiries
             </p>
-            <Button className="btn-secondary">
+            <Button className="border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all">
               <Building2 size={16} className="mr-2" />
               Browse Properties
             </Button>
@@ -766,13 +766,13 @@ export default function MessagesClient() {
             {filteredConversations.map((c) => (
               <Card
                 key={c.id}
-                className="bento-card cursor-pointer"
+                className="bento-card cursor-pointer hover:border-blue-500/40 transition-all"
                 onClick={() => handleSelectConversation(c.id)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-3">
-                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                      <User size={20} className="text-primary" />
+                    <div className="w-12 h-12 bg-blue-600/10 rounded-full flex items-center justify-center">
+                      <User size={20} className="text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">

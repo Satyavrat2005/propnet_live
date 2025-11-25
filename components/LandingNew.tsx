@@ -43,19 +43,22 @@ export default function LandingNew() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="relative">
-                <Building2 className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-600" />
-                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+              <div className="relative w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white p-1 border border-gray-200">
+                <img 
+                  src="/Propnet_icon.png" 
+                  alt="PropNet" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="text-xl sm:text-2xl font-bold text-gray-900">PropNet</span>
-              <Badge className="hidden sm:inline-flex bg-emerald-100 text-emerald-700 border-emerald-300 text-xs">
+              <Badge className="hidden sm:inline-flex bg-blue-100 text-blue-700 border-blue-300 text-xs">
                 <Sparkles className="w-3 h-3 mr-1" />
                 Live
               </Badge>
             </div>
             <Button
               onClick={() => router.push("/auth/login")}
-              className="bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-sm sm:text-base px-4 sm:px-6 h-9 sm:h-10"
+              className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm sm:text-base px-4 sm:px-6 h-9 sm:h-10"
             >
               Get Started
             </Button>
@@ -64,14 +67,14 @@ export default function LandingNew() {
       </header>
 
       {/* Hero Section with Bento Grid */}
-      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 bg-linear-to-br from-emerald-50 via-white to-emerald-50/30 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-emerald-100/[0.2] bg-size-[30px_30px] sm:bg-size-[40px_40px]"></div>
+      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 bg-linear-to-br from-blue-50 via-white to-blue-50/30 overflow-hidden">
+        <div className="absolute inset-0 bg-grid-blue-100/[0.2] bg-size-[30px_30px] sm:bg-size-[40px_40px]"></div>
         <div className="absolute inset-0 bg-linear-to-t from-white via-transparent to-transparent"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Hero Content */}
           <div className="text-center mb-8 sm:mb-12 lg:mb-16">
-            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 mb-4 sm:mb-6 text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5">
+            <Badge className="bg-blue-100 text-blue-700 border-blue-300 mb-4 sm:mb-6 text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5">
               <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Trusted by 500+ Real Estate Professionals
             </Badge>
@@ -79,7 +82,7 @@ export default function LandingNew() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight px-4">
               Your Real Estate Network,
               <br />
-              <span className="bg-linear-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
                 Built for Success
               </span>
             </h1>
@@ -92,7 +95,7 @@ export default function LandingNew() {
               <Button
                 size="lg"
                 onClick={() => router.push("/auth/login")}
-                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg font-semibold shadow-lg shadow-emerald-600/30 group"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg font-semibold shadow-lg shadow-blue-600/30 group"
               >
                 Join PropNet Today
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -102,7 +105,7 @@ export default function LandingNew() {
 
           {/* Bento Grid Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-6xl mx-auto">
-            <Card className="bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card className="bg-linear-to-br from-blue-600 via-blue-700 to-indigo-700 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-4 sm:p-6">
                 <Trophy className="w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 opacity-90" />
                 <div className="text-2xl sm:text-3xl font-bold mb-1">500+</div>
@@ -110,11 +113,11 @@ export default function LandingNew() {
               </CardContent>
             </Card>
 
-            <Card className="bg-linear-to-br from-blue-500 to-blue-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Card className="bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="p-4 sm:p-6">
                 <Building2 className="w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 opacity-90" />
                 <div className="text-2xl sm:text-3xl font-bold mb-1">2,500+</div>
-                <div className="text-xs sm:text-sm opacity-90">Properties Listed</div>
+                <div className="text-xs sm:text-sm opacity-95">Properties Listed</div>
               </CardContent>
             </Card>
 
@@ -169,12 +172,12 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1 text-sm">With PropNet</h3>
-                      <p className="text-sm text-emerald-700">Lead protection with timestamped records</p>
+                      <p className="text-sm text-blue-700">Lead protection with timestamped records</p>
                     </div>
                   </div>
                 </CardContent>
@@ -192,12 +195,12 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1 text-sm">With PropNet</h3>
-                      <p className="text-sm text-emerald-700">SMS-verified owner consent for all listings</p>
+                      <p className="text-sm text-blue-700">SMS-verified owner consent for all listings</p>
                     </div>
                   </div>
                 </CardContent>
@@ -215,12 +218,12 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1 text-sm">With PropNet</h3>
-                      <p className="text-sm text-emerald-700">Digital consent forms with clear terms</p>
+                      <p className="text-sm text-blue-700">Digital consent forms with clear terms</p>
                     </div>
                   </div>
                 </CardContent>
@@ -238,12 +241,12 @@ export default function LandingNew() {
                     </div>
                   </div>
                   <div className="flex items-start gap-3 pt-3 border-t border-red-200">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
                       <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1 text-sm">With PropNet</h3>
-                      <p className="text-sm text-emerald-700">Professional dashboard for everything</p>
+                      <p className="text-sm text-blue-700">Professional dashboard for everything</p>
                     </div>
                   </div>
                 </CardContent>
@@ -265,8 +268,8 @@ export default function LandingNew() {
                     </th>
                     <th className="px-6 py-4 text-left">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                          <Check className="w-5 h-5 text-emerald-600" />
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Check className="w-5 h-5 text-blue-600" />
                         </div>
                         <span className="text-lg font-bold text-gray-900">With PropNet</span>
                       </div>
@@ -281,9 +284,9 @@ export default function LandingNew() {
                         <span className="text-gray-700">Commission theft - you show properties, someone else closes and gets paid</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 bg-emerald-50/50">
+                    <td className="px-6 py-5 bg-blue-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">Lead protection system with timestamped client interaction records</span>
                       </div>
                     </td>
@@ -295,9 +298,9 @@ export default function LandingNew() {
                         <span className="text-gray-700">Exclusive listings get stolen and shared everywhere without credit or consent</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 bg-emerald-50/50">
+                    <td className="px-6 py-5 bg-blue-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">SMS-verified owner consent required for every listing - full transparency</span>
                       </div>
                     </td>
@@ -309,9 +312,9 @@ export default function LandingNew() {
                         <span className="text-gray-700">No proof of your efforts when commission disputes arise</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 bg-emerald-50/50">
+                    <td className="px-6 py-5 bg-blue-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">Digital consent forms with clear commission terms and complete audit trail</span>
                       </div>
                     </td>
@@ -323,9 +326,9 @@ export default function LandingNew() {
                         <span className="text-gray-700">WhatsApp chaos with no organized system for tracking leads and listings</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 bg-emerald-50/50">
+                    <td className="px-6 py-5 bg-blue-50/50">
                       <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                         <span className="text-gray-900 font-medium">Professional dashboard to organize everything - clients, listings, deals</span>
                       </div>
                     </td>
@@ -339,7 +342,7 @@ export default function LandingNew() {
             <p className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
               It's not your fault.
             </p>
-            <p className="text-lg sm:text-xl text-emerald-600 font-semibold">
+            <p className="text-lg sm:text-xl text-blue-600 font-semibold">
               You just needed the right platform. Welcome to PropNet.
             </p>
           </div>
@@ -347,10 +350,10 @@ export default function LandingNew() {
       </section>
 
       {/* Features Bento Grid */}
-      <section className="py-12 sm:py-16 md:py-20 bg-linear-to-b from-emerald-50/50 via-white to-white">
+      <section className="py-12 sm:py-16 md:py-20 bg-linear-to-b from-blue-50/50 via-white to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
-            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 mb-3 sm:mb-4 text-xs sm:text-sm">
+            <Badge className="bg-blue-100 text-blue-700 border-blue-300 mb-3 sm:mb-4 text-xs sm:text-sm">
               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Platform Features
             </Badge>
@@ -365,7 +368,7 @@ export default function LandingNew() {
           {/* Bento Grid Layout */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
             {/* Large Feature Card - Spans 2 columns on desktop */}
-            <Card className="sm:col-span-2 lg:col-span-2 bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group overflow-hidden relative">
+            <Card className="sm:col-span-2 lg:col-span-2 bg-linear-to-br from-blue-600 to-blue-700 border-0 text-white hover:shadow-2xl transition-all duration-300 group overflow-hidden relative">
               <div className="absolute inset-0 bg-grid-white/[0.05] bg-size-[20px_20px]"></div>
               <CardContent className="p-6 sm:p-8 relative z-10">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
@@ -374,7 +377,7 @@ export default function LandingNew() {
                   </div>
                   <div>
                     <h3 className="text-xl sm:text-2xl font-bold mb-2">Verified Broker Network</h3>
-                    <p className="text-emerald-100 text-sm sm:text-base">
+                    <p className="text-blue-100 text-sm sm:text-base">
                       Connect with confidence - every member is a verified real estate professional
                     </p>
                   </div>
@@ -382,15 +385,15 @@ export default function LandingNew() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
                     <div className="text-2xl sm:text-3xl font-bold mb-1">100%</div>
-                    <div className="text-xs sm:text-sm text-emerald-100">Verified Profiles</div>
+                    <div className="text-xs sm:text-sm text-blue-100">Verified Profiles</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
                     <div className="text-2xl sm:text-3xl font-bold mb-1">Zero</div>
-                    <div className="text-xs sm:text-sm text-emerald-100">Spam Users</div>
+                    <div className="text-xs sm:text-sm text-blue-100">Spam Users</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 col-span-2 sm:col-span-1">
                     <div className="text-2xl sm:text-3xl font-bold mb-1">500+</div>
-                    <div className="text-xs sm:text-sm text-emerald-100">Active Brokers</div>
+                    <div className="text-xs sm:text-sm text-blue-100">Active Brokers</div>
                   </div>
                 </div>
               </CardContent>
@@ -480,10 +483,10 @@ export default function LandingNew() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border-2 border-gray-200 hover:border-emerald-500 hover:shadow-xl transition-all duration-300 group">
+            <Card className="bg-white border-2 border-gray-200 hover:border-blue-600 hover:shadow-xl transition-all duration-300 group">
               <CardContent className="p-6">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <MessageSquare className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <MessageSquare className="h-6 w-6 sm:h-7 sm:w-7 text-blue-600" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold mb-2 text-gray-900">Built-in Messaging</h3>
                 <p className="text-sm sm:text-base text-gray-600">
@@ -524,13 +527,13 @@ export default function LandingNew() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
-            <Card className="bg-linear-to-br from-emerald-500 to-emerald-600 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
+            <Card className="bg-linear-to-br from-blue-600 to-blue-700 border-0 text-white hover:shadow-2xl transition-all duration-300 group">
               <CardContent className="p-6 sm:p-8 text-center">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 group-hover:scale-110 transition-transform">
                   <Target className="w-8 h-8 sm:w-10 sm:h-10" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold mb-3">Never Lose a Lead</h3>
-                <p className="text-emerald-100 leading-relaxed text-sm sm:text-base">
+                <p className="text-blue-100 leading-relaxed text-sm sm:text-base">
                   Track every client interaction with timestamps. Your efforts are recorded, your commission is protected.
                 </p>
               </CardContent>
@@ -588,7 +591,7 @@ export default function LandingNew() {
               { icon: Globe, title: "Smart Documents", desc: "Automated document handling and digital signature integration", color: "red" },
               { icon: LineChart, title: "Advanced Analytics", desc: "Deep insights into market trends and your performance metrics", color: "indigo" },
             ].map((feature, idx) => (
-              <Card key={idx} className="bg-white border-2 border-gray-200 hover:border-emerald-500 hover:shadow-xl transition-all duration-300 group">
+              <Card key={idx} className="bg-white border-2 border-gray-200 hover:border-blue-600 hover:shadow-xl transition-all duration-300 group">
                 <CardContent className="p-5 sm:p-6">
                   <div className={`w-10 h-10 sm:w-12 sm:h-12 bg-${feature.color}-100 rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform`}>
                     <feature.icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${feature.color}-600`} />
@@ -605,7 +608,7 @@ export default function LandingNew() {
 
 
       {/* Final CTA */}
-      <section className="py-16 sm:py-20 md:py-28 relative overflow-hidden bg-linear-to-br from-emerald-600 via-blue-600 to-indigo-700">
+      <section className="py-16 sm:py-20 md:py-28 relative overflow-hidden bg-linear-to-br from-blue-600 via-blue-700 to-indigo-700">
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-size-[40px_40px] sm:bg-size-[60px_60px]"></div>
         <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
 
@@ -624,7 +627,7 @@ export default function LandingNew() {
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-6 sm:mb-8">
             <Button
               size="lg"
-              className="w-full sm:w-auto bg-white text-emerald-600 hover:bg-gray-100 px-8 sm:px-12 py-6 sm:py-7 text-lg sm:text-xl font-bold shadow-2xl group"
+              className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-700 px-8 sm:px-12 py-6 sm:py-7 text-lg sm:text-xl font-bold shadow-2xl group"
               onClick={() => router.push("/auth/login")}
             >
               Get Started Now
@@ -644,13 +647,19 @@ export default function LandingNew() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 mb-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Building2 className="h-7 w-7 sm:h-8 sm:w-8 text-emerald-400" />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden bg-white p-1">
+                  <img 
+                    src="/Propnet_icon.png" 
+                    alt="PropNet" 
+                    className="w-full h-full object-contain"
+                  />
+                </div>
                 <span className="text-xl sm:text-2xl font-bold">PropNet</span>
               </div>
               <p className="text-gray-400 mb-4 text-sm sm:text-base">
                 The trusted platform for real estate professionals. Built by brokers, for brokers.
               </p>
-              <div className="inline-flex items-center bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full px-3 py-1 text-xs">
+              <div className="inline-flex items-center bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full px-3 py-1 text-xs">
                 <Sparkles className="w-3 h-3 mr-1" />
                 <span>Live & Growing</span>
               </div>
@@ -659,10 +668,10 @@ export default function LandingNew() {
             <div>
               <h3 className="text-base sm:text-lg font-semibold mb-4">Quick Links</h3>
               <div className="space-y-2">
-                <Link href="/auth/login" className="block text-gray-400 hover:text-emerald-400 transition-colors text-sm sm:text-base">
+                <Link href="/auth/login" className="block text-gray-400 hover:text-blue-400 transition-colors text-sm sm:text-base">
                   Login
                 </Link>
-                <Link href="/auth/signup" className="block text-gray-400 hover:text-emerald-400 transition-colors text-sm sm:text-base">
+                <Link href="/auth/signup" className="block text-gray-400 hover:text-blue-400 transition-colors text-sm sm:text-base">
                   Sign Up
                 </Link>
               </div>
@@ -672,15 +681,15 @@ export default function LandingNew() {
               <h3 className="text-base sm:text-lg font-semibold mb-4">Platform Features</h3>
               <div className="space-y-2">
                 <p className="text-gray-400 text-xs sm:text-sm flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 shrink-0" />
+                  <CheckCircle className="w-4 h-4 mr-2 text-blue-400 shrink-0" />
                   Verified Broker Network
                 </p>
                 <p className="text-gray-400 text-xs sm:text-sm flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 shrink-0" />
+                  <CheckCircle className="w-4 h-4 mr-2 text-blue-400 shrink-0" />
                   Lead Protection System
                 </p>
                 <p className="text-gray-400 text-xs sm:text-sm flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-400 shrink-0" />
+                  <CheckCircle className="w-4 h-4 mr-2 text-blue-400 shrink-0" />
                   Commission Transparency
                 </p>
               </div>
@@ -693,7 +702,7 @@ export default function LandingNew() {
                 &copy; 2025 PropNet. All rights reserved. Building the future of real estate.
               </p>
               <div className="flex items-center space-x-4">
-                <Link href="/auth/login" className="text-emerald-400 hover:text-emerald-300 text-xs sm:text-sm font-medium transition-colors">
+                <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-medium transition-colors">
                   Access Platform →
                 </Link>
               </div>

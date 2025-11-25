@@ -206,7 +206,7 @@ export default function ProfilePage() {
   if (authLoading || (normalizedProfile && (isPropertiesLoading || isRequestsLoading))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -367,7 +367,7 @@ function ProfileHeaderCard({
         </div> */}
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <StatPill label="Listings" value={listings} accent="text-primary" />
+        <StatPill label="Listings" value={listings} accent="text-blue-600" />
         <StatPill label="Pending" value={pendingListings} accent="text-accent" />
         <StatPill label="Owners" value={ownersCount} accent="text-neutral-700" />
       </div>
