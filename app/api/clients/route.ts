@@ -101,20 +101,19 @@ export async function POST(req: NextRequest) {
     const userId = (payload as any).sub || (payload as any).id;
 
     const body = await req.json();
-    const { client_name, client_phone, client_type, property_id } = body;
+    const { client_name, client_phone, client_type } = body;
 
-    if (!client_name || !client_phone || !client_type || !property_id) {
+    if (!client_name || !client_phone || !client_type) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Insert client
+    // Insert client without property_id
     const { data: client, error: clientError } = await supabase
       .from("client")
       .insert({
         client_name,
         client_phone,
         client_type,
-        property_id,
         broker_id: userId
       })
       .select()
@@ -122,6 +121,33 @@ export async function POST(req: NextRequest) {
 
     if (clientError) throw clientError;
 
+    return NextResponse.json({ success: true, client });
+  } catch (err: any) {
+    console.error("POST /api/clients error:", err);
+    return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+  }
+}
+
+// PATCH endpoint to associate property with client
+export async function PATCH(req: NextRequest) {
+  try {
+    const token = readSessionCookie(req);
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+    const payload = await verifySession(token);
+    const userId = (payload as any).sub || (payload as any).id;
+    const body = await req.json();
+    const { client_id, property_id } = body;
+    if (!client_id || !property_id) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+    // Update client row with property_id
+    const { error: clientError } = await supabase
+      .from("client")
+      .update({ property_id })
+      .eq("client_id", client_id);
+    if (clientError) throw clientError;
     // Update property: set public_property to false and listing_type to "Deal Done"
     const { error: propertyError } = await supabase
       .from("properties")
@@ -130,12 +156,10 @@ export async function POST(req: NextRequest) {
         listing_type: "Deal Done"
       })
       .eq("property_id", property_id);
-
     if (propertyError) throw propertyError;
-
-    return NextResponse.json({ success: true, client });
+    return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("POST /api/clients error:", err);
+    console.error("PATCH /api/clients error:", err);
     return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
   }
 }
