@@ -52,18 +52,34 @@ export async function GET(req: NextRequest) {
     (props || []).forEach((p: any) => {
       const key = `${(p.owner_phone || "").trim()}||${(p.owner_name || "").trim()}`;
       if (!map.has(key)) {
-        map.set(key, { owner_name: p.owner_name || "Unknown", owner_phone: p.owner_phone || "", count: 1, first_seen: p.created_at, source: "properties" });
+        map.set(key, { owner_name: p.owner_name || "Unknown", owner_phone: p.owner_phone || "", count: 1, first_seen: p.created_at, source: "properties", broker_count: 1 });
       } else {
         const existing = map.get(key);
         existing.count = (existing.count || 0) + 1;
       }
     });
 
+    // Count brokers for each owner (from all properties, not just this broker's)
+    for (const [key, client] of map.entries()) {
+      if (client.source === "properties") {
+        const { data: allPropsForOwner, error: ownerPropsError } = await supabase
+          .from("properties")
+          .select("id")
+          .eq("owner_name", client.owner_name)
+          .eq("owner_phone", client.owner_phone);
+        if (!ownerPropsError && Array.isArray(allPropsForOwner)) {
+          const uniqueBrokers = new Set(allPropsForOwner.map((p: any) => p.id).filter(Boolean));
+          client.broker_count = uniqueBrokers.size;
+        }
+      }
+    }
+
     // Add clients from client table
     for (const c of clientsFromTable || []) {
       const key = `${(c.client_phone || "").trim()}||${(c.client_name || "").trim()}`;
       // For tenants/buyers, count client rows with property_id for this name/phone
       let propertyCount = 0;
+      let brokerCount = 0;
       if (c.client_type === "Tenant" || c.client_type === "Buyer") {
         const { data: clientProps, error: clientPropsError } = await supabase
           .from("client")
@@ -74,6 +90,16 @@ export async function GET(req: NextRequest) {
         if (!clientPropsError && Array.isArray(clientProps)) {
           propertyCount = clientProps.length;
         }
+        // Count unique brokers for this tenant/buyer
+        const { data: allClientsForUser, error: allClientsError } = await supabase
+          .from("client")
+          .select("broker_id")
+          .eq("client_name", c.client_name)
+          .eq("client_phone", c.client_phone);
+        if (!allClientsError && Array.isArray(allClientsForUser)) {
+          const uniqueBrokers = new Set(allClientsForUser.map((cl: any) => cl.broker_id).filter(Boolean));
+          brokerCount = uniqueBrokers.size;
+        }
       }
       if (!map.has(key)) {
         map.set(key, { 
@@ -83,7 +109,8 @@ export async function GET(req: NextRequest) {
           first_seen: c.created_at,
           source: "client_table",
           client_type: c.client_type,
-          client_id: c.client_id
+          client_id: c.client_id,
+          broker_count: brokerCount || 1
         });
       } else {
         // Client exists in both sources, keep the existing one
@@ -93,6 +120,7 @@ export async function GET(req: NextRequest) {
         // If client_type is Tenant/Buyer, update count
         if (c.client_type === "Tenant" || c.client_type === "Buyer") {
           existing.count = propertyCount || 0;
+          existing.broker_count = brokerCount || 1;
         }
       }
     }

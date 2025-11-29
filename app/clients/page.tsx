@@ -312,6 +312,42 @@ export default function ClientsPage() {
     }
   }
 
+  // OPEN DEAL MODAL
+  const openDealModal = async (propertyId: string | number) => {
+    setDealModalOpen(true);
+    setDealLoading(true);
+    setDealDetail(null);
+
+    try {
+      const property = await fetchPropertyById(propertyId);
+      if (property) {
+        // Fetch client info for this property
+        const clientRes = await fetch("/api/clients", { credentials: "include" });
+        if (clientRes.ok) {
+          const allClients = await clientRes.json();
+          // Find client associated with this property
+          const associatedClient = allClients.find((c: any) => 
+            c.property_id === propertyId || 
+            (c.properties && c.properties.some((p: any) => (p.property_id ?? p.id) === propertyId))
+          );
+          if (associatedClient) {
+            property.client_name = associatedClient.client_name ?? associatedClient.owner_name;
+            property.client_phone = associatedClient.client_phone ?? associatedClient.owner_phone;
+            property.client_type = associatedClient.client_type;
+          }
+        }
+        setDealDetail(property);
+      } else {
+        setDealDetail(null);
+      }
+    } catch (err) {
+      console.error("Error fetching deal details:", err);
+      setDealDetail(null);
+    } finally {
+      setDealLoading(false);
+    }
+  };
+
   // OPEN CLIENT MODAL
   const openClientModal = async (compositeId: string) => {
     setClientModalOpen(true);
@@ -598,7 +634,7 @@ export default function ClientsPage() {
                           style={{ paddingLeft: 18 }}
                         >
                           <div>
-                            <p className="font-semibold text-lg text-slate-900">{c.owner_name ?? "—"}</p>
+                            <p className="font-semibold text-lg text-slate-900">{c.owner_name ?? "—"} {c.broker_count ? `(${c.broker_count})` : ''}</p>
                             <p className="text-sm text-slate-500 mt-1">{c.owner_phone ?? "—"}</p>
                           </div>
                           <div className="text-sm text-slate-400">Clients</div>
@@ -656,7 +692,7 @@ export default function ClientsPage() {
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div style={{ paddingLeft: 6 }}>
-                        <p className="font-bold text-lg">{c.owner_name}</p>
+                        <p className="font-bold text-lg">{c.owner_name} {c.broker_count ? `(${c.broker_count})` : ''}</p>
                         <p className="text-sm text-slate-500 mt-1">{c.owner_phone}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
@@ -689,7 +725,7 @@ export default function ClientsPage() {
                         <div className="flex flex-col items-end gap-2">
                           <Badge className="capitalize">{badgeText}</Badge>
                           <div className="flex items-center gap-2">
-                            <Button size="sm" variant="ghost" className="bg-blue-600 hover:bg-blue-700 text-white">View</Button>
+                            <Button size="sm" variant="ghost" onClick={() => openDealModal(d.property_id ?? d.id)} className="bg-blue-600 hover:bg-blue-700 text-white">View</Button>
                             <ChevronRight className="w-5 h-5 text-slate-300" />
                           </div>
                         </div>
@@ -880,6 +916,10 @@ export default function ClientsPage() {
                           <option value="">Select property</option>
                           {rawProperties
                             .filter((p: any) => {
+                              // Exclude properties with listing_type "Deal Done"
+                              const listingType = (p.listing_type ?? p.listingType ?? "").toString().toLowerCase();
+                              if (listingType === "deal done") return false;
+
                               const clientType = (clientModalData.client_type ?? clientModalData.clientType ?? "").toString();
                               if (clientType === "Buyer") {
                                 return (p.transaction_type ?? p.transactionType ?? "").toString().toLowerCase() === "sale";
@@ -959,7 +999,34 @@ export default function ClientsPage() {
                     <p className="text-xs text-slate-500">Owner</p>
                     <p className="font-medium">{dealDetail.owner?.name ?? dealDetail.owner_name ?? "N/A"} <span className="text-sm text-slate-400 block">{dealDetail.owner?.phone ?? dealDetail.owner_phone}</span></p>
                   </div>
+
+                  {dealDetail.client_name && (
+                    <div className="p-4 rounded-lg bg-blue-50">
+                      <p className="text-xs text-slate-500">Client ({dealDetail.client_type ?? "Buyer/Tenant"})</p>
+                      <p className="font-medium">{dealDetail.client_name} <span className="text-sm text-slate-400 block">{dealDetail.client_phone}</span></p>
+                    </div>
+                  )}
                 </div>
+
+                {dealDetail.client_name && (
+                  <div className="mb-4 p-4 rounded-lg bg-blue-50 border border-blue-200">
+                    <h4 className="text-lg font-semibold mb-3 text-blue-900">Client Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs text-blue-600 font-medium">Client Name</p>
+                        <p className="font-semibold text-slate-900">{dealDetail.client_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-blue-600 font-medium">Client Phone</p>
+                        <p className="font-semibold text-slate-900">{dealDetail.client_phone || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-blue-600 font-medium">Client Type</p>
+                        <p className="font-semibold text-slate-900">{dealDetail.client_type || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mb-4">
                   <h4 className="text-lg font-semibold mb-2">Description</h4>
