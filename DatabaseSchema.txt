@@ -1,0 +1,172 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.beta_users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text,
+  phone text UNIQUE CHECK (length(phone) = 10),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT beta_users_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.client (
+  client_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  client_type text,
+  property_id uuid,
+  broker_id uuid,
+  client_name text,
+  client_phone text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT client_pkey PRIMARY KEY (client_id),
+  CONSTRAINT client_property_id_fkey FOREIGN KEY (property_id) REFERENCES public.properties(property_id),
+  CONSTRAINT client_broker_id_fkey FOREIGN KEY (broker_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.conversation_participants (
+  conversation_id uuid NOT NULL,
+  profile_id uuid NOT NULL,
+  joined_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT conversation_participants_pkey PRIMARY KEY (conversation_id, profile_id),
+  CONSTRAINT conversation_participants_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id),
+  CONSTRAINT conversation_participants_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.conversations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  type text DEFAULT 'general'::text,
+  property_id uuid,
+  CONSTRAINT conversations_pkey PRIMARY KEY (id),
+  CONSTRAINT conversations_property_id_fkey FOREIGN KEY (property_id) REFERENCES public.properties(property_id)
+);
+CREATE TABLE public.messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL,
+  sender_id uuid NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT messages_pkey PRIMARY KEY (id),
+  CONSTRAINT messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id),
+  CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.primarly_listing (
+  id bigint NOT NULL DEFAULT nextval('primarly_listing_id_seq'::regclass),
+  project_name text,
+  project_description text,
+  details text,
+  end_date date,
+  blocks text,
+  promoter text,
+  site_address text,
+  latitude double precision,
+  longitude double precision,
+  land_area numeric,
+  total_area_of_land numeric,
+  total_carpet_area numeric,
+  CONSTRAINT primarly_listing_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  phone text UNIQUE,
+  name text,
+  email text,
+  bio text,
+  agency_name text,
+  rera_id text,
+  city text,
+  experience text,
+  website text,
+  area_of_expertise jsonb,
+  working_regions jsonb,
+  profile_photo_url text,
+  profile_complete boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  status text DEFAULT 'pending'::text,
+  password text UNIQUE,
+  CONSTRAINT profiles_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.properties (
+  property_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  id uuid,
+  property_title text NOT NULL,
+  property_type text,
+  transaction_type text,
+  bhk integer,
+  area numeric,
+  area_unit text,
+  sale_price text,
+  location text,
+  full_address text,
+  flat_number text,
+  floor text,
+  building_society text,
+  description text,
+  property_photos jsonb DEFAULT '[]'::jsonb,
+  listing_type text,
+  public_property boolean DEFAULT false,
+  latitude double precision,
+  longitude double precision,
+  geom USER-DEFINED DEFAULT (st_setsrid(st_makepoint(longitude, latitude), 4326))::geography,
+  owner_name text,
+  owner_phone text,
+  commission_terms text,
+  scope_of_work text,
+  agreement_document text,
+  approval_status text DEFAULT 'pending'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  owner_consent_token text,
+  owner_consent_sent_at timestamp with time zone,
+  owner_consent_response_at timestamp with time zone,
+  expires_at timestamp with time zone DEFAULT (now() + '30 days'::interval),
+  CONSTRAINT properties_pkey PRIMARY KEY (property_id),
+  CONSTRAINT properties_id_fkey FOREIGN KEY (id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.requirements (
+  requirement_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  id uuid,
+  property_type text NOT NULL,
+  transaction_type text NOT NULL,
+  preferred_location text NOT NULL,
+  min_price text,
+  max_price text,
+  min_size numeric,
+  max_size numeric,
+  size_unit text,
+  bhk numeric,
+  additional_requirement text,
+  latitude double precision,
+  longitude double precision,
+  geom USER-DEFINED DEFAULT 
+CASE
+    WHEN ((latitude IS NOT NULL) AND (longitude IS NOT NULL)) THEN (st_setsrid(st_makepoint(longitude, latitude), 4326))::geography
+    ELSE NULL::geography
+END,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT requirements_pkey PRIMARY KEY (requirement_id),
+  CONSTRAINT requirements_id_fkey FOREIGN KEY (id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.spatial_ref_sys (
+  srid integer NOT NULL CHECK (srid > 0 AND srid <= 998999),
+  auth_name character varying,
+  auth_srid integer,
+  srtext character varying,
+  proj4text character varying,
+  CONSTRAINT spatial_ref_sys_pkey PRIMARY KEY (srid)
+);
+CREATE TABLE public.tasks (
+  task_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  task_text text NOT NULL,
+  status boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tasks_pkey PRIMARY KEY (task_id),
+  CONSTRAINT tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.verified_user_check (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text,
+  rera_id text UNIQUE,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT verified_user_check_pkey PRIMARY KEY (id)
+);

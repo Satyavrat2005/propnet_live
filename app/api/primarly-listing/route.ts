@@ -18,6 +18,8 @@ type PrimaryListingRow = {
   land_area: number | null;
   total_area_of_land: number | null;
   total_carpet_area: number | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export async function GET() {
@@ -25,7 +27,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("primarly_listing")
       .select(
-        `id, project_name, project_description, details, end_date, blocks, promoter, site_address, land_area, total_area_of_land, total_carpet_area`
+        `id, project_name, project_description, details, end_date, blocks, promoter, site_address, land_area, total_area_of_land, total_carpet_area, latitude, longitude`
       )
       .order("end_date", { ascending: true })
       .range(0, 4999);
@@ -51,8 +53,8 @@ export async function GET() {
         name: row.promoter || "Promoter",
         phone: null,
       },
-      lat: null,
-      lng: null,
+      lat: row.latitude ?? null,
+      lng: row.longitude ?? null,
       description: row.project_description || null,
       promoter: row.promoter || null,
       details: row.details || null,
