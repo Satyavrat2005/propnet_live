@@ -372,17 +372,12 @@ export default function ClientsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/properties", "mine"] });
 
       // re-fetch client details to update modal view
-      try {
-        const idForFetch = encodeURIComponent(clientModalData.client_id ?? `${clientModalData.owner_phone ?? clientModalData.client_phone ?? ""}||${clientModalData.owner_name ?? clientModalData.client_name ?? ""}`);
-        const detailResp = await fetch(`/api/clients/${idForFetch}`, { credentials: "include" });
-        if (detailResp.ok) {
-          const detailJson = await detailResp.json();
-          setClientModalData(normalizeClientFields(detailJson));
-        } else {
-          // if detailed fetch fails, just close modal and rely on list refresh
-          setClientModalOpen(false);
-        }
-      } catch {
+      const idForFetch = encodeURIComponent(clientModalData.client_id ?? `${clientModalData.owner_phone ?? clientModalData.client_phone ?? ""}||${clientModalData.owner_name ?? clientModalData.client_name ?? ""}`);
+      const detailResp = await fetch(`/api/clients/${idForFetch}`, { credentials: "include" });
+      if (detailResp.ok) {
+        const detailJson = await detailResp.json();
+        setClientModalData(normalizeClientFields(detailJson)); // modal stays open, dropdown will disappear
+      } else {
         setClientModalOpen(false);
       }
 
@@ -870,7 +865,7 @@ export default function ClientsPage() {
                 </div>
 
                 {/* Associate property dropdown if client has no associated property */}
-                {clientModalData && !clientModalData.property_id && (
+                {clientModalData && !clientModalData.property_id && (!clientModalData.properties || clientModalData.properties.length === 0) && (
                   <div className="mt-6">
                     <h4 className="text-md font-semibold mb-2">Associate Property</h4>
                     <p className="text-sm text-slate-500 mb-2">Select one of your listings to associate with this client (Buyer → sale, Tenant → rent).</p>

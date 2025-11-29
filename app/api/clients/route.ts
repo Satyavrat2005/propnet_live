@@ -60,13 +60,26 @@ export async function GET(req: NextRequest) {
     });
 
     // Add clients from client table
-    (clientsFromTable || []).forEach((c: any) => {
+    for (const c of clientsFromTable || []) {
       const key = `${(c.client_phone || "").trim()}||${(c.client_name || "").trim()}`;
+      // For tenants/buyers, count client rows with property_id for this name/phone
+      let propertyCount = 0;
+      if (c.client_type === "Tenant" || c.client_type === "Buyer") {
+        const { data: clientProps, error: clientPropsError } = await supabase
+          .from("client")
+          .select("property_id")
+          .eq("client_name", c.client_name)
+          .eq("client_phone", c.client_phone)
+          .not("property_id", "is", null);
+        if (!clientPropsError && Array.isArray(clientProps)) {
+          propertyCount = clientProps.length;
+        }
+      }
       if (!map.has(key)) {
         map.set(key, { 
           owner_name: c.client_name || "Unknown", 
           owner_phone: c.client_phone || "", 
-          count: 1, 
+          count: propertyCount || 0, 
           first_seen: c.created_at,
           source: "client_table",
           client_type: c.client_type,
@@ -77,8 +90,12 @@ export async function GET(req: NextRequest) {
         const existing = map.get(key);
         existing.client_type = c.client_type;
         existing.client_id = c.client_id;
+        // If client_type is Tenant/Buyer, update count
+        if (c.client_type === "Tenant" || c.client_type === "Buyer") {
+          existing.count = propertyCount || 0;
+        }
       }
-    });
+    }
 
     const clients = Array.from(map.entries()).map(([k, v], idx) => ({ key: `client-${idx}`, ...v }));
 
