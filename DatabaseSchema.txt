@@ -56,11 +56,11 @@ CREATE TABLE public.primarly_listing (
   blocks text,
   promoter text,
   site_address text,
-  latitude double precision,
-  longitude double precision,
   land_area numeric,
   total_area_of_land numeric,
   total_carpet_area numeric,
+  latitude double precision,
+  longitude double precision,
   CONSTRAINT primarly_listing_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.profiles (
