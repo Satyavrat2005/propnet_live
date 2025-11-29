@@ -49,6 +49,8 @@ type PrimaryListingRow = {
   promoter: string | null;
   site_address: string | null;
   end_date: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 const trimText = (value?: string | null, maxLength = 160) => {
@@ -64,6 +66,86 @@ const TEXT_LIMITS = {
   description: 120,
   ownerName: 60,
   primaryDetails: 100,
+};
+
+const PRIMARY_GEOCODE_CACHE = new Map<string, { lat: number; lng: number }>();
+const GOOGLE_GEOCODE_BASE = "https://maps.googleapis.com/maps/api/geocode/json";
+
+const geocodePrimaryAddress = async (address: string) => {
+  const sanitized = address.trim();
+  if (!sanitized) {
+    return null;
+  }
+
+  const cacheKey = sanitized.toLowerCase();
+  const cached = PRIMARY_GEOCODE_CACHE.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    console.warn("[map-data] GOOGLE_MAPS_API_KEY not configured, skipping geocode");
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `${GOOGLE_GEOCODE_BASE}?address=${encodeURIComponent(sanitized)}&key=${encodeURIComponent(apiKey)}`,
+      { cache: "no-store" }
+    );
+    const data = await response.json();
+
+    if (data?.status !== "OK" || !Array.isArray(data?.results) || data.results.length === 0) {
+      return null;
+    }
+
+    const bestMatch = data.results[0];
+    const location = bestMatch.geometry?.location;
+    if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") {
+      return null;
+    }
+
+    const coords = { lat: location.lat, lng: location.lng };
+    PRIMARY_GEOCODE_CACHE.set(cacheKey, coords);
+    return coords;
+  } catch (error) {
+    console.error("[map-data] Failed to geocode primary listing", sanitized, error);
+    return null;
+  }
+};
+
+const ensurePrimaryListingCoordinates = async (row: PrimaryListingRow) => {
+  if (typeof row.latitude === "number" && typeof row.longitude === "number") {
+    return row;
+  }
+
+  const addressToGeocode = row.site_address?.trim();
+  if (!addressToGeocode) {
+    return row;
+  }
+
+  const coords = await geocodePrimaryAddress(addressToGeocode);
+  if (!coords) {
+    return row;
+  }
+
+  row.latitude = coords.lat;
+  row.longitude = coords.lng;
+
+  try {
+    const { error } = await supabase
+      .from("primarly_listing")
+      .update({ latitude: coords.lat, longitude: coords.lng })
+      .eq("id", row.id);
+    if (error) {
+      console.error("[map-data] Failed to persist primary listing coords", row.id, error);
+    }
+  } catch (persistError) {
+    console.error("[map-data] Unexpected error persisting primary coords", persistError);
+  }
+
+  return row;
 };
 
 const fetchApprovedProperties = unstable_cache(async (): Promise<MapProperty[]> => {
@@ -163,6 +245,8 @@ const fetchPrimaryListings = unstable_cache(async (): Promise<MapProperty[]> => 
       details,
       promoter,
       site_address,
+      latitude,
+      longitude,
       end_date
     `)
     .order("end_date", { ascending: true })
@@ -173,7 +257,13 @@ const fetchPrimaryListings = unstable_cache(async (): Promise<MapProperty[]> => 
     return [];
   }
 
-  return (data || []).map((row: PrimaryListingRow): MapProperty => ({
+  const rawRows = (data || []) as PrimaryListingRow[];
+  const resolvedRows: PrimaryListingRow[] = [];
+  for (const row of rawRows) {
+    resolvedRows.push(await ensurePrimaryListingCoordinates(row));
+  }
+
+  return resolvedRows.map((row: PrimaryListingRow): MapProperty => ({
     id: `primary-${row.id}`,
     title: trimText(row.project_name || "Primary Listing", TEXT_LIMITS.title) || "Primary Listing",
     propertyType: "primary",
@@ -189,8 +279,8 @@ const fetchPrimaryListings = unstable_cache(async (): Promise<MapProperty[]> => 
       agencyName: null,
       profilePhotoUrl: null,
     },
-    lat: null,
-    lng: null,
+    lat: row.latitude ?? null,
+    lng: row.longitude ?? null,
     promoter: trimText(row.promoter, 80) || null,
     listingSource: "primary",
   }));
