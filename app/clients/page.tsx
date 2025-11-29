@@ -7,11 +7,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {AppLayout} from "@/components/layout/app-layout";
-import { Users, TrendingUp, Clock, Target, Plus, ChevronRight, Building2, CheckCircle2, Search, Filter } from "lucide-react";
+import { AppLayout } from "@/components/layout/app-layout";
+import { Users, TrendingUp, Clock, Target, Plus, ChevronRight } from "lucide-react";
 
 /**
- * Clients page — images-only photo rendering (no URL text).
+ * Clients page — updated:
+ * - badge shows real count (c.count ?? 0)
+ * - client can be created without associated property
+ * - "Associate Property" UI appears inside client modal (only when client has no property)
+ * - associateProperty() function calls PATCH /api/clients/associate
  */
 
 export default function ClientsPage() {
@@ -85,15 +89,15 @@ export default function ClientsPage() {
   // Filtered properties based on client type
   const filteredProperties = useMemo(() => {
     if (!clientFormData.client_type) return rawProperties;
-    
+
     if (clientFormData.client_type === "Tenant") {
-      return rawProperties.filter((p: any) => p.transactionType === "rent" || p.transaction_type === "rent");
+      return rawProperties.filter((p: any) => (p.transactionType ?? p.transaction_type) === "rent");
     }
-    
+
     if (clientFormData.client_type === "Buyer") {
-      return rawProperties.filter((p: any) => p.transactionType === "sale" || p.transaction_type === "sale");
+      return rawProperties.filter((p: any) => (p.transactionType ?? p.transaction_type) === "sale");
     }
-    
+
     return rawProperties;
   }, [rawProperties, clientFormData.client_type]);
 
@@ -292,7 +296,7 @@ export default function ClientsPage() {
 
   // normalized lists for UI
   const clients = Array.isArray(rawClients) ? rawClients.map(normalizeClientFields) : [];
-  
+
   // Only show deals from client table (properties with client associations)
   const properties = Array.isArray(dealsFromClients) ? dealsFromClients.map(normalizePropertyFields) : [];
 
@@ -308,53 +312,83 @@ export default function ClientsPage() {
     }
   }
 
-  // open client modal (compositeId format kept the same)
+  // OPEN CLIENT MODAL
   const openClientModal = async (compositeId: string) => {
     setClientModalOpen(true);
-    setClientModalData(null);
     setClientModalLoading(true);
+    setClientModalData(null);
 
     try {
-      const r = await fetch(`/api/clients/${encodeURIComponent(compositeId)}`, { credentials: "include" });
-      if (!r.ok) {
-        setClientModalLoading(false);
-        setClientModalData(null);
-        return;
+      const id = encodeURIComponent(String(compositeId));
+      const res = await fetch(`/api/clients/${id}`, { credentials: "include" });
+      if (!res.ok) {
+        // fallback: fetch all and find
+        const all = await fetch("/api/clients", { credentials: "include" }).then(r => r.ok ? r.json() : []);
+        const found = (all || []).find((c: any) => {
+          const composite = `${c.client_phone ?? c.owner_phone ?? ""}||${c.client_name ?? c.owner_name ?? ""}`;
+          return composite === compositeId || c.client_id === compositeId || c.client_phone === compositeId;
+        });
+        if (found) {
+          setClientModalData(normalizeClientFields(found));
+        } else {
+          setClientModalData(null);
+        }
+      } else {
+        const data = await res.json();
+        setClientModalData(normalizeClientFields(data));
       }
-      const data = await r.json();
-      const normalizedClient = normalizeClientFields(data ?? {});
-      setClientModalData(normalizedClient);
-    } catch {
+    } catch (err) {
       setClientModalData(null);
     } finally {
       setClientModalLoading(false);
     }
   };
 
-  // open deal/property modal
-  const openDealModal = async (propertyId: string | number) => {
-    setDealModalOpen(true);
-    setDealDetail(null);
-    setDealLoading(true);
+  // Associate property function
+  const associateProperty = async (propertyId?: string) => {
+    if (!clientModalData) return alert("No client loaded");
+    const pid = propertyId ?? clientModalData._selectedPropertyId ?? clientModalData.property_id;
+    if (!pid) return alert("Select a property to associate");
 
     try {
-      const canonical = await fetchPropertyById(String(propertyId));
-      const fallback = !canonical
-        ? properties.find((p: any) => {
-            const ids = [p.property_id, p.id, p.propertyId].filter(Boolean);
-            return ids.some((x: any) => String(x) === String(propertyId));
-          })
-        : null;
+      const res = await fetch("/api/clients/associate", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          client_identifier: clientModalData.client_id ?? `${clientModalData.owner_phone ?? clientModalData.client_phone ?? ""}||${clientModalData.owner_name ?? clientModalData.client_name ?? ""}`,
+          property_id: pid
+        })
+      });
 
-      setDealDetail(canonical ?? fallback ?? null);
-    } catch {
-      setDealDetail(null);
-    } finally {
-      setDealLoading(false);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || err?.message || "Failed to associate property");
+      }
+
+      // refresh queries
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients", "deals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", "mine"] });
+
+      // re-fetch client details to update modal view
+      const idForFetch = encodeURIComponent(clientModalData.client_id ?? `${clientModalData.owner_phone ?? clientModalData.client_phone ?? ""}||${clientModalData.owner_name ?? clientModalData.client_name ?? ""}`);
+      const detailResp = await fetch(`/api/clients/${idForFetch}`, { credentials: "include" });
+      if (detailResp.ok) {
+        const detailJson = await detailResp.json();
+        setClientModalData(normalizeClientFields(detailJson)); // modal stays open, dropdown will disappear
+      } else {
+        setClientModalOpen(false);
+      }
+
+      alert("Property associated successfully. Listing marked as Deal Done.");
+    } catch (err: any) {
+      console.error("Associate property error:", err);
+      alert(err?.message || "Failed to associate property");
     }
   };
 
-  // tasks mutations (unchanged)
+  // tasks mutations
   const createTaskMutation = useMutation({
     mutationFn: async (payload: { task_text: string }) => {
       const res = await fetch("/api/tasks", {
@@ -407,7 +441,7 @@ export default function ClientsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/properties", "mine"] });
       setShowAddClient(false);
       setClientFormData({ client_name: "", client_phone: "", client_type: "", property_id: "" });
-      alert("Client added successfully and deal marked as complete!");
+      alert("Client added successfully!");
     },
   });
 
@@ -419,12 +453,12 @@ export default function ClientsPage() {
 
   const handleAddClient = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const { client_name, client_phone, client_type, property_id } = clientFormData;
-    
-    if (!client_name || !client_phone || !client_type || !property_id) {
-      return alert("Please fill all fields");
+    const { client_name, client_phone, client_type } = clientFormData;
+
+    if (!client_name || !client_phone || !client_type) {
+      return alert("Please fill name, phone and type");
     }
-    
+
     await createClientMutation.mutateAsync(clientFormData);
   };
 
@@ -448,8 +482,8 @@ export default function ClientsPage() {
                 Manage relationships and deals
               </p>
             </div>
-            <Button 
-              onClick={() => setShowAddClient(true)} 
+            <Button
+              onClick={() => setShowAddClient(true)}
               className="flex items-center gap-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white shadow-md transition-all duration-200"
             >
               <Plus className="w-4 h-4" />
@@ -512,26 +546,26 @@ export default function ClientsPage() {
         {/* Tabs */}
         <div className="card-modern p-2 mb-6">
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setActiveTab("overview")} 
+            <button
+              onClick={() => setActiveTab("overview")}
               className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "overview" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Overview
             </button>
-            <button 
-              onClick={() => setActiveTab("clients")} 
+            <button
+              onClick={() => setActiveTab("clients")}
               className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "clients" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Clients
             </button>
-            <button 
-              onClick={() => setActiveTab("deals")} 
+            <button
+              onClick={() => setActiveTab("deals")}
               className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "deals" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Deals
             </button>
-            <button 
-              onClick={() => setActiveTab("tasks")} 
+            <button
+              onClick={() => setActiveTab("tasks")}
               className={`rounded-lg px-5 py-2.5 font-medium transition-all ${activeTab === "tasks" ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
             >
               Tasks
@@ -539,178 +573,178 @@ export default function ClientsPage() {
           </div>
         </div>
 
-      <div className="px-8 py-8">
-        {activeTab === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="rounded-2xl shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {clients.length === 0 ? (
-                  <div className="py-16 text-center text-slate-400">
-                    <div className="flex items-center justify-center mb-6">
-                      <svg className="w-14 h-14 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 12c2.761 0 5-2.239 5-5S14.761 2 12 2 7 4.239 7 7s2.239 5 5 5zm0 2c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z" /></svg>
-                    </div>
-                    <p className="text-lg font-medium">No clients yet. Add your first client to get started!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 py-2">
-                    {clients.slice(0, 6).map((c: any, idx: number) => (
-                      <div
-                        key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${c.id ?? idx}`}
-                        onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
-                        className="flex items-center justify-between rounded-xl p-6 bg-linear-to-r from-[#fff7ff] to-[#f6fbff] hover:shadow-md transition cursor-pointer"
-                        style={{ paddingLeft: 18 }}
-                      >
-                        <div>
-                          <p className="font-semibold text-lg text-slate-900">{c.owner_name ?? "—"}</p>
-                          <p className="text-sm text-slate-500 mt-1">{c.owner_phone ?? "—"}</p>
-                        </div>
-                        <div className="text-sm text-slate-400">Clients</div>
+        <div className="px-8 py-8">
+          {activeTab === "overview" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="rounded-2xl shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {clients.length === 0 ? (
+                    <div className="py-16 text-center text-slate-400">
+                      <div className="flex items-center justify-center mb-6">
+                        <svg className="w-14 h-14 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 12c2.761 0 5-2.239 5-5S14.761 2 12 2 7 4.239 7 7s2.239 5 5 5zm0 2c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z" /></svg>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold">Pipeline Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm text-slate-600">Active Deals</div>
-                    <div className="font-semibold text-slate-700">{activeDealsCount}/{totalDeals}</div>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                    <div className="h-3 rounded-full" style={{ width: `${activeDealPct}%`, background: "linear-gradient(90deg,#22c55e,#06b6d4)", transition: "width .4s ease" }} />
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm text-slate-600">Task Completion</div>
-                    <div className="font-semibold text-slate-700">{tasks.length - pendingTasks}/{tasks.length || 0}</div>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                    <div className="h-3 rounded-full" style={{ width: `${taskCompletionPct}%`, background: "linear-gradient(90deg,#60a5fa,#a78bfa)", transition: "width .4s ease" }} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  <div className="rounded-xl p-6 bg-linear-to-br from-[#e6f2ff] to-[#f3fbff] text-center">
-                    <p className="text-3xl font-bold text-blue-600">{totalClients}</p>
-                    <p className="text-sm mt-2 text-slate-500">Total Clients</p>
-                  </div>
-                  <div className="rounded-xl p-6 bg-linear-to-br from-[#eefde7] to-[#f0fff7] text-center">
-                    <p className="text-3xl font-bold text-blue-600">{monthlyDeals}</p>
-                    <p className="text-sm mt-2 text-slate-500">This Month</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "clients" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {clients.map((c: any, idx: number) => (
-              <Card key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${c.id ?? idx}`} className="rounded-xl">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div style={{ paddingLeft: 6 }}>
-                      <p className="font-bold text-lg">{c.owner_name}</p>
-                      <p className="text-sm text-slate-500 mt-1">{c.owner_phone}</p>
+                      <p className="text-lg font-medium">No clients yet. Add your first client to get started!</p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className="capitalize">{c.count || 1} Properties</Badge>
-                      <Button size="sm" variant="ghost" onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white">View</Button>
+                  ) : (
+                    <div className="space-y-3 py-2">
+                      {clients.slice(0, 6).map((c: any, idx: number) => (
+                        <div
+                          key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${c.id ?? idx}`}
+                          onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
+                          className="flex items-center justify-between rounded-xl p-6 bg-linear-to-r from-[#fff7ff] to-[#f6fbff] hover:shadow-md transition cursor-pointer"
+                          style={{ paddingLeft: 18 }}
+                        >
+                          <div>
+                            <p className="font-semibold text-lg text-slate-900">{c.owner_name ?? "—"}</p>
+                            <p className="text-sm text-slate-500 mt-1">{c.owner_phone ?? "—"}</p>
+                          </div>
+                          <div className="text-sm text-slate-400">Clients</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold">Pipeline Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm text-slate-600">Active Deals</div>
+                      <div className="font-semibold text-slate-700">{activeDealsCount}/{totalDeals}</div>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                      <div className="h-3 rounded-full" style={{ width: `${activeDealPct}%`, background: "linear-gradient(90deg,#22c55e,#06b6d4)", transition: "width .4s ease" }} />
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm text-slate-600">Task Completion</div>
+                      <div className="font-semibold text-slate-700">{tasks.length - pendingTasks}/{tasks.length || 0}</div>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                      <div className="h-3 rounded-full" style={{ width: `${taskCompletionPct}%`, background: "linear-gradient(90deg,#60a5fa,#a78bfa)", transition: "width .4s ease" }} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-6">
+                    <div className="rounded-xl p-6 bg-linear-to-br from-[#e6f2ff] to-[#f3fbff] text-center">
+                      <p className="text-3xl font-bold text-blue-600">{totalClients}</p>
+                      <p className="text-sm mt-2 text-slate-500">Total Clients</p>
+                    </div>
+                    <div className="rounded-xl p-6 bg-linear-to-br from-[#eefde7] to-[#f0fff7] text-center">
+                      <p className="text-3xl font-bold text-blue-600">{monthlyDeals}</p>
+                      <p className="text-sm mt-2 text-slate-500">This Month</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === "deals" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {properties.length === 0 && <p className="text-center text-slate-500 p-6">No deals (properties) yet</p>}
-            {properties.map((d: any, idx: number) => {
-              const badgeText = d.transaction_type ?? d.transactionType ?? d.property_type ?? d.propertyType ?? "Unknown";
-              return (
-                <Card key={d.property_id ?? d.id ?? idx} className="rounded-xl">
+          {activeTab === "clients" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {clients.map((c: any, idx: number) => (
+                <Card key={`${c.owner_phone ?? ""}-${c.owner_name ?? ""}-${c.id ?? idx}`} className="rounded-xl">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div style={{ paddingLeft: 6 }}>
-                        <p className="font-semibold">{d.property_title}</p>
-                        <p className="text-sm text-slate-500">{d.location}</p>
+                        <p className="font-bold text-lg">{c.owner_name}</p>
+                        <p className="text-sm text-slate-500 mt-1">{c.owner_phone}</p>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <Badge className="capitalize">{badgeText}</Badge>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => openDealModal(d.property_id ?? d.id)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white">View</Button>
-                          <ChevronRight className="w-5 h-5 text-slate-300" />
-                        </div>
+                        <Badge className="capitalize">{c.count ?? 0} Properties</Badge>
+                        <Button size="sm" variant="ghost" onClick={() => openClientModal(`${c.owner_phone ?? ""}||${c.owner_name ?? ""}`)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white">
+                          View
+                        </Button>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-
-        {activeTab === "tasks" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-end">
-              <Button 
-                onClick={() => setShowAddTask(true)} 
-                className="flex items-center gap-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white shadow-md transition-all duration-200"
-              >
-                <Plus className="w-4 h-4" />
-                Add Task
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {tasks.length === 0 && <p className="text-center text-slate-500 p-6">No tasks yet</p>}
-              {tasks.map((t: any) => (
-                <Card key={t.task_id} className="rounded-xl">
-                  <CardContent className="flex items-center justify-between p-6">
-                    <div style={{ paddingRight: 12 }}>
-                      <p className={`font-medium ${t.status ? "line-through text-slate-400" : ""}`}>{t.task_text}</p>
-                      <p className="text-xs text-slate-400 mt-1">Created: {t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}</p>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={Boolean(t.status)}
-                          onChange={() => toggleTaskMutation.mutate({ id: t.task_id, status: !t.status })}
-                        />
-                        <span className={`w-11 h-6 inline-block rounded-full transition-colors ${t.status ? "bg-green-500" : "bg-gray-300"}`} />
-                        <span className="ml-3 text-sm text-slate-600">{t.status ? "Complete" : "Mark Complete"}</span>
-                      </label>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          </div>
-        )}
+          )}
+
+          {activeTab === "deals" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {properties.length === 0 && <p className="text-center text-slate-500 p-6">No deals (properties) yet</p>}
+              {properties.map((d: any, idx: number) => {
+                const badgeText = d.transaction_type ?? d.transactionType ?? d.property_type ?? d.propertyType ?? "Unknown";
+                return (
+                  <Card key={d.property_id ?? d.id ?? idx} className="rounded-xl">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div style={{ paddingLeft: 6 }}>
+                          <p className="font-semibold">{d.property_title}</p>
+                          <p className="text-sm text-slate-500">{d.location}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge className="capitalize">{badgeText}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="ghost" className="bg-blue-600 hover:bg-blue-700 text-white">View</Button>
+                            <ChevronRight className="w-5 h-5 text-slate-300" />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+          {activeTab === "tasks" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-end">
+                <Button
+                  onClick={() => setShowAddTask(true)}
+                  className="flex items-center gap-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white shadow-md transition-all duration-200"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Task
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {tasks.length === 0 && <p className="text-center text-slate-500 p-6">No tasks yet</p>}
+                {tasks.map((t: any) => (
+                  <Card key={t.task_id} className="rounded-xl">
+                    <CardContent className="flex items-center justify-between p-6">
+                      <div style={{ paddingRight: 12 }}>
+                        <p className={`font-medium ${t.status ? "line-through text-slate-400" : ""}`}>{t.task_text}</p>
+                        <p className="text-xs text-slate-400 mt-1">Created: {t.created_at ? new Date(t.created_at).toLocaleDateString() : "—"}</p>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <label className="inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={Boolean(t.status)}
+                            onChange={() => toggleTaskMutation.mutate({ id: t.task_id, status: !t.status })}
+                          />
+                          <span className={`w-11 h-6 inline-block rounded-full transition-colors ${t.status ? "bg-green-500" : "bg-gray-300"}`} />
+                          <span className="ml-3 text-sm text-slate-600">{t.status ? "Complete" : "Mark Complete"}</span>
+                        </label>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
 
-    </div>
-
-    {/* Client modal */}
+      {/* Client modal */}
       {clientModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-12">
           <div className="absolute inset-0 bg-black/30" onClick={() => setClientModalOpen(false)} />
@@ -785,7 +819,6 @@ export default function ClientsPage() {
                             <div className="flex flex-col items-end gap-3">
                               <Badge className="capitalize">{p.approval_status ?? "pending"}</Badge>
                               <div className="flex items-center gap-2">
-                                <Button size="sm" variant="ghost" onClick={() => openDealModal(p.property_id ?? p.id)}>Open</Button>
                                 <ChevronRight className="w-5 h-5 text-slate-300" />
                               </div>
                             </div>
@@ -830,6 +863,54 @@ export default function ClientsPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Associate property dropdown if client has no associated property */}
+                {clientModalData && !clientModalData.property_id && (!clientModalData.properties || clientModalData.properties.length === 0) && (
+                  <div className="mt-6">
+                    <h4 className="text-md font-semibold mb-2">Associate Property</h4>
+                    <p className="text-sm text-slate-500 mb-2">Select one of your listings to associate with this client (Buyer → sale, Tenant → rent).</p>
+
+                    <div className="flex gap-3 items-start">
+                      <div className="flex-1">
+                        <select
+                          value={clientModalData._selectedPropertyId ?? ""}
+                          onChange={e => setClientModalData({ ...clientModalData, _selectedPropertyId: e.target.value })}
+                          className="w-full p-3 border rounded-md"
+                        >
+                          <option value="">Select property</option>
+                          {rawProperties
+                            .filter((p: any) => {
+                              const clientType = (clientModalData.client_type ?? clientModalData.clientType ?? "").toString();
+                              if (clientType === "Buyer") {
+                                return (p.transaction_type ?? p.transactionType ?? "").toString().toLowerCase() === "sale";
+                              }
+                              if (clientType === "Tenant") {
+                                return (p.transaction_type ?? p.transactionType ?? "").toString().toLowerCase() === "rent";
+                              }
+                              return true;
+                            })
+                            .map((prop: any) => (
+                              <option key={prop.property_id ?? prop.id} value={prop.property_id ?? prop.id}>
+                                {prop.property_title ?? prop.title ?? "Untitled"} • {(prop.location ?? prop.full_address ?? "No location")}
+                              </option>
+                            ))
+                          }
+                        </select>
+                      </div>
+
+                      <div>
+                        <Button
+                          onClick={() => associateProperty()}
+                          disabled={!clientModalData?._selectedPropertyId}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          Associate
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </>
             ) : (
               <div className="py-8 text-center text-slate-500">Could not load client details</div>
@@ -946,8 +1027,8 @@ export default function ClientsPage() {
               <textarea value={taskText} onChange={(e) => setTaskText(e.target.value)} placeholder="E.g., Call client to confirm documents" className="w-full h-28 p-3 border rounded-md mb-4" />
               <div className="flex items-center justify-end gap-3">
                 <Button variant="ghost" onClick={() => setShowAddTask(false)} className="border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all">Cancel</Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={createTaskMutation.isPending}
                   className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                 >
@@ -976,10 +1057,10 @@ export default function ClientsPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-slate-600 mb-2">Client Name</label>
-                  <input 
+                  <input
                     type="text"
                     value={clientFormData.client_name}
-                    onChange={(e) => setClientFormData({...clientFormData, client_name: e.target.value})}
+                    onChange={(e) => setClientFormData({ ...clientFormData, client_name: e.target.value })}
                     placeholder="Enter client name"
                     className="w-full p-3 border rounded-md"
                   />
@@ -987,10 +1068,10 @@ export default function ClientsPage() {
 
                 <div>
                   <label className="block text-sm text-slate-600 mb-2">Client Phone</label>
-                  <input 
+                  <input
                     type="tel"
                     value={clientFormData.client_phone}
-                    onChange={(e) => setClientFormData({...clientFormData, client_phone: e.target.value})}
+                    onChange={(e) => setClientFormData({ ...clientFormData, client_phone: e.target.value })}
                     placeholder="Enter phone number"
                     className="w-full p-3 border rounded-md"
                   />
@@ -1000,7 +1081,7 @@ export default function ClientsPage() {
                   <label className="block text-sm text-slate-600 mb-2">Client Type</label>
                   <select
                     value={clientFormData.client_type}
-                    onChange={(e) => setClientFormData({...clientFormData, client_type: e.target.value})}
+                    onChange={(e) => setClientFormData({ ...clientFormData, client_type: e.target.value })}
                     className="w-full p-3 border rounded-md"
                   >
                     <option value="">Select type</option>
@@ -1009,38 +1090,19 @@ export default function ClientsPage() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm text-slate-600 mb-2">Associated Property</label>
-                  <select
-                    value={clientFormData.property_id}
-                    onChange={(e) => setClientFormData({...clientFormData, property_id: e.target.value})}
-                    className="w-full p-3 border rounded-md"
-                    disabled={!clientFormData.client_type}
-                  >
-                    <option value="">Select property</option>
-                    {filteredProperties.map((prop: any) => (
-                      <option key={prop.id} value={prop.id}>
-                        {prop.title || prop.property_title || "Untitled"} - {prop.location || "No location"}
-                      </option>
-                    ))}
-                  </select>
-                  {!clientFormData.client_type && (
-                    <p className="text-xs text-slate-400 mt-1">Please select client type first</p>
-                  )}
-                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 mt-6">
-                <Button 
+                <Button
                   type="button"
-                  variant="ghost" 
-                  onClick={() => setShowAddClient(false)} 
+                  variant="ghost"
+                  onClick={() => setShowAddClient(false)}
                   className="border-gray-300 hover:border-blue-500/40 hover:bg-blue-50 hover:text-blue-700 transition-all"
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   disabled={createClientMutation.isPending}
                   className="border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200"
                 >

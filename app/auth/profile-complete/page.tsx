@@ -122,7 +122,7 @@ export default function ProfileCompletePage() {
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black,transparent_65%)]"
+        className="pointer-events-none absolute inset-0 mask-[radial-gradient(ellipse_at_center,black,transparent_65%)]"
         style={{
           backgroundImage:
             "linear-gradient(rgba(15,23,42,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.05) 1px, transparent 1px)",
