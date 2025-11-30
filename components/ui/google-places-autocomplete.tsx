@@ -28,6 +28,7 @@ interface GooglePlacesAutocompleteProps {
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   onFocus?: FocusEventHandler<HTMLInputElement>;
   onBlur?: FocusEventHandler<HTMLInputElement>;
+  extractValue?: (suggestion: PlaceSuggestion) => string;
 }
 
 export default function GooglePlacesAutocomplete({
@@ -40,6 +41,7 @@ export default function GooglePlacesAutocomplete({
   onKeyDown,
   onFocus,
   onBlur,
+  extractValue,
 }: GooglePlacesAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -107,7 +109,10 @@ export default function GooglePlacesAutocomplete({
   };
 
   const handleSuggestionClick = async (suggestion: PlaceSuggestion) => {
-    onChange(suggestion.structured_formatting.main_text, suggestion);
+    const resolvedValue = extractValue
+      ? extractValue(suggestion)
+      : suggestion.structured_formatting.main_text;
+    onChange(resolvedValue, suggestion);
     setSuggestions([]);
     setShowSuggestions(false);
 
@@ -177,42 +182,44 @@ export default function GooglePlacesAutocomplete({
         )}
       </div>
 
-      {showSuggestions && suggestions.length > 0 && (
+      {showSuggestions && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-          {suggestions.map((suggestion) => (
-            <div
-              key={suggestion.place_id}
-              className="px-4 py-3 hover:bg-neutral-50 cursor-pointer border-b border-neutral-100 last:border-b-0"
-              onClick={() => handleSuggestionClick(suggestion)}
-            >
-              <div className="flex items-start space-x-3">
-                <Building2 size={16} className="text-neutral-400 mt-1 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-900 truncate">
-                    {suggestion.structured_formatting.main_text}
-                  </p>
-                  <p className="text-xs text-neutral-600 truncate">
-                    {suggestion.structured_formatting.secondary_text}
-                  </p>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-2 px-4 py-4 text-sm text-neutral-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+              <p className="font-medium text-neutral-800">Loading suggestions...</p>
+              <p className="text-xs text-neutral-500">This may take a second depending on your network.</p>
+            </div>
+          ) : suggestions.length > 0 ? (
+            suggestions.map((suggestion) => (
+              <div
+                key={suggestion.place_id}
+                className="px-4 py-3 hover:bg-neutral-50 cursor-pointer border-b border-neutral-100 last:border-b-0"
+                onClick={() => handleSuggestionClick(suggestion)}
+              >
+                <div className="flex items-start space-x-3">
+                  <Building2 size={16} className="text-neutral-400 mt-1 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 truncate">
+                      {suggestion.structured_formatting.main_text}
+                    </p>
+                    <p className="text-xs text-neutral-600 truncate">
+                      {suggestion.structured_formatting.secondary_text}
+                    </p>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : value.length >= 2 ? (
+            <div className="p-4 text-center text-amber-700 bg-amber-50">
+              <Building2 size={24} className="mx-auto mb-2" />
+              <p className="text-sm font-medium">Google Places API Setup Required</p>
+              <p className="text-xs mt-1">Enable Places API in Google Cloud Console to see suggestions.</p>
+              <p className="text-xs text-amber-600 mt-1">You can type the location manually in the meantime.</p>
             </div>
-          ))}
-        </div>
-      )}
-
-      {showSuggestions && suggestions.length === 0 && value.length >= 2 && !loading && (
-  <div className="absolute z-50 w-full mt-1 border border-amber-200 rounded-lg shadow-lg p-4 bg-amber-50">
-          <div className="text-center text-amber-700">
-            <Building2 size={24} className="mx-auto mb-2" />
-            <p className="text-sm font-medium">Google Places API Setup Required</p>
-            <p className="text-xs mt-1">
-              Enable Places API service in Google Cloud Console
-            </p>
-            <p className="text-xs text-amber-600 mt-1">
-              You can type building names manually for now
-            </p>
-          </div>
+          ) : (
+            <div className="px-4 py-3 text-sm text-neutral-500">Start typing to see nearby places.</div>
+          )}
         </div>
       )}
     </div>

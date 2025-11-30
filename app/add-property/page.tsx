@@ -297,11 +297,13 @@ function PropertyForm({
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-muted-foreground">Full Address</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Enter complete address including Flat/Unit No., Floor, Building/Society Name, Area, City, and any landmarks...&#10;Example: Flat 301, 3rd Floor, Rustomjee Paramount, Khar West, Mumbai, Maharashtra"
-                      className="resize-none input-modern"
-                      rows={4}
-                      {...field}
+                    <GooglePlacesAutocomplete
+                      value={field.value || ""}
+                      onChange={(value) => field.onChange(value)}
+                      placeholder="Enter complete address including Flat/Unit No., Floor, Building/Society Name, Area, City, and any landmarks... Example: Flat 301, 3rd Floor, Rustomjee Paramount, Khar West, Mumbai, Maharashtra"
+                      className="input-modern"
+                      types={["geocode"]}
+                      extractValue={(suggestion) => suggestion.description}
                     />
                   </FormControl>
                   <p className="text-xs text-muted-foreground mt-1">Our AI will automatically extract location, flat number, floor, and building details</p>
