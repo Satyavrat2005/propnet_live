@@ -3,8 +3,15 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 
-const GEMINI_ENDPOINT =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+// Fallback models in order of preference
+const GEMINI_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b"
+];
+
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 type ExtractedProperty = {
   title?: string;
@@ -147,17 +154,54 @@ export async function POST(req: NextRequest) {
       },
     ];
 
-    const resp = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: prompt }),
-      cache: "no-store",
-    });
+    // Try each model in sequence if rate limit is hit
+    let resp: Response | null = null;
+    let lastError: string = "";
+    let usedModel: string = "";
 
-    if (!resp.ok) {
-      const t = await resp.text();
+    for (const model of GEMINI_MODELS) {
+      const endpoint = `${GEMINI_BASE_URL}/${model}:generateContent?key=${apiKey}`;
+      
+      try {
+        console.log(`[Gemini] Trying model: ${model}`);
+        resp = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: prompt }),
+          cache: "no-store",
+        });
+
+        if (resp.ok) {
+          usedModel = model;
+          console.log(`[Gemini] Success with model: ${model}`);
+          break;
+        }
+
+        // If rate limit (429), try next model
+        if (resp.status === 429) {
+          console.log(`[Gemini] Rate limit hit for ${model}, trying next model...`);
+          lastError = await resp.text();
+          continue;
+        }
+
+        // For other errors, break and return error
+        lastError = await resp.text();
+        break;
+
+      } catch (error: any) {
+        console.error(`[Gemini] Error with model ${model}:`, error);
+        lastError = error.message;
+        continue;
+      }
+    }
+
+    if (!resp || !resp.ok) {
       return NextResponse.json(
-        { message: `Gemini error ${resp.status}`, detail: t },
+        { 
+          message: `All Gemini models failed or rate limited`, 
+          detail: lastError,
+          triedModels: GEMINI_MODELS
+        },
         { status: 500 }
       );
     }
@@ -203,14 +247,14 @@ export async function POST(req: NextRequest) {
       );
 
       return NextResponse.json(
-        { properties: fallback, count: fallback.length },
+        { properties: fallback, count: fallback.length, model: "fallback" },
         { status: 200 }
       );
     }
 
     const props: ExtractedProperty[] = json.properties.map(normalize);
     return NextResponse.json(
-      { properties: props, count: props.length },
+      { properties: props, count: props.length, model: usedModel },
       { status: 200 }
     );
   } catch (e: any) {

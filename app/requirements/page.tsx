@@ -55,6 +55,8 @@ interface Requirement {
   sizeUnit?: string | null;
   bhk?: number | null;
   description?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   createdAt: string;
 }
 
@@ -64,14 +66,6 @@ export default function RequirementsPage() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<Requirement | null>(null);
-  
-  // Filter states for matching properties
-  const [filterPropertyType, setFilterPropertyType] = useState<string>("all");
-  const [filterTransactionType, setFilterTransactionType] = useState<string>("all");
-  const [filterBhk, setFilterBhk] = useState<string>("all");
-  const [filterMinPrice, setFilterMinPrice] = useState<string>("");
-  const [filterMaxPrice, setFilterMaxPrice] = useState<string>("");
-  const [filterLocation, setFilterLocation] = useState<string>("");
 
   const form = useForm<RequirementFormData>({
     resolver: zodResolver(requirementSchema),
@@ -102,89 +96,204 @@ export default function RequirementsPage() {
     enabled: !!user,
   });
 
-  // Filter network properties based on user's filter selections
+  // Helper function to parse price text to number (in lakhs)
+  const parsePriceToLakhs = (priceStr: string | null | undefined): number | null => {
+    if (!priceStr) return null;
+    const str = priceStr.toLowerCase().trim();
+    
+    // Match patterns like "50 lakh", "1.2 cr", "50L", "1.2Cr", etc.
+    const croreMatch = str.match(/([\d.]+)\s*(cr|crore)/i);
+    if (croreMatch) {
+      return parseFloat(croreMatch[1]) * 100; // Convert crores to lakhs
+    }
+    
+    const lakhMatch = str.match(/([\d.]+)\s*(l|lakh|lac)/i);
+    if (lakhMatch) {
+      return parseFloat(lakhMatch[1]);
+    }
+    
+    // If just a number, assume it's in lakhs
+    const numMatch = str.match(/[\d.]+/);
+    if (numMatch) {
+      return parseFloat(numMatch[0]);
+    }
+    
+    return null;
+  };
+
+  // Helper function to calculate distance between two points (Haversine formula)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+  };
+
+  // Helper function to geocode address using Google Maps API
+  const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        console.warn('[Geocode] Google Maps API key not found');
+        return null;
+      }
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+      );
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const location = data.results[0].geometry.location;
+        return { lat: location.lat, lng: location.lng };
+      }
+      
+      console.warn(`[Geocode] Failed to geocode: ${address}`, data.status);
+      return null;
+    } catch (error) {
+      console.error('[Geocode] Error:', error);
+      return null;
+    }
+  };
+
+  // Filter network properties based on intelligent matching with requirements
   const matchingProperties = useMemo(() => {
     if (!networkProperties.length) return [];
+    if (!requirements.length) return [];
 
-    // First filter out "Deal Done" properties
-    let filtered = networkProperties.filter(property => 
+    console.log('[Requirements Matching] Starting match process...');
+    console.log('[Requirements Matching] Total requirements:', requirements.length);
+    console.log('[Requirements Matching] Requirements data:', requirements.map(r => ({
+      location: r.location,
+      hasCoords: !!(r.lat && r.lng),
+      lat: r.lat,
+      lng: r.lng
+    })));
+
+    // Filter out "Deal Done" properties
+    const availableProperties = networkProperties.filter(property => 
       property.listingType !== "Deal Done" && property.listing_type !== "Deal Done"
     );
 
-    // Check if any user filters are active
-    const hasActiveFilters = 
-      filterPropertyType !== "all" || 
-      filterTransactionType !== "all" || 
-      filterBhk !== "all" || 
-      filterLocation.trim() !== "" || 
-      filterMinPrice.trim() !== "" || 
-      filterMaxPrice.trim() !== "";
+    console.log('[Requirements Matching] Available properties:', availableProperties.length);
+    console.log('[Requirements Matching] Properties data:', availableProperties.map(p => ({
+      title: p.property_title || p.title,
+      location: p.location,
+      price: p.sale_price || p.price,
+      bhk: p.bhk,
+      type: p.propertyType || p.property_type,
+      hasCoords: !!(p.latitude && p.longitude),
+      lat: p.latitude,
+      lng: p.longitude
+    })));
 
-    // If no user filters are active, use requirements locations as default filter
-    if (!hasActiveFilters && requirements.length > 0) {
-      filtered = filtered.filter(property => {
-        // Check if property location matches any requirement location
-        return requirements.some(req => {
-          const reqLocation = req.location?.toLowerCase() || "";
-          const propertyLocation = property.location?.toLowerCase() || "";
-          const propertyFullAddress = property.fullAddress?.toLowerCase() || "";
+    // Match properties against all requirements
+    const matched = availableProperties.filter(property => {
+      const propertyName = property.property_title || property.title || 'Unknown';
+      
+      // Check if property matches ANY of the user's requirements
+      const isMatch = requirements.some(req => {
+        console.log(`\n[Match Check] ${propertyName} vs ${req.location}`);
+        
+        // 1. Property Type Match (exact)
+        const propType = property.propertyType || property.property_type;
+        console.log(`  - Type: ${propType} === ${req.propertyType}?`, propType === req.propertyType);
+        if (propType !== req.propertyType) {
+          return false;
+        }
+
+        // 2. Transaction Type Match (exact)
+        const transType = property.transactionType || property.transaction_type;
+        console.log(`  - Transaction: ${transType} === ${req.transactionType}?`, transType === req.transactionType);
+        if (transType !== req.transactionType) {
+          return false;
+        }
+
+        // 3. BHK Match (if requirement specifies BHK)
+        console.log(`  - BHK: ${property.bhk} === ${req.bhk}?`, !req.bhk || property.bhk === req.bhk);
+        if (req.bhk && property.bhk !== req.bhk) {
+          return false;
+        }
+
+        // 4. Price Range Match (with ±10 lakh buffer for flexibility)
+        const propertyPrice = parsePriceToLakhs(property.sale_price || property.price);
+        const reqMinPrice = parsePriceToLakhs(req.minPrice);
+        const reqMaxPrice = parsePriceToLakhs(req.maxPrice);
+        
+        console.log(`  - Price: ${propertyPrice}L vs ${reqMinPrice}-${reqMaxPrice}L (±10L buffer)`);
+        
+        if (propertyPrice !== null && (reqMinPrice !== null || reqMaxPrice !== null)) {
+          const buffer = 10; // ±10 lakhs buffer for more flexibility
           
-          // Split locations into words for matching
-          const reqLocationWords = reqLocation.split(/[\s,]+/).filter((w: string) => w.length > 3);
-          const propertyLocationWords = propertyLocation.split(/[\s,]+/).filter((w: string) => w.length > 3);
-          const propertyFullAddressWords = propertyFullAddress.split(/[\s,]+/).filter((w: string) => w.length > 3);
-          
-          // Check if any words match
-          return reqLocationWords.some((reqWord: string) => 
-            propertyLocationWords.some((propWord: string) => 
-              propWord.includes(reqWord) || reqWord.includes(propWord)
-            ) ||
-            propertyFullAddressWords.some((propWord: string) => 
-              propWord.includes(reqWord) || reqWord.includes(propWord)
-            )
-          );
-        });
+          // If requirement has both min and max price
+          if (reqMinPrice !== null && reqMaxPrice !== null) {
+            const priceMatch = propertyPrice >= (reqMinPrice - buffer) && propertyPrice <= (reqMaxPrice + buffer);
+            console.log(`    Price range check: ${priceMatch} (${reqMinPrice - buffer}L - ${reqMaxPrice + buffer}L)`);
+            if (!priceMatch) {
+              return false;
+            }
+          }
+          // If requirement has only min price
+          else if (reqMinPrice !== null) {
+            const priceMatch = propertyPrice >= (reqMinPrice - buffer);
+            console.log(`    Min price check: ${priceMatch} (>= ${reqMinPrice - buffer}L)`);
+            if (!priceMatch) {
+              return false;
+            }
+          }
+          // If requirement has only max price
+          else if (reqMaxPrice !== null) {
+            const priceMatch = propertyPrice <= (reqMaxPrice + buffer);
+            console.log(`    Max price check: ${priceMatch} (<= ${reqMaxPrice + buffer}L)`);
+            if (!priceMatch) {
+              return false;
+            }
+          }
+        }
+
+        // 5. Location Proximity Match (5 km radius)
+        // Only match if both property and requirement have stored coordinates
+        console.log(`  - Coordinates: Property(${property.latitude}, ${property.longitude}) vs Req(${req.lat}, ${req.lng})`);
+        
+        const propLat = property.latitude;
+        const propLng = property.longitude;
+        const reqLat = req.lat;
+        const reqLng = req.lng;
+
+        // Skip if coordinates are missing (they should be geocoded when creating the property/requirement)
+        if (!propLat || !propLng || !reqLat || !reqLng) {
+          console.log('    ❌ Missing coordinates - SKIPPED');
+          return false;
+        }
+        
+        const distance = calculateDistance(propLat, propLng, reqLat, reqLng);
+        
+        console.log(`    Distance: ${distance.toFixed(2)} km (max 5 km)`);
+        
+        // Strict 5km radius requirement using real geographic distance
+        if (distance > 5) {
+          console.log('    ❌ Too far - REJECTED');
+          return false;
+        }
+
+        console.log('    ✅ ALL CRITERIA MATCHED!');
+        // All criteria matched
+        return true;
       });
-    } else {
-      // Apply user filters
-      if (filterPropertyType !== "all") {
-        filtered = filtered.filter(p => p.propertyType === filterPropertyType);
-      }
       
-      if (filterTransactionType !== "all") {
-        filtered = filtered.filter(p => p.transactionType === filterTransactionType);
-      }
-      
-      if (filterBhk !== "all") {
-        filtered = filtered.filter(p => p.bhk === parseInt(filterBhk));
-      }
-      
-      if (filterLocation.trim()) {
-        const searchLocation = filterLocation.toLowerCase();
-        filtered = filtered.filter(p => 
-          p.location?.toLowerCase().includes(searchLocation) ||
-          p.fullAddress?.toLowerCase().includes(searchLocation)
-        );
-      }
-      
-      // Price filtering (basic string comparison - can be enhanced)
-      if (filterMinPrice.trim()) {
-        filtered = filtered.filter(p => {
-          const price = p.price || "";
-          return price >= filterMinPrice;
-        });
-      }
-      
-      if (filterMaxPrice.trim()) {
-        filtered = filtered.filter(p => {
-          const price = p.price || "";
-          return price <= filterMaxPrice;
-        });
-      }
-    }
+      return isMatch;
+    });
 
-    return filtered;
-  }, [networkProperties, filterPropertyType, filterTransactionType, filterBhk, filterLocation, filterMinPrice, filterMaxPrice, requirements]);
+    console.log(`[Requirements Matching] Final matched properties: ${matched.length}`);
+    console.log('[Requirements Matching] Matched:', matched.map(p => p.property_title || p.title));
+
+    return matched;
+  }, [networkProperties, requirements]);
 
   const createMutation = useMutation({
     mutationFn: async (data: RequirementFormData) => {
@@ -698,122 +807,7 @@ export default function RequirementsPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Matching Properties ({matchingProperties.length})</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setFilterPropertyType("all");
-              setFilterTransactionType("all");
-              setFilterBhk("all");
-              setFilterMinPrice("");
-              setFilterMaxPrice("");
-              setFilterLocation("");
-            }}
-            className="text-xs"
-          >
-            Clear Filters
-          </Button>
         </div>
-
-        {/* Filter Section */}
-        <Card className="mb-6 bg-gray-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter size={18} className="text-blue-600" />
-              <h3 className="font-semibold text-sm">Filter Properties</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Property Type Filter */}
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Property Type</label>
-                <Select value={filterPropertyType} onValueChange={setFilterPropertyType}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectMenu>
-                    <SelectOpt value="all" label="All Types" />
-                    <SelectOpt value="Apartment" label="Apartment" />
-                    <SelectOpt value="Villa" label="Villa" />
-                    <SelectOpt value="House" label="House" />
-                    <SelectOpt value="Office" label="Office" />
-                    <SelectOpt value="Shop" label="Shop" />
-                    <SelectOpt value="Plot" label="Plot" />
-                  </SelectMenu>
-                </Select>
-              </div>
-
-              {/* Transaction Type Filter */}
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Transaction Type</label>
-                <Select value={filterTransactionType} onValueChange={setFilterTransactionType}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectMenu>
-                    <SelectOpt value="all" label="All" />
-                    <SelectOpt value="sale" label="Buy" />
-                    <SelectOpt value="rent" label="Rent" />
-                  </SelectMenu>
-                </Select>
-              </div>
-
-              {/* BHK Filter */}
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">BHK</label>
-                <Select value={filterBhk} onValueChange={setFilterBhk}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="All BHK" />
-                  </SelectTrigger>
-                  <SelectMenu>
-                    <SelectOpt value="all" label="All BHK" />
-                    <SelectOpt value="1" label="1 BHK" />
-                    <SelectOpt value="2" label="2 BHK" />
-                    <SelectOpt value="3" label="3 BHK" />
-                    <SelectOpt value="4" label="4 BHK" />
-                    <SelectOpt value="5" label="5+ BHK" />
-                  </SelectMenu>
-                </Select>
-              </div>
-
-              {/* Location Filter */}
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Location</label>
-                <Input
-                  type="text"
-                  placeholder="Search location..."
-                  value={filterLocation}
-                  onChange={(e) => setFilterLocation(e.target.value)}
-                  className="bg-white"
-                />
-              </div>
-
-              {/* Min Price Filter */}
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Min Price (₹)</label>
-                <Input
-                  type="text"
-                  placeholder="e.g., 40 Lakh"
-                  value={filterMinPrice}
-                  onChange={(e) => setFilterMinPrice(e.target.value)}
-                  className="bg-white"
-                />
-              </div>
-
-              {/* Max Price Filter */}
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">Max Price (₹)</label>
-                <Input
-                  type="text"
-                  placeholder="e.g., 1 Cr"
-                  value={filterMaxPrice}
-                  onChange={(e) => setFilterMaxPrice(e.target.value)}
-                  className="bg-white"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {matchingProperties.length === 0 ? (
           <Card>
@@ -821,10 +815,10 @@ export default function RequirementsPage() {
               <Building className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No matching properties</h3>
               <p className="text-gray-600">
-                No properties from other agents match your current filters.
-                {(filterPropertyType !== "all" || filterTransactionType !== "all" || filterBhk !== "all" || filterLocation || filterMinPrice || filterMaxPrice) && (
-                  <span className="block mt-2">Try clearing or adjusting your filters.</span>
-                )}
+                No properties match your requirements. Properties must have all of: matching type, transaction, BHK, price within ±10L, and location within 5km radius.
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Distance is calculated using Google Maps API for accurate proximity matching.
               </p>
             </CardContent>
           </Card>
