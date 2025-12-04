@@ -233,7 +233,7 @@ async function getUserFromCookie(req: NextRequest): Promise<string | null> {
 }
 
 async function createPropertyViaApi(formData: FormData, req: NextRequest): Promise<CreatePropertyResult> {
-  const origin = req.nextUrl?.origin || process.env.NEXT_PUBLIC_APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const origin = req.nextUrl?.origin || req.headers.get("origin") || "http://localhost:3000";
   const endpoint = new URL("/api/my-properties", origin);
   try {
     const response = await fetch(endpoint, {
