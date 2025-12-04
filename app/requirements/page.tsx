@@ -116,8 +116,6 @@ interface Requirement {
   lat?: number | null;
   lng?: number | null;
   createdAt: string;
-  lat?: number | null;
-  lng?: number | null;
   latitude?: number | null;
   longitude?: number | null;
 }
