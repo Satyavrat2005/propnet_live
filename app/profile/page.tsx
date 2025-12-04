@@ -22,6 +22,7 @@ import {
 import { AppLayout } from "@/components/layout/app-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CubeLoader } from "@/components/ui/cube-loader";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -206,7 +207,7 @@ export default function ProfilePage() {
   if (authLoading || (normalizedProfile && (isPropertiesLoading || isRequestsLoading))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <CubeLoader message="Loading your profile..." />
       </div>
     );
   }

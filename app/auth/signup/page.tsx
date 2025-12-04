@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Smartphone, MessageSquare, CheckCircle2 } from "lucide-react";
+import { CubeLoader } from "@/components/ui/cube-loader";
 
 /**
  * Login page
@@ -29,6 +30,7 @@ export default function Page() {
   const [resendTimer, setResendTimer] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   const normalizePhone = (v: string) => v.replace(/\D/g, "").slice(0, 10);
 
@@ -136,7 +138,8 @@ export default function Page() {
 
       // Redirect to setup PIN after OTP verification
       setMessage("Verification successful. Redirecting to PIN setup...");
-      router.push(`/auth/setup-pin?phone=${encodeURIComponent(p)}`);
+      setRedirecting(true);
+      setTimeout(() => router.push(`/auth/setup-pin?phone=${encodeURIComponent(p)}`), 800);
     } catch (err: any) {
       setLoading(false);
       console.error("verifyCode error:", err);
@@ -148,6 +151,14 @@ export default function Page() {
     if (resendTimer > 0) return;
     await sendCode();
   };
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <CubeLoader message="Setting up your account..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

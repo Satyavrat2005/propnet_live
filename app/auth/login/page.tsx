@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Smartphone, MessageSquare, CheckCircle2 } from "lucide-react";
+import { CubeLoader } from "@/components/ui/cube-loader";
 
 /**
  * Signup page — same flow as login but purpose "signup"
@@ -30,6 +31,7 @@ export default function Page() {
   const [resendTimer, setResendTimer] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   const normalizePhone = (v: string) => v.replace(/\D/g, "").slice(0, 10);
 
@@ -117,16 +119,18 @@ export default function Page() {
       // Use server-provided redirectTo path
       if (json?.redirectTo) {
         setMessage("Verification successful. Redirecting...");
-        router.push(json.redirectTo);
+        setRedirecting(true);
+        setTimeout(() => router.push(json.redirectTo), 800);
         return;
       }
 
       // Fallback: Use requiresProfileComplete flag (backward compatibility)
       const requiresProfile = json?.requiresProfileComplete === true;
+      setRedirecting(true);
       if (requiresProfile) {
-        router.push("/auth/complete-profile");
+        setTimeout(() => router.push("/auth/complete-profile"), 800);
       } else {
-        router.push("/dashboard");
+        setTimeout(() => router.push("/dashboard"), 800);
       }
     } catch (err: any) {
       setLoading(false);
@@ -139,6 +143,14 @@ export default function Page() {
     if (resendTimer > 0) return;
     await sendCode();
   };
+
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <CubeLoader message="Taking you to your dashboard..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

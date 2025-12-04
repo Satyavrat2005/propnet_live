@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { CubeLoader } from "@/components/ui/cube-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -274,9 +275,7 @@ export default function Dashboard() {
   if (authLoading || propertiesLoading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-        </div>
+        <CubeLoader message="Loading your dashboard..." />
       </AppLayout>
     );
   }

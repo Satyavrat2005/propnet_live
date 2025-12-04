@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { CubeLoader } from "@/components/ui/cube-loader";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -540,21 +541,6 @@ export default function MyListings() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [agreementFiles, setAgreementFiles] = useState<File[]>([]);
   const [showOwnerPhone, setShowOwnerPhone] = useState<{ [key: string]: boolean }>({});
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
-
-  // Handle redirect to login if not authenticated - with a delay to ensure proper auth check
-  useEffect(() => {
-    if (!authLoading) {
-      setHasCheckedAuth(true);
-      if (!user) {
-        // Small delay to ensure cookie/session has been fully validated
-        const timer = setTimeout(() => {
-          router.push("/auth/login");
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [authLoading, user, router]);
 
   const { data: myProperties = [], isLoading } = useQuery({
     queryKey: ["/api/my-properties"],
@@ -793,36 +779,10 @@ export default function MyListings() {
     }
   };
 
-
-  // Show loading while checking auth or if not authenticated yet
-  if (authLoading || (!user && !hasCheckedAuth)) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading...</p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  // If auth check complete and still no user, useEffect will handle redirect
-  // Return null to prevent flash of content
-  if (!user) {
-    return null;
-  }
-
   if (isLoading && !myProperties?.length) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading properties...</p>
-          </div>
-        </div>
+        <CubeLoader message="Loading your properties..." />
       </AppLayout>
     );
   }

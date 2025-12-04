@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CubeLoader } from "@/components/ui/cube-loader";
 import {
   Select,
   SelectContent,
@@ -127,9 +128,7 @@ export default function PropertyFeedPage() {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="loading-spinner" />
-        </div>
+        <CubeLoader message="Loading property feed..." />
       </AppLayout>
     );
   }
