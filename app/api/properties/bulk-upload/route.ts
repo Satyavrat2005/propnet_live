@@ -232,17 +232,8 @@ async function getUserFromCookie(req: NextRequest): Promise<string | null> {
   }
 }
 
-function resolveAppBaseUrl(req: NextRequest): string {
-  if (process.env.NEXT_PUBLIC_APP_BASE_URL) return process.env.NEXT_PUBLIC_APP_BASE_URL;
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  const vercelUrl = process.env.VERCEL_URL;
-  if (vercelUrl) return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
-  if (req.nextUrl?.origin) return req.nextUrl.origin;
-  return "https://propnet.live";
-}
-
 async function createPropertyViaApi(formData: FormData, req: NextRequest): Promise<CreatePropertyResult> {
-  const origin = resolveAppBaseUrl(req);
+  const origin = req.nextUrl?.origin || process.env.NEXT_PUBLIC_APP_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const endpoint = new URL("/api/my-properties", origin);
   try {
     const response = await fetch(endpoint, {

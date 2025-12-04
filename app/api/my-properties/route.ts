@@ -82,14 +82,14 @@ function buildContainsPattern(value: string): string {
 }
 
 function getAppBaseUrl(req: NextRequest): string {
-  const origin = req.headers.get("origin");
-  if (origin) return origin;
   if (process.env.NEXT_PUBLIC_APP_BASE_URL) return process.env.NEXT_PUBLIC_APP_BASE_URL;
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   const vercelUrl = process.env.VERCEL_URL;
   if (vercelUrl) {
     return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
   }
+  const origin = req.headers.get("origin");
+  if (origin) return origin;
   return "https://propnet.live";
 }
 
