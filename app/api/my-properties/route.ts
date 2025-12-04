@@ -81,16 +81,12 @@ function buildContainsPattern(value: string): string {
   return `%${escapeForILike(value)}%`;
 }
 
-function getAppBaseUrl(req: NextRequest): string {
+const CANONICAL_APP_URL = "https://propnet-live.vercel.app";
+
+function getAppBaseUrl(_req: NextRequest): string {
   if (process.env.NEXT_PUBLIC_APP_BASE_URL) return process.env.NEXT_PUBLIC_APP_BASE_URL;
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  const vercelUrl = process.env.VERCEL_URL;
-  if (vercelUrl) {
-    return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
-  }
-  const origin = req.headers.get("origin");
-  if (origin) return origin;
-  return "https://propnet.live";
+  return CANONICAL_APP_URL;
 }
 
 async function getUserFromCookie(req: NextRequest) {
