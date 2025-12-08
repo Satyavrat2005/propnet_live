@@ -131,6 +131,11 @@ export default function AdminPortal() {
     router.push("/admin");
   };
 
+  // Manage Users button handler
+  const goToManageUsers = () => {
+    router.push("/admin/users");
+  };
+
   if (authLoading || !adminData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -175,14 +180,24 @@ export default function AdminPortal() {
               </div>
             </div>
 
-            {/* Buttons: Manage Property (new) + Logout (existing) */}
+            {/* Buttons: Manage Property + Registered Users + Logout */}
             <div className="flex items-center gap-3">
               <Button
                 onClick={goToManageProperty}
                 variant="outline"
                 className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
               >
+                <Building2 className="h-4 w-4 mr-2" />
                 Manage Property
+              </Button>
+
+              <Button
+                onClick={goToManageUsers}
+                variant="outline"
+                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Registered Users
               </Button>
 
               <Button
