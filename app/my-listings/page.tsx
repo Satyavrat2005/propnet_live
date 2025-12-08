@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { Button } from "@/components/ui/button";
 import { CubeLoader } from "@/components/ui/cube-loader";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,6 @@ import { safeFetch } from "@/lib/safeFetch";
 import { insertPropertySchema } from "@/lib/schema";
 import FileUpload from "@/components/ui/file-upload";
 import { AppLayout } from "@/components/layout/app-layout";
-import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { z } from "zod";
 import { QUICKPOST_SCOPE_LABEL } from "@/lib/quickpost";
 
@@ -304,21 +304,82 @@ function PropertyForm({
               )}
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="flatNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Flat/Unit Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Flat 301"
+                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                        autoComplete="off"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="floorNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Floor Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="8"
+                        className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                        autoComplete="off"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="fullAddress"
+              name="buildingSociety"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Full Address</FormLabel>
+                  <FormLabel className="text-gray-700 font-medium">Building / Society</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Enter complete address including Flat/Unit No., Floor, Building/Society Name, Area, City, and any landmarks...\nExample: Flat 301, 3rd Floor, Rustomjee Paramount, Khar West, Mumbai, Maharashtra"
-                      className="resize-none bg-white border-gray-300 focus:border-primary focus:ring-primary"
-                      rows={4}
+                    <GooglePlacesAutocomplete
+                      value={field.value || ""}
+                      onChange={(value) => field.onChange(value)}
+                      placeholder="Search building or society"
+                      types={["establishment"]}
+                      extractValue={(suggestion) => suggestion.structured_formatting.main_text || suggestion.description}
+                      inputClassName="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      className="w-full"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-700 font-medium">Location</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Andheri West, Mumbai"
+                      className="bg-white border-gray-300 focus:border-primary focus:ring-primary"
+                      autoComplete="off"
                       {...field}
                     />
                   </FormControl>
-                  <p className="text-xs text-gray-500 mt-1">Our AI will automatically extract location, flat number, floor, and building details</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -950,6 +1011,11 @@ export default function MyListings() {
               const isQuickPostListing =
                 Array.isArray(property.scopeOfWork) &&
                 property.scopeOfWork.includes(QUICKPOST_SCOPE_LABEL);
+              const displayOwnerName = property.ownerName?.trim() || "Not Mentioned";
+              const hasOwnerPhone = Boolean(property.ownerPhone);
+              const obfuscatedPhone = hasOwnerPhone
+                ? property.ownerPhone?.slice(0, 3) + "****" + property.ownerPhone?.slice(-2)
+                : "Not Mentioned";
               return (
                 <Card key={property.id} className="p-4 bg-white border-gray-200 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
@@ -1084,18 +1150,18 @@ export default function MyListings() {
                   <div className="text-sm space-y-1">
                     <div className="flex items-center text-gray-600">
                       <User size={12} className="mr-2 text-gray-400" />
-                      <span>{property.ownerName}</span>
+                      <span>{displayOwnerName}</span>
                     </div>
                     <div className="flex items-center text-gray-600">
                       <Phone size={12} className="mr-2 text-gray-400" />
                       <span>
-                        {showOwnerPhone[property.id]
-                          ? property.ownerPhone
-                          : `${property.ownerPhone?.slice(0, 3)}****${property.ownerPhone?.slice(-2)}`}
+                        {showOwnerPhone[property.id] && hasOwnerPhone ? property.ownerPhone : obfuscatedPhone}
                       </span>
-                      <button onClick={() => toggleOwnerPhone(property.id)} className="ml-2 text-blue-600 hover:text-blue-700">
-                        {showOwnerPhone[property.id] ? <EyeOff size={12} /> : <Eye size={12} />}
-                      </button>
+                      {hasOwnerPhone && (
+                        <button onClick={() => toggleOwnerPhone(property.id)} className="ml-2 text-blue-600 hover:text-blue-700">
+                          {showOwnerPhone[property.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

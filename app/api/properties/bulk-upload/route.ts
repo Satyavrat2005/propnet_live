@@ -210,8 +210,12 @@ function buildFormData(data: ReturnType<typeof insertPropertySchema.parse>): For
   if (typeof data.bhk === "number") formData.append("bhk", String(data.bhk));
   formData.append("listingType", data.listingType);
   formData.append("isPubliclyVisible", String(data.isPubliclyVisible ?? false));
-  formData.append("ownerName", data.ownerName);
-  formData.append("ownerPhone", data.ownerPhone);
+  if (data.ownerName) {
+    formData.append("ownerName", data.ownerName);
+  }
+  if (data.ownerPhone) {
+    formData.append("ownerPhone", data.ownerPhone);
+  }
   if (data.commissionTerms) formData.append("commissionTerms", data.commissionTerms);
   if (data.scopeOfWork && data.scopeOfWork.length) {
     formData.append("scopeOfWork", JSON.stringify(data.scopeOfWork));

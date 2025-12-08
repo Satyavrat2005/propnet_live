@@ -30,7 +30,8 @@ export interface BadgeProps
     VariantProps<typeof badgeVariants> {}
 
 export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+  // Render as a span so it can live inside text elements without invalid nesting
+  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
 export { badgeVariants };

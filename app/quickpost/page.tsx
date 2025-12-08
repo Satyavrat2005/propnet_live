@@ -430,9 +430,13 @@ export default function QuickPostPage() {
       "size",
       "location",
       "bhk",
+      "floorNumber",
       "flatNumber",
       "buildingSociety",
+      "ownerName",
+      "ownerPhone",
       "fullAddress",
+      "commissionTerms",
     ];
     const missing = required.filter((k) => !property[k]);
     const lt = property.listingType || "shared";
@@ -560,6 +564,12 @@ export default function QuickPostPage() {
             <CardContent className="space-y-4">
               {extractedProperties.map((property, index) => {
                 const validation = getValidationStatus(property);
+                const missingSet = new Set(validation.missingFields);
+                const getFieldValidationClasses = (field: keyof ExtractedProperty) => {
+                  return missingSet.has(field)
+                    ? "border-red-400 focus-visible:ring-red-300 bg-red-50"
+                    : "border-green-400 focus-visible:ring-green-300 bg-green-50";
+                };
                 const isEditorOpen =
                   expandedEditors[index] ?? !validation.isValid;
                 const isCreatingThisProperty =
@@ -568,11 +578,7 @@ export default function QuickPostPage() {
                 return (
                   <Card
                     key={property.tempId || index}
-                    className={`border ${
-                      validation.isValid
-                        ? "border-green-200 bg-green-50"
-                        : "border-red-200 bg-red-50"
-                    }`}
+                    className="border-2 border-green-500 bg-green-50"
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
@@ -593,11 +599,11 @@ export default function QuickPostPage() {
                             {getConfidenceBadge(property.confidence)}
                           </div>
 
-                          {!validation.isValid && (
+                          {/* {!validation.isValid && (
                             <p className="text-xs text-red-600 mb-2">
                               Missing: {validation.missingFields.join(", ")}
                             </p>
-                          )}
+                          )} */}
                         </div>
 
                         <div className="flex items-center space-x-1">
@@ -712,7 +718,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.title || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("title")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -736,7 +742,7 @@ export default function QuickPostPage() {
                                   })
                                 }
                               >
-                                <SelectTrigger className="h-8 text-xs">
+                                <SelectTrigger className={`h-8 text-xs ${getFieldValidationClasses("propertyType")}`}>
                                   <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -761,7 +767,7 @@ export default function QuickPostPage() {
                                   })
                                 }
                               >
-                                <SelectTrigger className="h-8 text-xs">
+                                <SelectTrigger className={`h-8 text-xs ${getFieldValidationClasses("transactionType")}`}>
                                   <SelectValue placeholder="Select transaction" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -785,7 +791,7 @@ export default function QuickPostPage() {
                                     })
                                   }
                                 >
-                                  <SelectTrigger className="h-8 text-xs">
+                                  <SelectTrigger className={`h-8 text-xs ${getFieldValidationClasses("rentFrequency")}`}>
                                     <SelectValue placeholder="Frequency" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -800,7 +806,7 @@ export default function QuickPostPage() {
                               <label className="text-xs text-neutral-600">Price</label>
                               <Input
                                 value={property.price || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("price")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -815,7 +821,7 @@ export default function QuickPostPage() {
                               <label className="text-xs text-neutral-600">Size</label>
                               <Input
                                 value={property.size || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("size")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, { size: e.target.value })
@@ -830,7 +836,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.location || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("location")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -850,7 +856,7 @@ export default function QuickPostPage() {
                                     ? String(property.bhk)
                                     : ""
                                 }
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("bhk")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -867,7 +873,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.flatNumber || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("flatNumber")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -884,7 +890,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.floorNumber || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("floorNumber")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -909,6 +915,7 @@ export default function QuickPostPage() {
                                 }}
                                 placeholder="Search building..."
                                 types={["establishment"]}
+                                inputClassName={getFieldValidationClasses("buildingSociety")}
                                 className={`text-xs ${
                                   isCreatingThisProperty
                                     ? "opacity-60 pointer-events-none"
@@ -923,7 +930,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.fullAddress || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("fullAddress")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -940,7 +947,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.ownerName || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("ownerName")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -957,7 +964,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.ownerPhone || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("ownerPhone")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {
@@ -974,7 +981,7 @@ export default function QuickPostPage() {
                               </label>
                               <Input
                                 value={property.commissionTerms || ""}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${getFieldValidationClasses("commissionTerms")}`}
                                 disabled={isCreatingThisProperty}
                                 onChange={(e) =>
                                   handleEditInline(property, {

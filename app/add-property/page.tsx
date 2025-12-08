@@ -27,16 +27,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { Shield, Upload, Home, Building2, MapPin, FileText, CheckCircle2 } from "lucide-react";
+import { Shield, Upload, Home, Building2, FileText, CheckCircle2 } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UseFormReturn, useForm } from "react-hook-form";
 
 import FileUpload from "@/components/ui/file-upload";
-import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { AppLayout } from "@/components/layout/app-layout";
 
+import GooglePlacesAutocomplete from "@/components/ui/google-places-autocomplete";
 import { insertPropertySchema } from "@/lib/schema";
 
 // Use the exact same schema as your my-listings modal
@@ -290,23 +290,82 @@ function PropertyForm({
               )}
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="flatNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Flat/Unit Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Flat 301"
+                        {...field}
+                        autoComplete="off"
+                        className="input-modern"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="floorNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-muted-foreground">Floor Number</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="8"
+                        {...field}
+                        autoComplete="off"
+                        className="input-modern"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="fullAddress"
+              name="buildingSociety"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-muted-foreground">Full Address</FormLabel>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Building / Society</FormLabel>
                   <FormControl>
                     <GooglePlacesAutocomplete
                       value={field.value || ""}
                       onChange={(value) => field.onChange(value)}
-                      placeholder="Enter complete address including Flat/Unit No., Floor, Building/Society Name, Area, City, and any landmarks... Example: Flat 301, 3rd Floor, Rustomjee Paramount, Khar West, Mumbai, Maharashtra"
-                      className="input-modern"
-                      types={["geocode"]}
-                      extractValue={(suggestion) => suggestion.description}
+                      placeholder="Search building or society"
+                      types={["establishment"]}
+                      extractValue={(suggestion) => suggestion.structured_formatting.main_text || suggestion.description}
+                      inputClassName="input-modern"
+                      className="w-full"
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground mt-1">Our AI will automatically extract location, flat number, floor, and building details</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium text-muted-foreground">Location</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Andheri West, Mumbai"
+                      {...field}
+                      autoComplete="off"
+                      className="input-modern"
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

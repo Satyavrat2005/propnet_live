@@ -8,6 +8,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PlaceSuggestion {
   place_id: string;
@@ -24,6 +25,7 @@ interface GooglePlacesAutocompleteProps {
   placeholder?: string;
   label?: string;
   className?: string;
+  inputClassName?: string;
   types?: string[];
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   onFocus?: FocusEventHandler<HTMLInputElement>;
@@ -37,6 +39,7 @@ export default function GooglePlacesAutocomplete({
   placeholder = "Enter building or society name...",
   label,
   className = "",
+  inputClassName = "",
   types = ["establishment", "geocode"],
   onKeyDown,
   onFocus,
@@ -171,7 +174,7 @@ export default function GooglePlacesAutocomplete({
           onFocus={handleInputFocus}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="pl-10"
+          className={cn("pl-10", inputClassName)}
           autoComplete="off"
         />
         

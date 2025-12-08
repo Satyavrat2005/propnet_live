@@ -6,7 +6,6 @@ import { randomUUID } from "crypto";
 import { verifySession, getUserIdFromSession } from "@/lib/auth/session";
 import { sendSms } from "@/lib/twilio";
 import { buildOwnerConsentSms } from "@/lib/ownerConsentSms";
-import { parseAddressWithGemini } from "@/lib/gemini-address-parser";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -263,21 +262,13 @@ export async function POST(req: NextRequest) {
     const ownerName = (form.get("ownerName") || "").toString().trim();
     const listingTypeInput = (form.get("listingType") || "").toString().trim();
 
-    // Use Gemini to parse address components from fullAddress
-    let location: string | null = null;
-    let flatNumber: string | null = null;
-    let floorNumber: string | null = null;
-    let buildingSociety: string | null = null;
+    const location = (form.get("location") || "").toString().trim() || null;
+    const flatNumber = (form.get("flatNumber") || "").toString().trim() || null;
+    const floorNumber = (form.get("floorNumber") || "").toString().trim() || null;
+    const buildingSociety = (form.get("buildingSociety") || "").toString().trim() || null;
 
-    if (fullAddress) {
-      const parsedAddress = await parseAddressWithGemini(fullAddress);
-      location = parsedAddress.location;
-      flatNumber = parsedAddress.flatNumber;
-      floorNumber = parsedAddress.floorNumber;
-      buildingSociety = parsedAddress.buildingSociety;
-    }
-
-    const addressForGeocode = fullAddress || [buildingSociety, location].filter(Boolean).join(", ");
+    const addressForGeocode =
+      fullAddress || [flatNumber, floorNumber, buildingSociety, location].filter(Boolean).join(", ");
 
     if (
       flatNumber &&
@@ -373,6 +364,8 @@ export async function POST(req: NextRequest) {
       photoUrls.push(url);
     }
 
+    const approvalStatus = ownerPhoneStored ? "pending" : "approved";
+
     const payload: any = {
       id: userId,
       property_title: form.get("title"),
@@ -398,7 +391,7 @@ export async function POST(req: NextRequest) {
       commission_terms: form.get("commissionTerms"),
       scope_of_work: scopeOfWorkRaw ? String(scopeOfWorkRaw) : null,
       agreement_document: null,
-      approval_status: "pending",
+      approval_status: approvalStatus,
     };
 
     const { data, error } = await supabase
@@ -479,80 +472,87 @@ export async function POST(req: NextRequest) {
     let smsStatus: "sent" | "failed" | "skipped" = "skipped";
     let smsError: string | null = null;
 
-    try {
-      const nowIso = new Date().toISOString();
-      const generatedToken = randomUUID();
+    if (ownerPhoneStored) {
+      try {
+        const nowIso = new Date().toISOString();
+        const generatedToken = randomUUID();
 
-      const { data: consentRow, error: consentError } = await adminSupabase
-        .from("properties")
-        .update({
-          owner_consent_token: generatedToken,
-          owner_consent_sent_at: nowIso,
-        })
-        .eq("property_id", data.property_id)
-        .select("owner_consent_token, owner_consent_sent_at, approval_status")
-        .single();
+        const { data: consentRow, error: consentError } = await adminSupabase
+          .from("properties")
+          .update({
+            owner_consent_token: generatedToken,
+            owner_consent_sent_at: nowIso,
+          })
+          .eq("property_id", data.property_id)
+          .select("owner_consent_token, owner_consent_sent_at, approval_status")
+          .single();
 
-      if (consentError) {
-        console.error("Consent token update error:", consentError);
-        ownerConsentToken = generatedToken;
-      } else {
-        ownerConsentToken = consentRow?.owner_consent_token ?? generatedToken;
-        mapped.ownerApprovalStatus = consentRow?.approval_status ?? mapped.ownerApprovalStatus;
-        mapped.ownerConsentSentAt = consentRow?.owner_consent_sent_at ?? nowIso;
-      }
-
-      if (ownerConsentToken) {
-        ownerConsentUrl = `${getAppBaseUrl(req)}/consent/${ownerConsentToken}`;
-
-        const envReady = Boolean(
-          process.env.TWILIO_ACCOUNT_SID &&
-            process.env.TWILIO_AUTH_TOKEN &&
-            (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_SMS_FROM)
-        );
-
-        if (!ownerPhonesE164.length) {
-          smsStatus = "skipped";
-          smsError = "Owner phone missing or invalid";
-        } else if (!envReady) {
-          smsStatus = "skipped";
-          smsError = "Twilio messaging credentials missing";
+        if (consentError) {
+          console.error("Consent token update error:", consentError);
+          ownerConsentToken = generatedToken;
         } else {
-          const { data: agentProfile } = await supabase
-            .from("profiles")
-            .select("name, agency_name, phone")
-            .eq("id", userId)
-            .single();
+          ownerConsentToken = consentRow?.owner_consent_token ?? generatedToken;
+          mapped.ownerApprovalStatus = consentRow?.approval_status ?? mapped.ownerApprovalStatus;
+          mapped.ownerConsentSentAt = consentRow?.owner_consent_sent_at ?? nowIso;
+        }
 
-          const agentName = agentProfile?.name || "Your agent";
-          const smsBody = buildOwnerConsentSms({
-            ownerName: mapped.ownerName,
-            agentName,
-            propertyTitle: mapped.title,
-            location: mapped.location,
-            propertyType: mapped.propertyType,
-            bhk: mapped.bhk,
-            size: mapped.size,
-            sizeUnit: mapped.sizeUnit,
-            price: mapped.price,
-            listingType: mapped.listingType ? mapped.listingType.toString() : undefined,
-            ownerConsentUrl,
-          });
+        if (ownerConsentToken) {
+          ownerConsentUrl = `${getAppBaseUrl(req)}/consent/${ownerConsentToken}`;
 
-          try {
-            await sendSms({ to: ownerPhonesE164, body: smsBody });
-            smsStatus = "sent";
-          } catch (smsErr: any) {
-            smsStatus = "failed";
-            smsError = smsErr?.message || "Failed to send SMS";
-            console.error("Twilio SMS error:", smsErr);
+          const envReady = Boolean(
+            process.env.TWILIO_ACCOUNT_SID &&
+              process.env.TWILIO_AUTH_TOKEN &&
+              (process.env.TWILIO_MESSAGING_SERVICE_SID || process.env.TWILIO_SMS_FROM)
+          );
+
+          if (!ownerPhonesE164.length) {
+            smsStatus = "skipped";
+            smsError = "Owner phone missing or invalid";
+          } else if (!envReady) {
+            smsStatus = "skipped";
+            smsError = "Twilio messaging credentials missing";
+          } else {
+            const { data: agentProfile } = await supabase
+              .from("profiles")
+              .select("name, agency_name, phone")
+              .eq("id", userId)
+              .single();
+
+            const agentName = agentProfile?.name || "Your agent";
+            const smsBody = buildOwnerConsentSms({
+              ownerName: mapped.ownerName,
+              agentName,
+              propertyTitle: mapped.title,
+              location: mapped.location,
+              propertyType: mapped.propertyType,
+              bhk: mapped.bhk,
+              size: mapped.size,
+              sizeUnit: mapped.sizeUnit,
+              price: mapped.price,
+              listingType: mapped.listingType ? mapped.listingType.toString() : undefined,
+              ownerConsentUrl,
+            });
+
+            try {
+              await sendSms({ to: ownerPhonesE164, body: smsBody });
+              smsStatus = "sent";
+            } catch (smsErr: any) {
+              smsStatus = "failed";
+              smsError = smsErr?.message || "Failed to send SMS";
+              console.error("Twilio SMS error:", smsErr);
+            }
           }
         }
+      } catch (consentErr: any) {
+        console.error("Owner consent setup error:", consentErr);
+        smsStatus = "failed";
+        if (!smsError) smsError = consentErr?.message || "Failed to prepare owner consent";
       }
-    } catch (consentErr: any) {
-      console.error("Owner consent setup error:", consentErr);
-      smsStatus = "failed";
-      if (!smsError) smsError = consentErr?.message || "Failed to prepare owner consent";
+    } else {
+      smsStatus = "skipped";
+      ownerConsentToken = null;
+      ownerConsentUrl = null;
+      mapped.ownerApprovalStatus = approvalStatus;
     }
 
     const responsePayload = {
