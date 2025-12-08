@@ -16,12 +16,12 @@ const supabase = createClient(
  */
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await validateAdminSession(req);
 
-    const id = params.id;
+    const { id } = await params;
     const body = await req.json();
 
     const { data, error } = await supabase
@@ -49,12 +49,12 @@ export async function PATCH(
  */
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await validateAdminSession(req);
 
-    const id = params.id;
+    const { id } = await params;
 
     const { error } = await supabase
       .from("primarly_listing")

@@ -499,7 +499,7 @@ export default function AdminPrimaryListings() {
       <div className="container mx-auto px-4 py-8">
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+          <Card className="bg-linear-to-br from-emerald-50 to-emerald-100 border-emerald-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -511,7 +511,7 @@ export default function AdminPrimaryListings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <Card className="bg-linear-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -523,7 +523,7 @@ export default function AdminPrimaryListings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <Card className="bg-linear-to-br from-amber-50 to-amber-100 border-amber-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -535,7 +535,7 @@ export default function AdminPrimaryListings() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <Card className="bg-linear-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -611,7 +611,7 @@ export default function AdminPrimaryListings() {
                     {/* Location */}
                     {listing.site_address && (
                       <div className="flex items-start gap-2 mb-3">
-                        <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                        <MapPin className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                         <p className="text-sm text-gray-600 line-clamp-2">{listing.site_address}</p>
                       </div>
                     )}
