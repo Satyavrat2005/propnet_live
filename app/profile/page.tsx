@@ -230,8 +230,8 @@ export default function ProfilePage() {
       <div className="max-w-5xl mx-auto w-full space-y-6">
         {/* Page Header */}
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Profile</h1>
-          <p className="text-sm text-muted-foreground">Manage your professional profile</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Profile</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your professional profile</p>
         </div>
 
         <div className="space-y-6">
@@ -263,12 +263,12 @@ export default function ProfilePage() {
             <ContactDetails profile={normalizedProfile} />
           </SectionCard>
 
-          <div className="space-y-2">
+          <div className="space-y-3 md:space-y-2">
             {menuItems.map((item, index) => (
               <button
                 key={index}
                 onClick={item.action}
-                className="w-full flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+                className="w-full flex items-center justify-between p-5 md:p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
               >
                 <div className="flex items-center space-x-3">
                   <item.icon size={20} />
@@ -341,17 +341,17 @@ function ProfileHeaderCard({
   listings: number;
 }) {
   return (
-    <div className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
-      <div className="text-center mb-6">
-        <div className="w-24 h-24 bg-neutral-200 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
+    <div className="bg-white border border-neutral-200 rounded-2xl p-6 md:p-8 shadow-sm">
+      <div className="text-center mb-6 md:mb-8">
+        <div className="w-28 h-28 md:w-24 md:h-24 bg-neutral-200 rounded-full mx-auto mb-4 flex items-center justify-center overflow-hidden">
           {profile.profilePhotoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-2xl font-bold text-neutral-600">{profile.agencyName?.charAt(0) || profile.name?.charAt(0) || "A"}</span>
+            <span className="text-3xl md:text-2xl font-bold text-neutral-600">{profile.agencyName?.charAt(0) || profile.name?.charAt(0) || "A"}</span>
           )}
         </div>
-        <h3 className="text-xl font-bold text-neutral-900">{profile.name}</h3>
+        <h3 className="text-2xl md:text-xl font-bold text-neutral-900">{profile.name}</h3>
         <p className="text-neutral-500">{profile.agencyName || "Real Estate Agent"}</p>
         {profile.email && <p className="text-sm text-neutral-400">{profile.email}</p>}
         {profile.city && <p className="text-sm text-neutral-400">{profile.city}</p>}
@@ -367,7 +367,7 @@ function ProfileHeaderCard({
           )}
         </div> */}
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
         <StatPill label="Listings" value={listings} accent="text-blue-600" />
         <StatPill label="Pending" value={pendingListings} accent="text-accent" />
         <StatPill label="Owners" value={ownersCount} accent="text-neutral-700" />
@@ -378,9 +378,9 @@ function ProfileHeaderCard({
 
 function StatPill({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div className="text-center p-3 bg-neutral-50 rounded-xl">
-      <div className={`text-2xl font-bold ${accent}`}>{value}</div>
-      <p className="text-xs text-neutral-500">{label}</p>
+    <div className="text-center p-4 md:p-3 bg-neutral-50 rounded-xl">
+      <div className={`text-3xl md:text-2xl font-bold ${accent}`}>{value}</div>
+      <p className="text-xs md:text-xs text-neutral-500">{label}</p>
     </div>
   );
 }

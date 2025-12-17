@@ -127,7 +127,7 @@ export default function AdminUsers() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 py-4 md:py-6">
-          <div className="space-y-4 md:space-y-0">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-0">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Registered Users</h1>
               <p className="text-sm md:text-base text-gray-600 mt-1">View and manage all users registered on the platform</p>
@@ -135,7 +135,7 @@ export default function AdminUsers() {
             <Button
               onClick={() => router.push("/admin/dashboard")}
               variant="outline"
-              className="w-full sm:w-auto border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
+              className="w-full sm:w-auto border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600 shrink-0"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard

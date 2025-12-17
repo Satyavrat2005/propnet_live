@@ -129,9 +129,9 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
   return (
     <>
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 mb-4">
-        <div className="flex h-[140px]">
+        <div className="flex h-[160px]">
           {/* Content Section - Left */}
-          <div className="flex-1 p-4 flex flex-col justify-between">
+          <div className="flex-1 p-5 flex flex-col justify-between">
             {/* Top Section */}
             <div>
               {/* Property Type Badge */}
@@ -165,25 +165,25 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
             </div>
 
             {/* Bottom Section */}
-            <div className="flex items-center justify-between">
-              <div className="flex space-x-1">
+            <div className="flex items-center justify-between mt-1">
+              <div className="flex gap-2">
                 <button
                   onClick={handleLike}
-                  className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center ${
                     isLiked ? "bg-red-50 text-red-500" : "bg-gray-100 text-gray-400"
                   } transition-colors`}
                 >
-                  <Heart size={12} fill={isLiked ? "currentColor" : "none"} />
+                  <Heart size={16} fill={isLiked ? "currentColor" : "none"} />
                 </button>
                 <button
                   onClick={handleShare}
-                  className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                  className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <Share2 size={12} />
+                  <Share2 size={16} />
                 </button>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   size="sm"
                   variant="outline"
@@ -197,30 +197,30 @@ export default function CompactPropertyCard({ property, onViewDetails }: Compact
                     }
                     router.push(`/messages?participantId=${String(property.ownerId)}&propertyId=${property.id}`);
                   }}
-                  className="text-xs px-2 py-1 h-6 border-gray-300 flex items-center gap-1"
+                  className="text-xs px-3 py-1.5 h-8 border-gray-300 flex items-center gap-1.5"
                 >
-                  <MessageCircle size={10} className="mr-1" />
-                  Message
+                  <MessageCircle size={13} />
+                  <span>Message</span>
                 </Button>
         
                 <Button size="sm" variant="ghost" onClick={handleDetailsClick}
-                  className="text-xs px-2 py-1 h-6"
+                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5"
                 >
-                  <Eye size={10} className="mr-1" />
-                  Details
+                  <Eye size={13} />
+                  <span>Details</span>
                 </Button>
               </div>
             </div>
           </div>
 
           {/* Image Section - Right */}
-          <div className="w-[120px] shrink-0 relative">
+          <div className="w-[180px] shrink-0 relative">
             {primaryPhoto ? (
-              <div className="relative h-full w-full">
+              <div className="relative h-full w-full overflow-hidden rounded-tr-2xl rounded-br-2xl">
                 <img 
                   src={primaryPhoto} 
                   alt={property.title ?? 'Property image'}
-                  className="w-full h-full object-cover rounded-tr-2xl rounded-br-2xl"
+                  className="w-full h-full object-cover"
                 />
                 {property.photos && property.photos.length > 1 && (
                   <div className="absolute bottom-2 right-2 bg-black/70 text-white px-1.5 py-0.5 rounded text-xs">

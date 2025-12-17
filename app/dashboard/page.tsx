@@ -283,17 +283,17 @@ export default function Dashboard() {
   return (
     <AppLayout>
       {/* Welcome Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
+      <div className="mb-6 md:mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-1">
               Welcome back, {user?.name?.split(' ')[0] || 'there'}! 👋
             </h1>
-            <p className="text-muted-foreground">Here's what's happening with your properties today</p>
+            <p className="text-sm md:text-base text-muted-foreground">Here's what's happening with your properties today</p>
           </div>
           <Button 
             onClick={() => router.push('/add-property')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-lg"
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 shadow-lg"
           >
             <Plus className="w-5 h-5 mr-2" />
             Add Property
@@ -302,51 +302,51 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6 md:mb-8">
         <div className="bento-card group cursor-pointer hover:border-blue-500/40" onClick={() => router.push('/my-listings')}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Building2 className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-14 h-14 md:w-12 md:h-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Building2 className="w-7 h-7 md:w-6 md:h-6 text-blue-600" />
             </div>
             <Badge className="bg-blue-100 text-blue-700 border-0">
               <TrendingUp className="w-3 h-3 mr-1" />
               Active
             </Badge>
           </div>
-          <p className="text-3xl font-bold text-foreground mb-1">{stats.totalListings}</p>
+          <p className="text-4xl md:text-3xl font-bold text-foreground mb-1">{stats.totalListings}</p>
           <p className="text-sm text-muted-foreground">Total Listings</p>
         </div>
 
         <div className="bento-card group cursor-pointer hover:border-green-500/40" onClick={() => router.push('/my-listings')}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-14 h-14 md:w-12 md:h-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-7 h-7 md:w-6 md:h-6 text-green-600" />
             </div>
             <Badge className="bg-green-100 text-green-700 border-0">Verified</Badge>
           </div>
-          <p className="text-3xl font-bold text-foreground mb-1">{stats.approvedListings}</p>
+          <p className="text-4xl md:text-3xl font-bold text-foreground mb-1">{stats.approvedListings}</p>
           <p className="text-sm text-muted-foreground">Approved Properties</p>
         </div>
 
         <div className="bento-card group cursor-pointer hover:border-orange-500/40" onClick={() => router.push('/requirements')}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Target className="w-6 h-6 text-orange-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-14 h-14 md:w-12 md:h-12 rounded-xl bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Target className="w-7 h-7 md:w-6 md:h-6 text-orange-600" />
             </div>
             <Badge className="bg-orange-100 text-orange-700 border-0">Active</Badge>
           </div>
-          <p className="text-3xl font-bold text-foreground mb-1">{stats.totalRequirements}</p>
+          <p className="text-4xl md:text-3xl font-bold text-foreground mb-1">{stats.totalRequirements}</p>
           <p className="text-sm text-muted-foreground">Client Requirements</p>
         </div>
 
         <div className="bento-card group cursor-pointer hover:border-purple-500/40" onClick={() => router.push('/feed')}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Users className="w-6 h-6 text-purple-600" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-14 h-14 md:w-12 md:h-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Users className="w-7 h-7 md:w-6 md:h-6 text-purple-600" />
             </div>
             <Badge className="bg-purple-100 text-purple-700 border-0">Network</Badge>
           </div>
-          <p className="text-3xl font-bold text-foreground mb-1">{stats.networkProperties}</p>
+          <p className="text-4xl md:text-3xl font-bold text-foreground mb-1">{stats.networkProperties}</p>
           <p className="text-sm text-muted-foreground">Available Properties</p>
         </div>
       </div>
@@ -368,10 +368,10 @@ export default function Dashboard() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Zap className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 md:w-12 md:h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4 md:mb-3 group-hover:scale-110 transition-transform">
+                      <Zap className="w-7 h-7 md:w-6 md:h-6 text-white" />
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">QuickPost</h3>
+                    <h3 className="font-semibold text-base md:text-sm text-foreground mb-1">QuickPost</h3>
                     <p className="text-sm text-muted-foreground">AI-powered property listing</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
@@ -384,10 +384,10 @@ export default function Dashboard() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Plus className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 md:w-12 md:h-12 bg-emerald-500 rounded-xl flex items-center justify-center mb-4 md:mb-3 group-hover:scale-110 transition-transform">
+                      <Plus className="w-7 h-7 md:w-6 md:h-6 text-white" />
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">Add Property</h3>
+                    <h3 className="font-semibold text-base md:text-sm text-foreground mb-1">Add Property</h3>
                     <p className="text-sm text-muted-foreground">Create new listing manually</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
@@ -400,10 +400,10 @@ export default function Dashboard() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Building2 className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 md:w-12 md:h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4 md:mb-3 group-hover:scale-110 transition-transform">
+                      <Building2 className="w-7 h-7 md:w-6 md:h-6 text-white" />
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">My Listings</h3>
+                    <h3 className="font-semibold text-base md:text-sm text-foreground mb-1">My Listings</h3>
                     <p className="text-sm text-muted-foreground">Manage your properties</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
@@ -416,10 +416,10 @@ export default function Dashboard() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Target className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 md:w-12 md:h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4 md:mb-3 group-hover:scale-110 transition-transform">
+                      <Target className="w-7 h-7 md:w-6 md:h-6 text-white" />
                     </div>
-                    <h3 className="font-semibold text-foreground mb-1">Requirements</h3>
+                    <h3 className="font-semibold text-base md:text-sm text-foreground mb-1">Requirements</h3>
                     <p className="text-sm text-muted-foreground">Track client needs</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-orange-600 group-hover:translate-x-1 transition-all" />

@@ -137,45 +137,47 @@ export default function PropertyFeedPage() {
     <AppLayout>
       <div className="max-w-7xl mx-auto w-full space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Property Feed</h1>
-            <p className="text-sm text-muted-foreground">{filteredProperties.length} listings available</p>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Property Feed</h1>
+              <p className="text-sm md:text-base text-muted-foreground">{filteredProperties.length} listings available</p>
+            </div>
+            <Button
+              onClick={() => router.push("/quickpost")}
+              className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <Sparkles size={16} />
+              QuickPost
+            </Button>
           </div>
-          <Button
-            onClick={() => router.push("/quickpost")}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2"
-          >
-            <Sparkles size={16} />
-            QuickPost
-          </Button>
         </div>
 
         {/* Search & Filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
             <div className="relative flex-1">
               <Search
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                 size={18}
               />
               <Input
-                placeholder="Search by address, city, or ZIP code"
+                placeholder="Search properties..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-3 border-gray-200 focus:border-blue-600 bg-gray-50 focus:bg-white transition-colors rounded-lg"
+                className="pl-10 pr-4 py-5 md:py-3 border-gray-200 focus:border-blue-600 bg-gray-50 focus:bg-white transition-colors rounded-lg"
               />
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-3 py-3 min-w-fit rounded-lg ${
+              className={`flex items-center gap-2 px-4 md:px-3 py-5 md:py-3 min-w-fit rounded-lg ${
                 activeFiltersCount > 0
                   ? "border-primary text-primary bg-primary/5"
                   : "bg-gray-50"
               }`}
             >
-              <Filter size={16} />
+              <Filter size={18} className="md:w-4 md:h-4" />
               {activeFiltersCount > 0 && (
                 <span className="bg-primary text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
                   {activeFiltersCount}
@@ -185,10 +187,10 @@ export default function PropertyFeedPage() {
           </div>
 
         {/* Tabs */}
-        <div className="flex space-x-2">
+        <div className="flex gap-2 md:gap-3">
           <button
             onClick={() => setSelectedTab("sale")}
-            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
+            className={`flex-1 md:flex-none px-6 md:px-8 py-3 md:py-2.5 rounded-full text-sm font-medium transition-colors ${
               selectedTab === "sale"
                 ? "bg-gray-900 text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -199,7 +201,7 @@ export default function PropertyFeedPage() {
           </button>
           <button
             onClick={() => setSelectedTab("rent")}
-            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${
+            className={`flex-1 md:flex-none px-6 md:px-8 py-3 md:py-2.5 rounded-full text-sm font-medium transition-colors ${
               selectedTab === "rent"
                 ? "bg-gray-900 text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -212,9 +214,9 @@ export default function PropertyFeedPage() {
 
         {/* Filters */}
         {showFilters && (
-          <Card className="mx-4 mb-3 border-t-0 rounded-t-none shadow-sm">
-            <CardContent className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+          <Card className="border-t-0 rounded-t-none shadow-sm">
+            <CardContent className="p-5 md:p-4 space-y-5 md:space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-3">
                 <Select
                   value={filters.propertyType}
                   onValueChange={(value) =>

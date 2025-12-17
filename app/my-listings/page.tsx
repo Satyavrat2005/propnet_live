@@ -889,13 +889,13 @@ export default function MyListings() {
     <AppLayout>
       <div className="max-w-7xl mx-auto w-full space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">My Listings</h1>
-            <p className="text-sm text-muted-foreground">{totalProperties} properties</p>
-          </div>
-          <div className="flex items-center space-x-2 w-full sm:w-auto">
-
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">My Listings</h1>
+              <p className="text-sm md:text-base text-muted-foreground">{totalProperties} properties</p>
+            </div>
+          <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
           <Dialog
             open={isAddDialogOpen}
             onOpenChange={(open) => {
@@ -911,7 +911,7 @@ export default function MyListings() {
             <DialogTrigger asChild>
               <Button 
                 size="sm" 
-                className="flex items-center space-x-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200" 
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 border-2 border-blue-600 bg-blue-600 hover:bg-blue-700 hover:border-blue-700 text-white transition-all duration-200 py-5 md:py-2" 
                 onClick={() => setIsAddDialogOpen(true)}
               >
                 <Plus size={16} />
@@ -946,9 +946,12 @@ export default function MyListings() {
               />
             </DialogContent>
           </Dialog>
+          </div>
+          </div>
+        </div>
 
-          <Dialog
-            open={isEditDialogOpen}
+        <Dialog
+          open={isEditDialogOpen}
             onOpenChange={(open) => {
               setIsEditDialogOpen(open);
               if (!open) {
@@ -987,10 +990,8 @@ export default function MyListings() {
               />
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
 
-      <div className="flex-1 px-6 py-6">
+        <div className="flex-1 px-6 py-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -1017,20 +1018,20 @@ export default function MyListings() {
                 ? property.ownerPhone?.slice(0, 3) + "****" + property.ownerPhone?.slice(-2)
                 : "Not Mentioned";
               return (
-                <Card key={property.id} className="p-4 bg-white border-gray-200 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-3">
+                <Card key={property.id} className="p-5 md:p-4 bg-white border-gray-200 hover:shadow-md transition-shadow">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-0 mb-3">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{property.title}</h3>
-                    <div className="flex items-center text-sm text-gray-500 space-x-4 mb-2">
+                    <h3 className="font-semibold text-lg md:text-base text-gray-900 mb-2 md:mb-1">{property.title}</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center text-sm text-gray-500 gap-2 sm:gap-4 mb-3 md:mb-2">
                       <span className="flex items-center">
-                        <MapPin size={12} className="mr-1" />
-                        {property.location}
+                        <MapPin size={14} className="mr-1 shrink-0" />
+                        <span className="line-clamp-1">{property.location}</span>
                       </span>
                       <span className="flex items-center">
-                        <Building2 size={12} className="mr-1" />
+                        <Building2 size={14} className="mr-1 shrink-0" />
                         {property.propertyType}
                       </span>
-                      <span className="font-medium text-blue-600">₹{property.price}</span>
+                      <span className="font-semibold text-blue-600 text-base md:text-sm">₹{property.price}</span>
                       <span className="text-xs text-gray-400">
                         {property.transactionType === "rent" ? "For Rent" : "For Sale"}
                       </span>
@@ -1070,7 +1071,7 @@ export default function MyListings() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
                     {property.expiresAt && (() => {
                       const days = getDaysUntilExpiry(property.expiresAt);
                       if (days !== null && days <= 5 && days >= 1) {
@@ -1080,9 +1081,9 @@ export default function MyListings() {
                             size="sm"
                             onClick={() => renewPropertyMutation.mutate(property.id)}
                             disabled={renewPropertyMutation.isPending}
-                            className="h-8 px-3 border-blue-300 text-blue-700 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                            className="flex-1 md:flex-none h-10 md:h-8 px-4 md:px-3 border-blue-300 text-blue-700 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-400"
                           >
-                            <RefreshCw size={14} className={`mr-1 ${renewPropertyMutation.isPending ? 'animate-spin' : ''}`} />
+                            <RefreshCw size={16} className={`mr-1 ${renewPropertyMutation.isPending ? 'animate-spin' : ''}`} />
                             {renewPropertyMutation.isPending ? 'Renewing...' : 'Renew'}
                           </Button>
                         );
@@ -1091,8 +1092,8 @@ export default function MyListings() {
                     })()}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0 border-gray-300">
-                          <MoreVertical size={16} />
+                        <Button variant="outline" size="sm" className="h-10 w-10 md:h-8 md:w-8 p-0 border-gray-300 shrink-0">
+                          <MoreVertical size={18} className="md:w-4 md:h-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white">

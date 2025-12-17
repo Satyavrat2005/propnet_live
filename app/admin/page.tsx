@@ -294,12 +294,12 @@ export default function AdminPrimaryListings() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 py-4 md:py-6">
-          <div className="space-y-4 md:space-y-0">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-0">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Primary Listings Management</h1>
               <p className="text-sm md:text-base text-gray-600 mt-1">Manage all primary property listings and projects</p>
             </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 md:gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 md:gap-3 shrink-0">
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white">
