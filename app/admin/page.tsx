@@ -293,16 +293,16 @@ export default function AdminPrimaryListings() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 py-4 md:py-6">
+          <div className="space-y-4 md:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Primary Listings Management</h1>
-              <p className="text-gray-600 mt-1">Manage all primary property listings and projects</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Primary Listings Management</h1>
+              <p className="text-sm md:text-base text-gray-600 mt-1">Manage all primary property listings and projects</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 md:gap-3">
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white">
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Listing
                   </Button>
@@ -486,7 +486,7 @@ export default function AdminPrimaryListings() {
               <Button
                 onClick={() => router.push("/admin/dashboard")}
                 variant="outline"
-                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
+                className="w-full sm:w-auto border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Dashboard
@@ -496,51 +496,51 @@ export default function AdminPrimaryListings() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8">
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <Card className="bg-linear-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-            <CardContent className="p-6">
+            <CardContent className="p-6 md:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-emerald-700 text-sm font-medium">Total Listings</p>
-                  <p className="text-3xl font-bold text-emerald-900 mt-2">{total}</p>
+                  <p className="text-emerald-700 text-xs md:text-sm font-medium">Total Listings</p>
+                  <p className="text-4xl md:text-3xl font-bold text-emerald-900 mt-2">{total}</p>
                 </div>
-                <Building2 className="h-12 w-12 text-emerald-600 opacity-70" />
+                <Building2 className="h-14 w-14 md:h-12 md:w-12 text-emerald-600 opacity-70" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-linear-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
+            <CardContent className="p-6 md:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-700 text-sm font-medium">Active Projects</p>
-                  <p className="text-3xl font-bold text-green-900 mt-2">{activeListings}</p>
+                  <p className="text-green-700 text-xs md:text-sm font-medium">Active Projects</p>
+                  <p className="text-4xl md:text-3xl font-bold text-green-900 mt-2">{activeListings}</p>
                 </div>
-                <TrendingUp className="h-12 w-12 text-green-600 opacity-70" />
+                <TrendingUp className="h-14 w-14 md:h-12 md:w-12 text-green-600 opacity-70" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-linear-to-br from-amber-50 to-amber-100 border-amber-200">
-            <CardContent className="p-6">
+            <CardContent className="p-6 md:p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-amber-700 text-sm font-medium">Expired Projects</p>
-                  <p className="text-3xl font-bold text-amber-900 mt-2">{expiredListings}</p>
+                  <p className="text-amber-700 text-xs md:text-sm font-medium">Expired Projects</p>
+                  <p className="text-4xl md:text-3xl font-bold text-amber-900 mt-2">{expiredListings}</p>
                 </div>
-                <Clock className="h-12 w-12 text-amber-600 opacity-70" />
+                <Clock className="h-14 w-14 md:h-12 md:w-12 text-amber-600 opacity-70" />
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-linear-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
+            <CardContent className="p-6 md:p-5">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-700 text-sm font-medium">Total Area</p>
-                  <p className="text-3xl font-bold text-blue-900 mt-2">
+                <div className="flex-1">
+                  <p className="text-blue-700 text-xs md:text-sm font-medium">Total Area</p>
+                  <p className="text-4xl md:text-3xl font-bold text-blue-900 mt-2">
                     {safeFilteredListings.reduce((sum, listing) => {
                       const area = listing.total_carpet_area;
                       return sum + (area ? parseFloat(area.toString()) : 0);
@@ -548,22 +548,22 @@ export default function AdminPrimaryListings() {
                   </p>
                   <p className="text-xs text-blue-600 mt-1">sq. units</p>
                 </div>
-                <MapPin className="h-12 w-12 text-blue-600 opacity-70" />
+                <MapPin className="h-14 w-14 md:h-12 md:w-12 text-blue-600 opacity-70 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
+        <div className="mb-6 md:mb-8">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search by project name, promoter, location, or blocks..."
+              placeholder="Search by name, promoter, location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 py-6 text-base border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+              className="pl-10 md:pl-12 py-5 md:py-6 text-base border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -571,14 +571,14 @@ export default function AdminPrimaryListings() {
         {/* Primary Listings Grid */}
         {safeFilteredListings.length === 0 ? (
           <Card className="bg-white border-gray-200">
-            <CardContent className="p-12 text-center">
-              <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No primary listings found</p>
-              <p className="text-gray-400 text-sm mt-2">Click "Add New Listing" to create your first primary listing</p>
+            <CardContent className="p-8 md:p-12 text-center">
+              <Building2 className="h-20 w-20 md:h-16 md:w-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg md:text-xl font-medium">No primary listings found</p>
+              <p className="text-gray-400 text-sm md:text-base mt-2">Click "Add New Listing" to create your first primary listing</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {safeFilteredListings.map((listing) => {
               const isExpired = listing.end_date && new Date(listing.end_date) < new Date();
               
@@ -589,13 +589,13 @@ export default function AdminPrimaryListings() {
                     isExpired ? 'border-amber-300 bg-amber-50' : 'border-emerald-200 hover:border-emerald-400'
                   }`}
                 >
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 md:p-5">
                     {/* Project Name & Status */}
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-xl text-gray-900 line-clamp-2 flex-1">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <h3 className="font-bold text-lg md:text-xl text-gray-900 line-clamp-2 flex-1">
                         {listing.project_name}
                       </h3>
-                      <Badge className={isExpired ? 'bg-amber-100 text-amber-800 border-amber-300 ml-2' : 'bg-green-100 text-green-800 border-green-300 ml-2'}>
+                      <Badge className={`shrink-0 ${isExpired ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-green-100 text-green-800 border-green-300'}`}>
                         {isExpired ? 'Expired' : 'Active'}
                       </Badge>
                     </div>
@@ -603,7 +603,7 @@ export default function AdminPrimaryListings() {
                     {/* Promoter */}
                     {listing.promoter && (
                       <div className="flex items-center gap-2 mb-3">
-                        <Building2 className="h-4 w-4 text-emerald-600" />
+                        <Building2 className="h-4 w-4 text-emerald-600 shrink-0" />
                         <p className="text-sm font-medium text-gray-700">{listing.promoter}</p>
                       </div>
                     )}
@@ -618,43 +618,43 @@ export default function AdminPrimaryListings() {
 
                     {/* Description */}
                     {listing.project_description && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-3">{listing.project_description}</p>
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-3">{listing.project_description}</p>
                     )}
 
                     {/* Details Grid */}
-                    <div className="grid grid-cols-2 gap-3 mb-4 pt-3 border-t border-gray-200">
+                    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-5 pt-4 border-t border-gray-200">
                       {listing.blocks && (
                         <div>
-                          <p className="text-xs text-gray-500">Blocks</p>
+                          <p className="text-xs text-gray-500 mb-1">Blocks</p>
                           <p className="text-sm font-semibold text-gray-900">{listing.blocks}</p>
                         </div>
                       )}
                       {listing.total_carpet_area && (
                         <div>
-                          <p className="text-xs text-gray-500">Carpet Area</p>
+                          <p className="text-xs text-gray-500 mb-1">Carpet Area</p>
                           <p className="text-sm font-semibold text-gray-900">{Number(listing.total_carpet_area).toFixed(0)} sq.u</p>
                         </div>
                       )}
                       {listing.land_area && (
                         <div>
-                          <p className="text-xs text-gray-500">Land Area</p>
+                          <p className="text-xs text-gray-500 mb-1">Land Area</p>
                           <p className="text-sm font-semibold text-gray-900">{Number(listing.land_area).toFixed(0)} sq.u</p>
                         </div>
                       )}
                       {listing.end_date && (
                         <div>
-                          <p className="text-xs text-gray-500">End Date</p>
+                          <p className="text-xs text-gray-500 mb-1">End Date</p>
                           <p className="text-sm font-semibold text-gray-900">{new Date(listing.end_date).toLocaleDateString()}</p>
                         </div>
                       )}
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 pt-3 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-2 pt-4 border-t border-gray-200">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                        className="w-full sm:flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
                         onClick={() => handleEdit(listing)}
                       >
                         <Edit className="h-4 w-4 mr-1" />
@@ -663,7 +663,7 @@ export default function AdminPrimaryListings() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 border-red-600 text-red-600 hover:bg-red-50"
+                        className="w-full sm:flex-1 border-red-600 text-red-600 hover:bg-red-50"
                         onClick={() => {
                           setListingToDelete(listing);
                           setIsDeleteDialogOpen(true);

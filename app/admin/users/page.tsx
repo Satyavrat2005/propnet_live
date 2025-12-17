@@ -126,16 +126,16 @@ export default function AdminUsers() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 py-4 md:py-6">
+          <div className="space-y-4 md:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Registered Users</h1>
-              <p className="text-gray-600 mt-1">View and manage all users registered on the platform</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Registered Users</h1>
+              <p className="text-sm md:text-base text-gray-600 mt-1">View and manage all users registered on the platform</p>
             </div>
             <Button
               onClick={() => router.push("/admin/dashboard")}
               variant="outline"
-              className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
+              className="w-full sm:w-auto border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Dashboard
@@ -144,18 +144,18 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8">
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           <Card className="bg-linear-to-br from-blue-500 to-blue-600 border-0 text-white">
             <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-white/20 rounded-lg">
-                  <UsersIcon className="h-6 w-6" />
-                </div>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{totalUsers}</p>
+                  <p className="text-4xl md:text-3xl font-bold mb-1">{totalUsers}</p>
                   <p className="text-sm text-blue-100">Total Users</p>
+                </div>
+                <div className="p-3 bg-white/20 rounded-lg shrink-0">
+                  <UsersIcon className="h-7 w-7 md:h-6 md:w-6" />
                 </div>
               </div>
             </CardContent>
@@ -163,13 +163,13 @@ export default function AdminUsers() {
 
           <Card className="bg-linear-to-br from-green-500 to-green-600 border-0 text-white">
             <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-white/20 rounded-lg">
-                  <CheckCircle className="h-6 w-6" />
-                </div>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{completeProfiles}</p>
+                  <p className="text-4xl md:text-3xl font-bold mb-1">{completeProfiles}</p>
                   <p className="text-sm text-green-100">Complete Profiles</p>
+                </div>
+                <div className="p-3 bg-white/20 rounded-lg shrink-0">
+                  <CheckCircle className="h-7 w-7 md:h-6 md:w-6" />
                 </div>
               </div>
             </CardContent>
@@ -177,13 +177,13 @@ export default function AdminUsers() {
 
           <Card className="bg-linear-to-br from-purple-500 to-purple-600 border-0 text-white">
             <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-white/20 rounded-lg">
-                  <Award className="h-6 w-6" />
-                </div>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-3xl font-bold">{verifiedUsers}</p>
+                  <p className="text-4xl md:text-3xl font-bold mb-1">{verifiedUsers}</p>
                   <p className="text-sm text-purple-100">Verified Users</p>
+                </div>
+                <div className="p-3 bg-white/20 rounded-lg shrink-0">
+                  <Award className="h-7 w-7 md:h-6 md:w-6" />
                 </div>
               </div>
             </CardContent>
@@ -191,15 +191,15 @@ export default function AdminUsers() {
         </div>
 
         {/* Search Bar */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
+        <Card className="mb-6 md:mb-8">
+          <CardContent className="p-4 md:p-5">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
-                placeholder="Search by name, email, phone, agency, city, or RERA ID..."
+                placeholder="Search by name, email, phone, agency..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 md:pl-12 py-5 md:py-3"
               />
             </div>
           </CardContent>
@@ -208,42 +208,42 @@ export default function AdminUsers() {
         {/* Users List */}
         {list.length === 0 ? (
           <Card>
-            <CardContent className="p-12 text-center">
-              <UsersIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            <CardContent className="p-8 md:p-12 text-center">
+              <UsersIcon className="h-20 w-20 md:h-16 md:w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg md:text-xl font-semibold text-gray-700 mb-2">
                 {searchQuery ? "No users found" : "No users registered yet"}
               </h3>
-              <p className="text-gray-500">
+              <p className="text-sm md:text-base text-gray-500">
                 {searchQuery ? "Try adjusting your search criteria" : "Users will appear here once they register"}
               </p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:gap-5">
             {list.map((user) => (
               <Card key={user.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
+                <CardContent className="p-6 md:p-7">
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
                     {/* Profile Photo */}
-                    <div className="shrink-0">
+                    <div className="shrink-0 mx-auto sm:mx-0">
                       {user.profile_photo_url ? (
                         <img
                           src={user.profile_photo_url}
                           alt={user.name || "User"}
-                          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                          className="w-20 h-20 md:w-16 md:h-16 rounded-full object-cover border-2 border-gray-200"
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-full bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold">
+                        <div className="w-20 h-20 md:w-16 md:h-16 rounded-full bg-linear-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-2xl md:text-xl font-bold">
                           {user.name?.charAt(0).toUpperCase() || "U"}
                         </div>
                       )}
                     </div>
 
                     {/* User Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    <div className="flex-1 min-w-0 w-full">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                             {user.name || "Unnamed User"}
                           </h3>
                           <div className="flex flex-wrap gap-2">
@@ -266,53 +266,53 @@ export default function AdminUsers() {
                             )}
                           </div>
                         </div>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs shrink-0">
                           <Calendar className="w-3 h-3 mr-1" />
                           {new Date(user.created_at).toLocaleDateString()}
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
                         {user.phone && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Phone className="w-4 h-4 text-gray-400" />
+                            <Phone className="w-4 h-4 text-gray-400 shrink-0" />
                             <span>{user.phone}</span>
                           </div>
                         )}
                         {user.email && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Mail className="w-4 h-4 text-gray-400" />
+                            <Mail className="w-4 h-4 text-gray-400 shrink-0" />
                             <span className="truncate">{user.email}</span>
                           </div>
                         )}
                         {user.agency_name && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Building2 className="w-4 h-4 text-gray-400" />
+                            <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
                             <span>{user.agency_name}</span>
                           </div>
                         )}
                         {user.city && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <MapPin className="w-4 h-4 text-gray-400" />
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
                             <span>{user.city}</span>
                           </div>
                         )}
                         {user.rera_id && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Award className="w-4 h-4 text-gray-400" />
-                            <span className="font-mono">{user.rera_id}</span>
+                            <Award className="w-4 h-4 text-gray-400 shrink-0" />
+                            <span className="font-mono text-xs">{user.rera_id}</span>
                           </div>
                         )}
                         {user.experience && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Clock className="w-4 h-4 text-gray-400" />
+                            <Clock className="w-4 h-4 text-gray-400 shrink-0" />
                             <span>{user.experience} experience</span>
                           </div>
                         )}
                       </div>
 
                       {user.bio && (
-                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{user.bio}</p>
+                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{user.bio}</p>
                       )}
 
                       {(user.area_of_expertise || user.working_regions) && (

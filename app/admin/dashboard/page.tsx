@@ -169,105 +169,108 @@ export default function AdminPortal() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <Shield className="h-6 w-6 text-emerald-600" />
+          <div className="py-4 md:py-6">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+              {/* Header Title */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <Shield className="h-6 w-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Admin Portal</h1>
+                  <p className="text-sm text-gray-600">Welcome, {adminData?.admin?.username}</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Admin Portal</h1>
-                <p className="text-sm text-gray-600">Welcome, {adminData?.admin?.username}</p>
+
+              {/* Buttons: Stack on mobile, horizontal on desktop */}
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                <Button
+                  onClick={goToManageProperty}
+                  variant="outline"
+                  className="w-full md:w-auto border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Manage Property
+                </Button>
+
+                <Button
+                  onClick={goToManageUsers}
+                  variant="outline"
+                  className="w-full md:w-auto border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Registered Users
+                </Button>
+
+                <Button
+                  onClick={handleLogout}
+                  className="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               </div>
-            </div>
-
-            {/* Buttons: Manage Property + Registered Users + Logout */}
-            <div className="flex items-center gap-3">
-              <Button
-                onClick={goToManageProperty}
-                variant="outline"
-                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
-              >
-                <Building2 className="h-4 w-4 mr-2" />
-                Manage Property
-              </Button>
-
-              <Button
-                onClick={goToManageUsers}
-                variant="outline"
-                className="border-emerald-600 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Registered Users
-              </Button>
-
-              <Button
-                onClick={handleLogout}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-3 md:pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Total Signups</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-100 rounded-lg">
-                  <Users className="h-5 w-5 text-emerald-600" />
+            <CardContent className="pb-6 md:pb-4">
+              <div className="flex items-center justify-between md:gap-2">
+                <span className="text-3xl md:text-2xl font-bold text-gray-900">{total}</span>
+                <div className="p-3 md:p-2 bg-emerald-100 rounded-lg">
+                  <Users className="h-6 w-6 md:h-5 md:w-5 text-emerald-600" />
                 </div>
-                <span className="text-2xl font-bold text-gray-900">{total}</span>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-3 md:pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Pending Review</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="h-5 w-5 text-yellow-600" />
+            <CardContent className="pb-6 md:pb-4">
+              <div className="flex items-center justify-between md:gap-2">
+                <span className="text-3xl md:text-2xl font-bold text-gray-900">{pending.length}</span>
+                <div className="p-3 md:p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="h-6 w-6 md:h-5 md:w-5 text-yellow-600" />
                 </div>
-                <span className="text-2xl font-bold text-gray-900">{pending.length}</span>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-3 md:pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Approved</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <UserCheck className="h-5 w-5 text-green-600" />
+            <CardContent className="pb-6 md:pb-4">
+              <div className="flex items-center justify-between md:gap-2">
+                <span className="text-3xl md:text-2xl font-bold text-gray-900">{approved.length}</span>
+                <div className="p-3 md:p-2 bg-green-100 rounded-lg">
+                  <UserCheck className="h-6 w-6 md:h-5 md:w-5 text-green-600" />
                 </div>
-                <span className="text-2xl font-bold text-gray-900">{approved.length}</span>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-3 md:pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Rejected</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <UserX className="h-5 w-5 text-red-600" />
+            <CardContent className="pb-6 md:pb-4">
+              <div className="flex items-center justify-between md:gap-2">
+                <span className="text-3xl md:text-2xl font-bold text-gray-900">{rejected.length}</span>
+                <div className="p-3 md:p-2 bg-red-100 rounded-lg">
+                  <UserX className="h-6 w-6 md:h-5 md:w-5 text-red-600" />
                 </div>
-                <span className="text-2xl font-bold text-gray-900">{rejected.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -301,19 +304,19 @@ export default function AdminPortal() {
                 ) : pending.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">No pending users</div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4 md:space-y-6">
                     {pending.map((u) => (
-                      <div key={u.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {u.name || "Unnamed Broker"}{" "}
-                              {u.rera_id ? (
-                                <span className="inline-flex items-center ml-2 text-xs text-emerald-600">
-                                  <BadgeCheck className="h-4 w-4 mr-1" /> RERA: {u.rera_id}
-                                </span>
-                              ) : null}
+                      <div key={u.id} className="p-6 md:p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg md:text-base text-gray-900 mb-1">
+                              {u.name || "Unnamed Broker"}
                             </h3>
+                            {u.rera_id && (
+                              <span className="inline-flex items-center text-xs text-emerald-600 mb-2">
+                                <BadgeCheck className="h-4 w-4 mr-1" /> RERA: {u.rera_id}
+                              </span>
+                            )}
                             {u.agency_name && (
                               <p className="text-sm text-gray-600">{u.agency_name}</p>
                             )}
@@ -321,32 +324,32 @@ export default function AdminPortal() {
                           {getStatusBadge(u.status)}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div className="space-y-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 text-sm mb-5">
+                          <div className="space-y-2.5 md:space-y-1.5">
                             {u.phone && (
                               <p className="text-gray-600 flex items-center">
-                                <Phone className="h-4 w-4 mr-2" />
+                                <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
                                 <span className="text-gray-900">{u.phone}</span>
                               </p>
                             )}
                             {u.email && (
                               <p className="text-gray-600 flex items-center">
-                                <Mail className="h-4 w-4 mr-2" />
-                                <span className="text-gray-900">{u.email}</span>
+                                <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
+                                <span className="text-gray-900 break-all">{u.email}</span>
                               </p>
                             )}
                             {u.city && (
                               <p className="text-gray-600 flex items-center">
-                                <MapPin className="h-4 w-4 mr-2" />
+                                <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
                                 <span className="text-gray-900">{u.city}</span>
                               </p>
                             )}
                           </div>
 
-                          <div className="space-y-1">
+                          <div className="space-y-2.5 md:space-y-1.5">
                             {u.experience && (
                               <p className="text-gray-600 flex items-center">
-                                <Building2 className="h-4 w-4 mr-2" />
+                                <Building2 className="h-4 w-4 mr-2 flex-shrink-0" />
                                 <span className="text-gray-900">Experience: {u.experience}</span>
                               </p>
                             )}
@@ -369,10 +372,10 @@ export default function AdminPortal() {
                           </div>
                         </div>
 
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex flex-col sm:flex-row gap-2.5 md:gap-2 pt-4 border-t border-gray-200">
                           <Button
                             size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
                             onClick={() => updateStatus.mutate({ id: u.id, status: "approved" })}
                             disabled={updateStatus.isPending}
                             type="button"
@@ -384,7 +387,7 @@ export default function AdminPortal() {
                             size="sm"
                             variant="outline"
                             onClick={() => updateStatus.mutate({ id: u.id, status: "rejected" })}
-                            className="border-red-600 text-red-600 hover:bg-red-50"
+                            className="w-full sm:w-auto border-red-600 text-red-600 hover:bg-red-50"
                             disabled={updateStatus.isPending}
                             type="button"
                           >
